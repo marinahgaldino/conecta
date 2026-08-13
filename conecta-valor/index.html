@@ -129,120 +129,144 @@
       "https://www.imovelweb.com.br/comerciais-galpao-deposito-barracao-venda.html",
       "https://engarrafe.com.br/maquinas_usadas/"
     ],
-    categoriasComuns: [
-      "motor el\xE9trico",
-      "motorredutor",
-      "compressor",
-      "bomba centr\xEDfuga",
-      "tanque inox",
-      "tanque a\xE7o carbono",
-      "gerador",
-      "transformador",
-      "torno",
-      "fresadora",
-      "ret\xEDfica",
-      "prensa",
-      "guilhotina",
-      "caldeira",
-      "empilhadeira",
-      "linha de envase",
-      "enchedora",
-      "rotuladora",
-      "sopradora PET",
-      "misturador industrial",
-      "esteira transportadora",
-      "balan\xE7a industrial",
-      "quadro el\xE9trico",
-      "exaustor industrial",
-      "jato de granalha",
-      "v\xE1lvula industrial",
-      "forno industrial",
-      "filtro industrial",
-      "unidade hidr\xE1ulica",
-      "sucata metal",
-      "galp\xE3o industrial",
-      "terreno industrial"
-    ]
+    categoriasComuns: []
   };
-  var FAMILIA_FUNCAO = {
-    "Terreno": "Im\xF3veis",
-    "Galp\xE3o": "Im\xF3veis",
-    "Pr\xE9dio Administrativo": "Im\xF3veis",
-    "Planta Industrial": "Im\xF3veis",
-    "Envasadora": "Envase e Embalagem",
-    "Linha de Envase": "Envase e Embalagem",
-    "Envasadora Tribloco": "Envase e Embalagem",
-    "Envasadora Monobloco": "Envase e Embalagem",
-    "Sopradora": "Envase e Embalagem",
-    "Rotuladora": "Envase e Embalagem",
-    "Tampadora": "Envase e Embalagem",
-    "Seladora": "Envase e Embalagem",
-    "Empacotadora": "Envase e Embalagem",
-    "Paletizador": "Envase e Embalagem",
-    "Tanque": "Tanques e Processo",
-    "Tanque Misturador": "Tanques e Processo",
-    "Reator": "Tanques e Processo",
-    "Vaso de Press\xE3o": "Tanques e Processo",
-    "Silo": "Tanques e Processo",
-    "Compressor": "Utilidades",
-    "Caldeira": "Utilidades",
-    "Forno Industrial": "Utilidades",
-    "Chiller": "Utilidades",
-    "Torre de Resfriamento": "Utilidades",
-    "HVAC": "Utilidades",
-    "Exaustor": "Utilidades",
-    "Bomba": "Mec\xE2nica",
-    "Motor El\xE9trico": "Mec\xE2nica",
-    "Motorredutor": "Mec\xE2nica",
-    "Redutor": "Mec\xE2nica",
-    "Trocador de Calor": "Mec\xE2nica",
-    "Unidade Hidr\xE1ulica": "Mec\xE2nica",
-    "Atuador El\xE9trico": "Mec\xE2nica",
-    "Transformador": "El\xE9trica e Automa\xE7\xE3o",
-    "Painel El\xE9trico": "El\xE9trica e Automa\xE7\xE3o",
-    "Gerador": "El\xE9trica e Automa\xE7\xE3o",
-    "CLP": "El\xE9trica e Automa\xE7\xE3o",
-    "Inversor": "El\xE9trica e Automa\xE7\xE3o",
-    "Instrumenta\xE7\xE3o": "El\xE9trica e Automa\xE7\xE3o",
-    "Religadora": "El\xE9trica e Automa\xE7\xE3o",
-    "Empilhadeira": "Movimenta\xE7\xE3o",
-    "Ponte Rolante": "Movimenta\xE7\xE3o",
-    "Talha": "Movimenta\xE7\xE3o",
-    "Esteira Transportadora": "Movimenta\xE7\xE3o",
-    "Elevador de Gr\xE3os": "Movimenta\xE7\xE3o",
-    "Torno": "M\xE1quinas-Ferramenta",
-    "Fresadora": "M\xE1quinas-Ferramenta",
-    "Centro de Usinagem CNC": "M\xE1quinas-Ferramenta",
-    "M\xE1quina de Solda": "M\xE1quinas-Ferramenta",
-    "Ret\xEDfica": "M\xE1quinas-Ferramenta",
-    "Prensa": "M\xE1quinas-Ferramenta",
-    "Guilhotina": "M\xE1quinas-Ferramenta",
-    "Dobradeira": "M\xE1quinas-Ferramenta",
-    "Injetora": "M\xE1quinas-Ferramenta",
-    "Pe\xE7a/Acess\xF3rio para M\xE1quina": "M\xE1quinas-Ferramenta",
-    "Caminh\xE3o": "Ve\xEDculos",
-    "Carreta": "Ve\xEDculos",
-    "Ve\xEDculo Leve": "Ve\xEDculos",
-    "Pasteurizador": "Processo Alimentício",
-    "Homogeneizador": "Processo Alimentício",
-    "Centr\xEDfuga/Desnatadeira": "Processo Alimentício",
-    "Carbonatador": "Processo Alimentício",
-    "Resfriador de Leite": "Processo Alimentício",
-    "Misturador": "Processo Alimentício",
-    "Resfriador de Garrafas": "Processo Alimentício",
-    "Lavadora Industrial": "Processo Alimentício",
-    "Balan\xE7a": "Instrumentos e Utilidades Gerais",
-    "V\xE1lvula Industrial": "Instrumentos e Utilidades Gerais",
-    "Filtro Industrial": "Instrumentos e Utilidades Gerais",
-    "Lumin\xE1ria Industrial": "Instrumentos e Utilidades Gerais",
-    "Espectrofot\xF4metro": "Instrumentos e Utilidades Gerais",
-    "Lavadora de Piso": "Instrumentos e Utilidades Gerais",
-    "Jateamento": "Instrumentos e Utilidades Gerais",
-    "Sucata": "Outros"
+
+  // ===== FONTE \xDANICA DE VERDADE: fun\xE7\xE3o (categoria), grupo/fam\xEDlia e slug est\xE1vel =====
+  var CATEGORIA_CANONICA = [
+    { id: "resfriador_leite", nome: "Resfriador de Leite", grupo: "processo_alimenticio", re: /resfriador(?:a)?\s*(?:de\s*)?leite|resfriador\s*industrial/i, comum: false, ativo: true },
+    { id: "caldeira", nome: "Caldeira", grupo: "utilidades", re: /caldeira/i, comum: true, ativo: true },
+    { id: "centrifuga_desnatadeira", nome: "Centrífuga/Desnatadeira", grupo: "processo_alimenticio", re: /centr[íi]fuga|desnatadeira|clarificadora/i, comum: false, ativo: true },
+    { id: "homogeneizador", nome: "Homogeneizador", grupo: "processo_alimenticio", re: /homogeneizador|homogenizador/i, comum: false, ativo: true },
+    { id: "trocador_calor", nome: "Trocador de Calor", grupo: "mecanica", re: /trocador de (calor|placas)|placas? de troca t[ée]rmica/i, comum: false, ativo: true },
+    { id: "torre_resfriamento", nome: "Torre de Resfriamento", grupo: "utilidades", re: /torre de resfriamento/i, comum: false, ativo: true },
+    { id: "hvac", nome: "HVAC", grupo: "utilidades", re: /\bHVAC\b|ar condicionado central|climatiza[çc][ãa]o/i, comum: false, ativo: true },
+    { id: "centro_usinagem_cnc", nome: "Centro de Usinagem CNC", grupo: "maquinas_ferramenta", re: /centro de usinagem|usinagem CNC/i, excludeRe: /torno|fresa/i, comum: false, ativo: true },
+    { id: "fresadora", nome: "Fresadora", grupo: "maquinas_ferramenta", re: /fresadora|fresa\b(?!dor)/i, comum: true, ativo: true },
+    { id: "maquina_solda", nome: "Máquina de Solda", grupo: "maquinas_ferramenta", re: /m[áa]quina de solda(r)?\b|soldadora\b|welding machine/i, comum: false, ativo: true },
+    { id: "prensa", nome: "Prensa", grupo: "maquinas_ferramenta", re: /prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i, excludeRe: /imprensa/i, comum: true, ativo: true },
+    { id: "guilhotina", nome: "Guilhotina", grupo: "maquinas_ferramenta", re: /guilhotina/i, comum: true, ativo: true },
+    { id: "paletizador", nome: "Paletizador", grupo: "envase_embalagem", re: /paletizador(a)?/i, comum: false, ativo: true },
+    { id: "empilhadeira", nome: "Empilhadeira", grupo: "movimentacao", re: /empilhadeira/i, comum: true, ativo: true },
+    { id: "esteira_transportadora", nome: "Esteira Transportadora", grupo: "movimentacao", re: /esteira (transportadora|de envase)|transportador(a)? de (correia|rolos)/i, comum: true, ativo: true },
+    { id: "ponte_rolante", nome: "Ponte Rolante", grupo: "movimentacao", re: /ponte rolante/i, comum: false, ativo: true },
+    { id: "talha", nome: "Talha", grupo: "movimentacao", re: /\btalha\b/i, comum: false, ativo: true },
+    { id: "painel_eletrico", nome: "Painel Elétrico", grupo: "eletrica_automacao", re: /painel el[ée]trico|CCM\b|centro de controle de motores|quadro (geral|de distribui[çc][ãa]o)/i, comum: true, ativo: true },
+    { id: "clp", nome: "CLP", grupo: "eletrica_automacao", re: /\bCLP\b|controlador l[óo]gico program[áa]vel|\bPLC\b/i, comum: false, ativo: true },
+    { id: "inversor", nome: "Inversor", grupo: "eletrica_automacao", re: /inversor de frequ[êe]ncia|\bVFD\b|\binversor\b/i, comum: false, ativo: true },
+    { id: "instrumentacao", nome: "Instrumentação", grupo: "eletrica_automacao", re: /instrumenta[çc][ãa]o|transmissor de (press[ãa]o|n[íi]vel|temperatura)/i, comum: false, ativo: true },
+    { id: "caminhao", nome: "Caminhão", grupo: "veiculos", re: /caminh[ãa]o\b/i, comum: false, ativo: true },
+    { id: "carreta", nome: "Carreta", grupo: "veiculos", re: /\bcarreta\b/i, comum: false, ativo: true },
+    { id: "veiculo_leve", nome: "Veículo Leve", grupo: "veiculos", re: /ve[íi]culo leve|utilit[áa]rio\b/i, comum: false, ativo: true },
+    { id: "predio_administrativo", nome: "Prédio Administrativo", grupo: "imoveis", re: /pr[ée]dio administrativo|escrit[óo]rio comercial/i, comum: false, ativo: true },
+    { id: "galpao", nome: "Galpão", grupo: "imoveis", re: /\bgalp[ãa]o\b/i, comum: true, ativo: true },
+    { id: "terreno", nome: "Terreno", grupo: "imoveis", re: /\bterreno\b/i, comum: true, ativo: true },
+    { id: "peca_acessorio_maquina", nome: "Peça/Acessório para Máquina", grupo: "maquinas_ferramenta", re: /\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i, requireRe: /torno|fresa|retificadora?/i, comum: false, ativo: true },
+    { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", re: /retific(adora|a)\b|barramento/i, comum: true, ativo: true },
+    { id: "elevador_graos", nome: "Elevador de Grãos", grupo: "movimentacao", re: /elevador de (gr[ãa]os|canecas)/i, comum: false, ativo: true },
+    { id: "religadora", nome: "Religadora", grupo: "eletrica_automacao", re: /religadora/i, comum: false, ativo: true },
+    { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", re: /gerador|eletrog[êe]neo/i, comum: true, ativo: true },
+    { id: "luminaria_industrial", nome: "Luminária Industrial", grupo: "instrumentos_utilidades", re: /lumin[áa]ria|refletor|plafon(ier)?/i, comum: false, ativo: true },
+    { id: "planta_industrial", nome: "Planta Industrial", grupo: "imoveis", re: /f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i, comum: false, ativo: true },
+    { id: "seladora", nome: "Seladora", grupo: "envase_embalagem", re: /selador/i, comum: false, ativo: true },
+    { id: "espectrofotometro", nome: "Espectrofotômetro", grupo: "instrumentos_utilidades", re: /espectr[oô]fot[ôo]metro|espectr[ôo]metro/i, comum: false, ativo: true },
+    { id: "jateamento", nome: "Jateamento", grupo: "instrumentos_utilidades", re: /jato de areia|jato de granalha|granalha|jateamento/i, comum: true, ativo: true },
+    { id: "torno", nome: "Torno", grupo: "maquinas_ferramenta", re: /torno\b/i, comum: true, ativo: true },
+    { id: "dobradeira", nome: "Dobradeira", grupo: "maquinas_ferramenta", re: /m[áa]quina de dobrar|dobradeira\b/i, comum: false, ativo: true },
+    { id: "pasteurizador", nome: "Pasteurizador", grupo: "processo_alimenticio", re: /pasteurizador/i, comum: false, ativo: true },
+    { id: "carbonatador", nome: "Carbonatador", grupo: "processo_alimenticio", re: /carbonat/i, comum: false, ativo: true },
+    { id: "envasadora_tribloco", nome: "Envasadora Tribloco", grupo: "envase_embalagem", re: /\btriblo(co|ck)\b/i, comum: false, ativo: true },
+    { id: "envasadora_monobloco", nome: "Envasadora Monobloco", grupo: "envase_embalagem", re: /\bmonoblo(co|ck)\b/i, comum: false, ativo: true },
+    { id: "tampadora", nome: "Tampadora", grupo: "envase_embalagem", re: /capping machine|tampador/i, comum: false, ativo: true },
+    { id: "lavadora_industrial", nome: "Lavadora Industrial", grupo: "processo_alimenticio", re: /washing machine|lavadora(?! de piso)/i, comum: false, ativo: true },
+    { id: "linha_envase", nome: "Linha de Envase", grupo: "envase_embalagem", re: /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie/i, comum: true, ativo: true },
+    { id: "misturador", nome: "Misturador", grupo: "processo_alimenticio", re: /mixer(?! ?grinder)/i, comum: true, ativo: true },
+    { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", re: /cooling machine|spray.*cool/i, comum: false, ativo: true },
+    { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", re: /packing machine|pouch.*packing/i, comum: false, ativo: true },
+    { id: "sucata", nome: "Sucata", grupo: "outros", re: /sucata/i, comum: true, ativo: true },
+    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", re: /rotulad/i, comum: true, ativo: true },
+    { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
+    { id: "envasadora", nome: "Envasadora", grupo: "envase_embalagem", re: /envasador(a)?\b/i, comum: false, ativo: true },
+    { id: "transformador", nome: "Transformador", grupo: "eletrica_automacao", re: /transformador|\btrafo\b/i, comum: true, ativo: true },
+    { id: "motorredutor", nome: "Motorredutor", grupo: "mecanica", re: /motor\s*redutor/i, comum: true, ativo: true },
+    { id: "redutor", nome: "Redutor", grupo: "mecanica", re: /\bredutor(es)?\b/i, comum: false, ativo: true },
+    { id: "unidade_hidraulica", nome: "Unidade Hidráulica", grupo: "mecanica", re: /unidade hidr[áa]ulica/i, comum: true, ativo: true },
+    { id: "motor_eletrico", nome: "Motor Elétrico", grupo: "mecanica", re: /\bmotor\b/i, comum: true, ativo: true },
+    { id: "vaso_pressao", nome: "Vaso de Pressão", grupo: "tanques_processo", re: /vaso de press[ãa]o/i, comum: false, ativo: true },
+    { id: "silo", nome: "Silo", grupo: "tanques_processo", re: /\bsilo\b/i, comum: false, ativo: true },
+    { id: "tanque_misturador", nome: "Tanque Misturador", grupo: "tanques_processo", re: /tanque.{0,20}(misturador|agitador)|misturador.{0,20}tanque/i, comum: false, ativo: true },
+    { id: "tanque", nome: "Tanque", grupo: "tanques_processo", re: /tanque/i, comum: true, ativo: true },
+    { id: "reator", nome: "Reator", grupo: "tanques_processo", re: /reator/i, comum: false, ativo: true },
+    { id: "compressor", nome: "Compressor", grupo: "utilidades", re: /compressor/i, comum: true, ativo: true },
+    { id: "bomba", nome: "Bomba", grupo: "mecanica", re: /bomba/i, comum: true, ativo: true },
+    { id: "chiller", nome: "Chiller", grupo: "utilidades", re: /chiller|frigor[íi]fica/i, comum: false, ativo: true },
+    { id: "injetora", nome: "Injetora", grupo: "maquinas_ferramenta", re: /moldagem por inje[çc][ãa]o/i, comum: false, ativo: true },
+    { id: "balanca", nome: "Balança", grupo: "instrumentos_utilidades", re: /balan[çc]a/i, comum: true, ativo: true },
+    { id: "lavadora_piso", nome: "Lavadora de Piso", grupo: "instrumentos_utilidades", re: /lavadora de piso/i, comum: false, ativo: true },
+    { id: "filtro_industrial", nome: "Filtro Industrial", grupo: "instrumentos_utilidades", re: /filtro de areia|filtro industrial/i, comum: true, ativo: true },
+    { id: "forno_industrial", nome: "Forno Industrial", grupo: "utilidades", re: /forno industrial/i, comum: true, ativo: true },
+    { id: "valvula_industrial", nome: "Válvula Industrial", grupo: "instrumentos_utilidades", re: /v[áa]lvula/i, comum: true, ativo: true },
+    { id: "atuador_eletrico", nome: "Atuador Elétrico", grupo: "mecanica", re: /atuador/i, comum: false, ativo: true },
+    { id: "exaustor", nome: "Exaustor", grupo: "utilidades", re: /exaustor/i, comum: true, ativo: true },
+  ];
+  var GRUPO_LABELS = {
+    imoveis: "Im\xF3veis",
+    envase_embalagem: "Envase e Embalagem",
+    tanques_processo: "Tanques e Processo",
+    utilidades: "Utilidades",
+    mecanica: "Mec\xE2nica",
+    eletrica_automacao: "El\xE9trica e Automa\xE7\xE3o",
+    movimentacao: "Movimenta\xE7\xE3o",
+    maquinas_ferramenta: "M\xE1quinas-Ferramenta",
+    veiculos: "Ve\xEDculos",
+    processo_alimenticio: "Processo Aliment\xEDcio",
+    instrumentos_utilidades: "Instrumentos e Utilidades Gerais",
+    outros: "Outros"
   };
-  function familiaDaFuncao(funcao) {
-    return FAMILIA_FUNCAO[funcao] || "Outros";
+  function classificarFuncao(t) {
+    if (!t) return { category_id: null, category_name: null, confidence: 0 };
+    if (/lote de m[\xE1a]quinas|lote de equipamentos/i.test(t)) return { category_id: null, category_name: null, confidence: 0 };
+    for (const c of CATEGORIA_CANONICA) {
+      if (!c.ativo) continue;
+      if (!c.re.test(t)) continue;
+      if (c.excludeRe && c.excludeRe.test(t)) continue;
+      if (c.requireRe && !c.requireRe.test(t)) continue;
+      return { category_id: c.id, category_name: c.nome, confidence: 0.9 };
+    }
+    return { category_id: null, category_name: null, confidence: 0 };
   }
+  function classificarCategoriaGenerica(t) {
+    return classificarFuncao(t).category_name;
+  }
+  function resolverCategoriaId(nomeOuTexto) {
+    if (!nomeOuTexto) return null;
+    const alvo = String(nomeOuTexto).trim().toLowerCase();
+    const porId = CATEGORIA_CANONICA.find((c) => c.id === alvo);
+    if (porId) return porId.id;
+    const porNome = CATEGORIA_CANONICA.find((c) => c.nome.toLowerCase() === alvo);
+    if (porNome) return porNome.id;
+    return classificarFuncao(nomeOuTexto).category_id;
+  }
+  function nomeDaCategoriaId(id) {
+    const found = CATEGORIA_CANONICA.find((c) => c.id === id);
+    return found ? found.nome : id;
+  }
+  function familiaDaFuncao(nomeOuId) {
+    if (!nomeOuId) return "outros";
+    const alvo = String(nomeOuId).trim().toLowerCase();
+    const found = CATEGORIA_CANONICA.find((c) => c.nome.toLowerCase() === alvo || c.id === alvo);
+    return found ? found.grupo : "outros";
+  }
+  function normalizarCategoria(texto) {
+    if (!texto) return texto;
+    const limpo = String(texto).trim();
+    const porNome = CATEGORIA_CANONICA.find((c) => c.nome.toLowerCase() === limpo.toLowerCase());
+    if (porNome) return porNome.nome;
+    const classificado = classificarFuncao(limpo);
+    if (classificado.category_name) return classificado.category_name;
+    return limpo.toLowerCase().split(" ").map((w) => w.length > 2 ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(" ");
+  }
+  DEFAULT_CONFIG.categoriasComuns = CATEGORIA_CANONICA.filter((c) => c.comum).map((c) => c.nome);
   var MARCAS_CONHECIDAS = [
     "WEG",
     "SEW-EURODRIVE",
@@ -1213,88 +1237,6 @@
     if (/olx\.com\.br|Para Doa[çc][ãa]o(Sim|N[ãa]o)|Aceita trocas(Sim|N[ãa]o)/i.test(t) && /R\$\s*[\d.,]+/.test(t)) return "olx";
     if (/(?:Valor|Pre[çc]o)(\s+de\s+venda)?:?\s*R?\$?\s*[\d][\d.,]*/i.test(t)) return "estruturado";
     if (/^\s*R?\$?\s*[\d][\d.,]*\s*(mil)?\s*$/im.test(t) && /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'.]+[\s\/,-]+[A-Z]{2}\s*$/im.test(t)) return "estruturado";
-    return null;
-  }
-  function classificarCategoriaGenerica(t) {
-    if (/resfriador(?:a)?\s*(?:de\s*)?leite|resfriador\s*industrial/i.test(t)) return "Resfriador de Leite";
-    if (/caldeira/i.test(t)) return "Caldeira";
-    if (/centr[íi]fuga|desnatadeira|clarificadora/i.test(t)) return "Centr\xEDfuga/Desnatadeira";
-    if (/homogeneizador|homogenizador/i.test(t)) return "Homogeneizador";
-    if (/trocador de (calor|placas)|placas? de troca t[ée]rmica/i.test(t)) return "Trocador de Calor";
-    if (/torre de resfriamento/i.test(t)) return "Torre de Resfriamento";
-    if (/\bHVAC\b|ar condicionado central|climatiza[çc][ãa]o/i.test(t)) return "HVAC";
-    if (/centro de usinagem|usinagem CNC/i.test(t) && !/torno|fresa/i.test(t)) return "Centro de Usinagem CNC";
-    if (/fresadora|fresa\b(?!dor)/i.test(t)) return "Fresadora";
-    if (/m[áa]quina de solda(r)?\b|soldadora\b|welding machine/i.test(t)) return "M\xE1quina de Solda";
-    if (/prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i.test(t) && !/imprensa/i.test(t)) return "Prensa";
-    if (/guilhotina/i.test(t)) return "Guilhotina";
-    if (/paletizador(a)?/i.test(t)) return "Paletizador";
-    if (/empilhadeira/i.test(t)) return "Empilhadeira";
-    if (/esteira (transportadora|de envase)|transportador(a)? de (correia|rolos)/i.test(t)) return "Esteira Transportadora";
-    if (/ponte rolante/i.test(t)) return "Ponte Rolante";
-    if (/\btalha\b/i.test(t)) return "Talha";
-    if (/painel el[ée]trico|CCM\b|centro de controle de motores/i.test(t)) return "Painel El\xE9trico";
-    if (/\bCLP\b|controlador l[óo]gico program[áa]vel|\bPLC\b/i.test(t)) return "CLP";
-    if (/inversor de frequ[êe]ncia|\bVFD\b|\binversor\b/i.test(t)) return "Inversor";
-    if (/instrumenta[çc][ãa]o|transmissor de (press[ãa]o|n[íi]vel|temperatura)/i.test(t)) return "Instrumenta\xE7\xE3o";
-    if (/caminh[ãa]o\b/i.test(t)) return "Caminh\xE3o";
-    if (/\bcarreta\b/i.test(t)) return "Carreta";
-    if (/ve[íi]culo leve|utilit[áa]rio\b/i.test(t)) return "Ve\xEDculo Leve";
-    if (/pr[ée]dio administrativo|escrit[óo]rio comercial/i.test(t)) return "Pr\xE9dio Administrativo";
-    if (/\bgalp[ãa]o\b/i.test(t)) return "Galp\xE3o";
-    if (/\bterreno\b/i.test(t)) return "Terreno";
-    if (/\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i.test(t) && /torno|fresa|retificadora?/i.test(t)) {
-      return "Pe\xE7a/Acess\xF3rio para M\xE1quina";
-    }
-    if (/retific(adora|a)\b|barramento/i.test(t)) return "Ret\xEDfica";
-    if (/elevador de (gr[ãa]os|canecas)/i.test(t)) return "Elevador de Gr\xE3os";
-    if (/religadora/i.test(t)) return "Religadora";
-    if (/gerador|eletrog[êe]neo/i.test(t)) return "Gerador";
-    if (/lumin[áa]ria|refletor|plafon(ier)?/i.test(t)) return "Lumin\xE1ria Industrial";
-    if (/f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i.test(t)) return "Planta Industrial";
-    if (/selador/i.test(t)) return "Seladora";
-    if (/espectr[oô]fot[ôo]metro|espectr[ôo]metro/i.test(t)) return "Espectrofot\xF4metro";
-    if (/jato de areia|jato de granalha|granalha|jateamento/i.test(t)) return "Jateamento";
-    if (/lote de m[áa]quinas|lote de equipamentos/i.test(t)) return null;
-    if (/torno\b/i.test(t)) return "Torno";
-    if (/m[áa]quina de dobrar|dobradeira\b/i.test(t)) return "Dobradeira";
-    if (/pasteurizador/i.test(t)) return "Pasteurizador";
-    if (/carbonat/i.test(t)) return "Carbonatador";
-    if (/\btriblo(co|ck)\b/i.test(t)) return "Envasadora Tribloco";
-    if (/\bmonoblo(co|ck)\b/i.test(t)) return "Envasadora Monobloco";
-    if (/capping machine|tampador/i.test(t)) return "Tampadora";
-    if (/washing machine|lavadora/i.test(t)) return "Lavadora Industrial";
-    if (/filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)/i.test(t)) return "Linha de Envase";
-    if (/mixer(?! ?grinder)/i.test(t)) return "Misturador";
-    if (/cooling machine|spray.*cool/i.test(t)) return "Resfriador de Garrafas";
-    if (/packing machine|pouch.*packing/i.test(t)) return "Empacotadora";
-    if (/sucata/i.test(t)) return "Sucata";
-    if (/rotulad/i.test(t)) return "Rotuladora";
-    if (/soprador|m[áa]quina de sopro|blow.*mold/i.test(t)) return "Sopradora";
-    if (/enchedora|tribloco|envasador|linha de envase|abf[uü]lllinie/i.test(t)) return "Linha de Envase";
-    if (/transformador|\btrafo\b/i.test(t)) return "Transformador";
-    if (/motor\s*redutor/i.test(t)) return "Motorredutor";
-    if (/\bredutor(es)?\b/i.test(t)) return "Redutor";
-    if (/unidade hidr[áa]ulica/i.test(t)) return "Unidade Hidr\xE1ulica";
-    if (/\bmotor\b/i.test(t)) return "Motor El\xE9trico";
-    if (/vaso de press[ãa]o/i.test(t)) return "Vaso de Press\xE3o";
-    if (/\bsilo\b/i.test(t)) return "Silo";
-    if (/tanque.{0,20}(misturador|agitador)|misturador.{0,20}tanque/i.test(t)) return "Tanque Misturador";
-    if (/tanque/i.test(t)) return "Tanque";
-    if (/reator/i.test(t)) return "Reator";
-    if (/compressor/i.test(t)) return "Compressor";
-    if (/gerador/i.test(t)) return "Gerador";
-    if (/bomba/i.test(t)) return "Bomba";
-    if (/chiller|frigor[íi]fica/i.test(t)) return "Chiller";
-    if (/moldagem por inje[çc][ãa]o/i.test(t)) return "Injetora";
-    if (/balan[çc]a/i.test(t)) return "Balan\xE7a";
-    if (/lavadora de piso/i.test(t)) return "Lavadora de Piso";
-    if (/quadro (geral|de distribui[çc][ãa]o)/i.test(t)) return "Quadro El\xE9trico";
-    if (/filtro de areia|filtro industrial/i.test(t)) return "Filtro Industrial";
-    if (/forno industrial/i.test(t)) return "Forno Industrial";
-    if (/v[áa]lvula/i.test(t)) return "V\xE1lvula Industrial";
-    if (/atuador/i.test(t)) return "Atuador El\xE9trico";
-    if (/exaustor/i.test(t)) return "Exaustor";
     return null;
   }
   function parsePrecoCasual(str) {
@@ -2455,36 +2397,6 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     if (/linha|envase|rotulad|embalagem|esteira/.test(c)) return "Ex: capacidade de produ\xE7\xE3o (unidades/hora), n\xEDvel de automa\xE7\xE3o, ano de fabrica\xE7\xE3o, dimens\xF5es";
     return "Ex: tens\xE3o, corrente, frequ\xEAncia, ano de fabrica\xE7\xE3o, n\xBA de s\xE9rie, dimens\xF5es";
   }
-  var CATEGORIA_CANONICA = [
-    { re: /f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i, valor: "F\xE1brica" },
-    { re: /retific(adora|a)\b|barramento/i, valor: "Ret\xEDfica" },
-    { re: /^motor(es)?\s*el[eé]tric/i, valor: "Motor El\xE9trico" },
-    { re: /motor\s*redutor/i, valor: "Motorredutor" },
-    { re: /^bomba/i, valor: "Bomba" },
-    { re: /^compressor/i, valor: "Compressor" },
-    { re: /^gerador/i, valor: "Gerador" },
-    { re: /^tanque/i, valor: "Tanque" },
-    { re: /^reator/i, valor: "Reator" },
-    { re: /^vaso de press/i, valor: "Vaso de Press\xE3o" },
-    { re: /\btriblo(co|ck)\b/i, valor: "Envasadora Tribloco" },
-    { re: /\bmonoblo(co|ck)\b/i, valor: "Envasadora Monobloco" },
-    { re: /linha (de )?envase|linha (completa )?(de )?enchimento|linha.{0,20}bebidas.{0,20}envasadora|envasadora.{0,15}rotuladora/i, valor: "Linha de Envase" },
-    { re: /rotulad/i, valor: "Rotuladora" },
-    { re: /esteira|transportador/i, valor: "Esteira Transportadora" },
-    { re: /empilhadeira/i, valor: "Empilhadeira" },
-    { re: /caldeira/i, valor: "Caldeira" },
-    { re: /transformador/i, valor: "Transformador" },
-    { re: /^galp[ãa]o/i, valor: "Galp\xE3o Industrial" },
-    { re: /terreno industrial|[áa]rea industrial/i, valor: "Terreno Industrial/Comercial" }
-  ];
-  function normalizarCategoria(texto) {
-    if (!texto) return texto;
-    const limpo = texto.trim();
-    for (const { re, valor } of CATEGORIA_CANONICA) {
-      if (re.test(limpo)) return valor;
-    }
-    return limpo.toLowerCase().split(" ").map((w) => w.length > 2 ? w.charAt(0).toUpperCase() + w.slice(1) : w).join(" ");
-  }
   var ESTADOS_BR = {
     "acre": "AC",
     "alagoas": "AL",
@@ -3086,6 +2998,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       try {
         const { data: itemRow, error: itemErr } = await client.from("itens_avaliados").insert({
           categoria: item.categoria || null,
+          categoria_id: resolverCategoriaId(item.categoria),
           marca: item.marca || null,
           modelo: item.modelo || null,
           potencia_kw: item.potenciaKw ? Number(item.potenciaKw) : null,
@@ -3355,6 +3268,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         if (!client) throw new Error("Conecte o Supabase na aba Admin antes de salvar.");
         const rows = collectorResults.map((it) => ({
           categoria: normalizarCategoria(it.categoria),
+          categoria_id: resolverCategoriaId(it.categoria),
           marca: it.marca || null,
           modelo: it.modelo || null,
           potencia_cv: it.potencia_cv ?? null,
@@ -3483,6 +3397,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         if (!client) throw new Error("Conecte o Supabase na aba Admin antes de salvar.");
         const rows = manualResults.map((it) => ({
           categoria: normalizarCategoria(it.categoria),
+          categoria_id: resolverCategoriaId(it.categoria),
           marca: it.marca || null,
           modelo: it.modelo || null,
           potencia_cv: it.potencia_cv ?? null,
@@ -3535,6 +3450,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       try {
         const row = {
           categoria: normalizarCategoria(entryForm.categoria),
+          categoria_id: resolverCategoriaId(entryForm.categoria),
           marca: normalizarMarca(entryForm.marca) || null,
           modelo: entryForm.modelo || null,
           capacidade: completarCapacidade(entryForm.capacidade, entryForm.categoria) || null,
