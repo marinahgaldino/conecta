@@ -162,110 +162,86 @@
       "sucata metal",
       "galp\xE3o industrial",
       "terreno industrial"
-    ],
-    categoriasMacro: [
-      "Processo / Produ\xE7\xE3o",
-      "Envase e Embalagem",
-      "Engarrafamento PET",
-      "Rotulagem e Codifica\xE7\xE3o",
-      "Tanques e Vasos",
-      "Trocadores de Calor",
-      "Bombas",
-      "Compressores",
-      "Sistemas de Ar Comprimido",
-      "Caldeiras e Vapor",
-      "Refrigera\xE7\xE3o Industrial",
-      "HVAC / Climatiza\xE7\xE3o",
-      "Motores El\xE9tricos",
-      "Redutores e Motorredutores",
-      "Transmiss\xE3o Mec\xE2nica",
-      "Transportadores e Esteiras",
-      "Movimenta\xE7\xE3o de Materiais",
-      "Empilhadeiras",
-      "Pontes Rolantes e Talhas",
-      "Geradores",
-      "Transformadores",
-      "Pain\xE9is El\xE9tricos",
-      "Cabos e Distribui\xE7\xE3o El\xE9trica",
-      "Automa\xE7\xE3o e Controle",
-      "Instrumenta\xE7\xE3o",
-      "Laborat\xF3rio e Qualidade",
-      "M\xE1quinas-Ferramenta",
-      "Usinagem CNC",
-      "Soldagem e Corte",
-      "Constru\xE7\xE3o e Terraplenagem",
-      "Minera\xE7\xE3o e Britagem",
-      "Agr\xEDcola",
-      "Alimentos e Bebidas",
-      "Qu\xEDmico e Petroqu\xEDmico",
-      "Farmac\xEAutico e Cosm\xE9ticos",
-      "Utilidades Industriais"
     ]
   };
-  var CATEGORIA_MACRO = {
-    "Pasteurizador": "Alimentos e Bebidas",
-    "Resfriador de Leite": "Alimentos e Bebidas",
-    "Centr\xEDfuga/Desnatadeira": "Alimentos e Bebidas",
-    "Homogeneizador": "Alimentos e Bebidas",
-    "Carbonatador": "Alimentos e Bebidas",
+  var FAMILIA_FUNCAO = {
+    "Terreno": "Im\xF3veis",
+    "Galp\xE3o": "Im\xF3veis",
+    "Pr\xE9dio Administrativo": "Im\xF3veis",
+    "Planta Industrial": "Im\xF3veis",
+    "Envasadora": "Envase e Embalagem",
+    "Linha de Envase": "Envase e Embalagem",
     "Envasadora Tribloco": "Envase e Embalagem",
     "Envasadora Monobloco": "Envase e Embalagem",
+    "Sopradora": "Envase e Embalagem",
+    "Rotuladora": "Envase e Embalagem",
     "Tampadora": "Envase e Embalagem",
-    "Linha de Envase": "Envase e Embalagem",
-    "Empacotadora": "Envase e Embalagem",
     "Seladora": "Envase e Embalagem",
-    "Rotuladora": "Rotulagem e Codifica\xE7\xE3o",
-    "Sopradora": "Engarrafamento PET",
-    "Resfriador de Garrafas": "Engarrafamento PET",
-    "Lavadora Industrial": "Envase e Embalagem",
-    "Tanque": "Tanques e Vasos",
-    "Reator": "Tanques e Vasos",
-    "Trocador de Calor": "Trocadores de Calor",
-    "Chiller": "Refrigera\xE7\xE3o Industrial",
-    "Bomba": "Bombas",
-    "Compressor": "Compressores",
-    "Unidade Hidr\xE1ulica": "Sistemas de Ar Comprimido",
-    "Caldeira": "Caldeiras e Vapor",
-    "Forno Industrial": "Caldeiras e Vapor",
-    "Motor El\xE9trico": "Motores El\xE9tricos",
-    "Motorredutor": "Redutores e Motorredutores",
-    "Atuador El\xE9trico": "Transmiss\xE3o Mec\xE2nica",
-    "Esteira Transportadora": "Transportadores e Esteiras",
-    "Elevador de Gr\xE3os": "Movimenta\xE7\xE3o de Materiais",
-    "Empilhadeira": "Empilhadeiras",
-    "Ponte Rolante": "Pontes Rolantes e Talhas",
-    "Talha": "Pontes Rolantes e Talhas",
-    "Gerador": "Geradores",
-    "Transformador": "Transformadores",
-    "Quadro El\xE9trico": "Pain\xE9is El\xE9tricos",
-    "Painel El\xE9trico": "Pain\xE9is El\xE9tricos",
-    "Religadora": "Cabos e Distribui\xE7\xE3o El\xE9trica",
-    "Espectrofot\xF4metro": "Laborat\xF3rio e Qualidade",
+    "Empacotadora": "Envase e Embalagem",
+    "Paletizador": "Envase e Embalagem",
+    "Tanque": "Tanques e Processo",
+    "Tanque Misturador": "Tanques e Processo",
+    "Reator": "Tanques e Processo",
+    "Vaso de Press\xE3o": "Tanques e Processo",
+    "Silo": "Tanques e Processo",
+    "Compressor": "Utilidades",
+    "Caldeira": "Utilidades",
+    "Forno Industrial": "Utilidades",
+    "Chiller": "Utilidades",
+    "Torre de Resfriamento": "Utilidades",
+    "HVAC": "Utilidades",
+    "Exaustor": "Utilidades",
+    "Bomba": "Mec\xE2nica",
+    "Motor El\xE9trico": "Mec\xE2nica",
+    "Motorredutor": "Mec\xE2nica",
+    "Redutor": "Mec\xE2nica",
+    "Trocador de Calor": "Mec\xE2nica",
+    "Unidade Hidr\xE1ulica": "Mec\xE2nica",
+    "Atuador El\xE9trico": "Mec\xE2nica",
+    "Transformador": "El\xE9trica e Automa\xE7\xE3o",
+    "Painel El\xE9trico": "El\xE9trica e Automa\xE7\xE3o",
+    "Gerador": "El\xE9trica e Automa\xE7\xE3o",
+    "CLP": "El\xE9trica e Automa\xE7\xE3o",
+    "Inversor": "El\xE9trica e Automa\xE7\xE3o",
+    "Instrumenta\xE7\xE3o": "El\xE9trica e Automa\xE7\xE3o",
+    "Religadora": "El\xE9trica e Automa\xE7\xE3o",
+    "Empilhadeira": "Movimenta\xE7\xE3o",
+    "Ponte Rolante": "Movimenta\xE7\xE3o",
+    "Talha": "Movimenta\xE7\xE3o",
+    "Esteira Transportadora": "Movimenta\xE7\xE3o",
+    "Elevador de Gr\xE3os": "Movimenta\xE7\xE3o",
     "Torno": "M\xE1quinas-Ferramenta",
     "Fresadora": "M\xE1quinas-Ferramenta",
+    "Centro de Usinagem CNC": "M\xE1quinas-Ferramenta",
+    "M\xE1quina de Solda": "M\xE1quinas-Ferramenta",
     "Ret\xEDfica": "M\xE1quinas-Ferramenta",
     "Prensa": "M\xE1quinas-Ferramenta",
     "Guilhotina": "M\xE1quinas-Ferramenta",
     "Dobradeira": "M\xE1quinas-Ferramenta",
-    "Pe\xE7a/Acess\xF3rio para M\xE1quina": "M\xE1quinas-Ferramenta",
     "Injetora": "M\xE1quinas-Ferramenta",
-    "Jateamento": "Constru\xE7\xE3o e Terraplenagem",
-    "Lumin\xE1ria Industrial": "Utilidades Industriais",
-    "Balan\xE7a": "Instrumenta\xE7\xE3o",
-    "Lavadora de Piso": "Utilidades Industriais",
-    "Filtro Industrial": "Utilidades Industriais",
-    "V\xE1lvula Industrial": "Automa\xE7\xE3o e Controle",
-    "Exaustor": "HVAC / Climatiza\xE7\xE3o",
-    "Misturador": "Processo / Produ\xE7\xE3o",
-    "F\xE1brica": "Utilidades Industriais",
-    "Sucata": "Utilidades Industriais"
+    "Pe\xE7a/Acess\xF3rio para M\xE1quina": "M\xE1quinas-Ferramenta",
+    "Caminh\xE3o": "Ve\xEDculos",
+    "Carreta": "Ve\xEDculos",
+    "Ve\xEDculo Leve": "Ve\xEDculos",
+    "Pasteurizador": "Processo Alimentício",
+    "Homogeneizador": "Processo Alimentício",
+    "Centr\xEDfuga/Desnatadeira": "Processo Alimentício",
+    "Carbonatador": "Processo Alimentício",
+    "Resfriador de Leite": "Processo Alimentício",
+    "Misturador": "Processo Alimentício",
+    "Resfriador de Garrafas": "Processo Alimentício",
+    "Lavadora Industrial": "Processo Alimentício",
+    "Balan\xE7a": "Instrumentos e Utilidades Gerais",
+    "V\xE1lvula Industrial": "Instrumentos e Utilidades Gerais",
+    "Filtro Industrial": "Instrumentos e Utilidades Gerais",
+    "Lumin\xE1ria Industrial": "Instrumentos e Utilidades Gerais",
+    "Espectrofot\xF4metro": "Instrumentos e Utilidades Gerais",
+    "Lavadora de Piso": "Instrumentos e Utilidades Gerais",
+    "Jateamento": "Instrumentos e Utilidades Gerais",
+    "Sucata": "Outros"
   };
-  function macroDeCategoria(categoria) {
-    if (!categoria) return null;
-    if (CATEGORIA_MACRO[categoria]) return CATEGORIA_MACRO[categoria];
-    const c = categoria.toLowerCase();
-    if (/galp[ãa]o|terreno/.test(c)) return "Utilidades Industriais";
-    return "Utilidades Industriais";
+  function familiaDaFuncao(funcao) {
+    return FAMILIA_FUNCAO[funcao] || "Outros";
   }
   var MARCAS_CONHECIDAS = [
     "WEG",
@@ -1245,14 +1221,28 @@
     if (/centr[íi]fuga|desnatadeira|clarificadora/i.test(t)) return "Centr\xEDfuga/Desnatadeira";
     if (/homogeneizador|homogenizador/i.test(t)) return "Homogeneizador";
     if (/trocador de (calor|placas)|placas? de troca t[ée]rmica/i.test(t)) return "Trocador de Calor";
+    if (/torre de resfriamento/i.test(t)) return "Torre de Resfriamento";
+    if (/\bHVAC\b|ar condicionado central|climatiza[çc][ãa]o/i.test(t)) return "HVAC";
+    if (/centro de usinagem|usinagem CNC/i.test(t) && !/torno|fresa/i.test(t)) return "Centro de Usinagem CNC";
     if (/fresadora|fresa\b(?!dor)/i.test(t)) return "Fresadora";
+    if (/m[áa]quina de solda(r)?\b|soldadora\b|welding machine/i.test(t)) return "M\xE1quina de Solda";
     if (/prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i.test(t) && !/imprensa/i.test(t)) return "Prensa";
     if (/guilhotina/i.test(t)) return "Guilhotina";
+    if (/paletizador(a)?/i.test(t)) return "Paletizador";
     if (/empilhadeira/i.test(t)) return "Empilhadeira";
     if (/esteira (transportadora|de envase)|transportador(a)? de (correia|rolos)/i.test(t)) return "Esteira Transportadora";
     if (/ponte rolante/i.test(t)) return "Ponte Rolante";
     if (/\btalha\b/i.test(t)) return "Talha";
     if (/painel el[ée]trico|CCM\b|centro de controle de motores/i.test(t)) return "Painel El\xE9trico";
+    if (/\bCLP\b|controlador l[óo]gico program[áa]vel|\bPLC\b/i.test(t)) return "CLP";
+    if (/inversor de frequ[êe]ncia|\bVFD\b|\binversor\b/i.test(t)) return "Inversor";
+    if (/instrumenta[çc][ãa]o|transmissor de (press[ãa]o|n[íi]vel|temperatura)/i.test(t)) return "Instrumenta\xE7\xE3o";
+    if (/caminh[ãa]o\b/i.test(t)) return "Caminh\xE3o";
+    if (/\bcarreta\b/i.test(t)) return "Carreta";
+    if (/ve[íi]culo leve|utilit[áa]rio\b/i.test(t)) return "Ve\xEDculo Leve";
+    if (/pr[ée]dio administrativo|escrit[óo]rio comercial/i.test(t)) return "Pr\xE9dio Administrativo";
+    if (/\bgalp[ãa]o\b/i.test(t)) return "Galp\xE3o";
+    if (/\bterreno\b/i.test(t)) return "Terreno";
     if (/\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i.test(t) && /torno|fresa|retificadora?/i.test(t)) {
       return "Pe\xE7a/Acess\xF3rio para M\xE1quina";
     }
@@ -1261,7 +1251,7 @@
     if (/religadora/i.test(t)) return "Religadora";
     if (/gerador|eletrog[êe]neo/i.test(t)) return "Gerador";
     if (/lumin[áa]ria|refletor|plafon(ier)?/i.test(t)) return "Lumin\xE1ria Industrial";
-    if (/f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i.test(t)) return "F\xE1brica";
+    if (/f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i.test(t)) return "Planta Industrial";
     if (/selador/i.test(t)) return "Seladora";
     if (/espectr[oô]fot[ôo]metro|espectr[ôo]metro/i.test(t)) return "Espectrofot\xF4metro";
     if (/jato de areia|jato de granalha|granalha|jateamento/i.test(t)) return "Jateamento";
@@ -1284,8 +1274,12 @@
     if (/enchedora|tribloco|envasador|linha de envase|abf[uü]lllinie/i.test(t)) return "Linha de Envase";
     if (/transformador|\btrafo\b/i.test(t)) return "Transformador";
     if (/motor\s*redutor/i.test(t)) return "Motorredutor";
+    if (/\bredutor(es)?\b/i.test(t)) return "Redutor";
     if (/unidade hidr[áa]ulica/i.test(t)) return "Unidade Hidr\xE1ulica";
     if (/\bmotor\b/i.test(t)) return "Motor El\xE9trico";
+    if (/vaso de press[ãa]o/i.test(t)) return "Vaso de Press\xE3o";
+    if (/\bsilo\b/i.test(t)) return "Silo";
+    if (/tanque.{0,20}(misturador|agitador)|misturador.{0,20}tanque/i.test(t)) return "Tanque Misturador";
     if (/tanque/i.test(t)) return "Tanque";
     if (/reator/i.test(t)) return "Reator";
     if (/compressor/i.test(t)) return "Compressor";
