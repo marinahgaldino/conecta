@@ -243,6 +243,99 @@
     });
   }
   var SCHEMA_FUNCAO = {
+    "envasadora": {
+      campos_obrigatorios: ["capacidade_bph", "fabricante"],
+      campos_opcionais: ["modelo", "tipo_envase", "ano", "nivel_automacao"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph", "modelo"],
+      faixas_esperadas: {"capacidade_bph": [500, 60000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+        { campo: "capacidade_bph", tipo: "max", valor: 60000, nivel: "suave", mensagem: "capacidade acima de 60.000 unid/h é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "fabricante", "estado"], complementares: ["ano", "modelo", "nivel_automacao"] }
+    },
+    "linha_envase": {
+      campos_obrigatorios: ["capacidade_bph", "fabricante"],
+      campos_opcionais: ["modelo", "ano", "nivel_automacao", "num_maquinas_linha"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph", "ano"],
+      faixas_esperadas: {"capacidade_bph": [1000, 100000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+        { campo: "capacidade_bph", tipo: "max", valor: 100000, nivel: "suave", mensagem: "capacidade acima de 100.000 unid/h é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "fabricante", "estado"], complementares: ["ano", "nivel_automacao", "num_maquinas_linha"] }
+    },
+    "sopradora": {
+      campos_obrigatorios: ["capacidade_bph", "num_cavidades", "fabricante"],
+      campos_opcionais: ["modelo", "volume_max_ml", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "num_cavidades", "capacidade_bph"],
+      faixas_esperadas: {"num_cavidades": [1, 24], "capacidade_bph": [500, 40000]},
+      validacoes: [
+        { campo: "num_cavidades", tipo: "min", valor: 0, nivel: "rigida", mensagem: "número de cavidades precisa ser maior que zero" },
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+        { campo: "num_cavidades", tipo: "max", valor: 24, nivel: "suave", mensagem: "acima de 24 cavidades é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "num_cavidades", "fabricante", "estado"], complementares: ["volume_max_ml", "modelo", "ano"] }
+    },
+    "rotuladora": {
+      campos_obrigatorios: ["capacidade_bph", "tipo_rotulo", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph", "tipo_rotulo"],
+      faixas_esperadas: {"capacidade_bph": [500, 60000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "tipo_rotulo", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "tampadora": {
+      campos_obrigatorios: ["capacidade_bph", "tipo_tampa", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph", "tipo_tampa"],
+      faixas_esperadas: {"capacidade_bph": [500, 60000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "tipo_tampa", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "seladora": {
+      campos_obrigatorios: ["tipo_selagem", "fabricante"],
+      campos_opcionais: ["capacidade_bph", "largura_max_mm", "modelo", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h", "largura_max_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "tipo_selagem", "capacidade_bph"],
+      faixas_esperadas: {"capacidade_bph": [100, 20000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "max", valor: 20000, nivel: "suave", mensagem: "capacidade acima de 20.000 unid/h é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["tipo_selagem", "fabricante", "estado"], complementares: ["capacidade_bph", "largura_max_mm", "ano"] }
+    },
+    "empacotadora": {
+      campos_obrigatorios: ["tipo_embalagem", "capacidade_bph", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "tipo_embalagem", "capacidade_bph"],
+      faixas_esperadas: {"capacidade_bph": [100, 20000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tipo_embalagem", "capacidade_bph", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "paletizador": {
+      campos_obrigatorios: ["capacidade_paletes_hora", "fabricante"],
+      campos_opcionais: ["tipo", "altura_max_pallet_m", "modelo", "ano"],
+      campos_normalizados: {"capacidade_paletes_hora": "paletes/h", "altura_max_pallet_m": "m"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_paletes_hora", "tipo"],
+      faixas_esperadas: {"capacidade_paletes_hora": [10, 300]},
+      validacoes: [
+        { campo: "capacidade_paletes_hora", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+        { campo: "capacidade_paletes_hora", tipo: "max", valor: 300, nivel: "suave", mensagem: "capacidade acima de 300 paletes/h é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["capacidade_paletes_hora", "fabricante", "estado"], complementares: ["tipo", "altura_max_pallet_m", "ano"] }
+    },
     "motor_eletrico": {
       campos_obrigatorios: ["potencia_cv", "fabricante"],
       campos_opcionais: ["modelo", "rpm", "tensao_v", "polaridade", "carcaca", "ano", "peso_kg"],
