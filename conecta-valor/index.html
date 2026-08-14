@@ -243,6 +243,131 @@
     });
   }
   var SCHEMA_FUNCAO = {
+    "compressor": {
+      campos_obrigatorios: ["tipo", "pressao_bar", "vazao_m3min", "fabricante"],
+      campos_opcionais: ["modelo", "potencia_cv", "ano"],
+      campos_normalizados: {"pressao_bar": "bar", "vazao_m3min": "m³/min", "potencia_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "tipo", "pressao_bar", "vazao_m3min", "potencia_cv"],
+      faixas_esperadas: {"pressao_bar": [2, 15], "vazao_m3min": [0.1, 100], "potencia_cv": [1, 500]},
+      validacoes: [
+        { campo: "pressao_bar", tipo: "min", valor: 0, nivel: "rigida", mensagem: "pressão precisa ser maior que zero" },
+        { campo: "vazao_m3min", tipo: "min", valor: 0, nivel: "rigida", mensagem: "vazão precisa ser maior que zero" },
+        { campo: "pressao_bar", tipo: "max", valor: 15, nivel: "suave", mensagem: "pressão acima de 15 bar é incomum, confira" },
+        { campo: "potencia_cv", tipo: "max", valor: 500, nivel: "suave", mensagem: "potência acima de 500 CV é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["tipo", "pressao_bar", "vazao_m3min", "fabricante", "estado"], complementares: ["potencia_cv", "modelo", "ano"] }
+    },
+    "caldeira": {
+      campos_obrigatorios: ["tipo_combustivel", "capacidade_producao_vapor_kgh", "fabricante"],
+      campos_opcionais: ["pressao_trabalho_bar", "modelo", "ano"],
+      campos_normalizados: {"capacidade_producao_vapor_kgh": "kg/h", "pressao_trabalho_bar": "bar"},
+      campos_ocr_prioritarios: ["fabricante", "tipo_combustivel", "capacidade_producao_vapor_kgh", "pressao_trabalho_bar"],
+      faixas_esperadas: {"capacidade_producao_vapor_kgh": [50, 50000], "pressao_trabalho_bar": [1, 50]},
+      validacoes: [
+        { campo: "capacidade_producao_vapor_kgh", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade de vapor precisa ser maior que zero" },
+        { campo: "capacidade_producao_vapor_kgh", tipo: "max", valor: 50000, nivel: "suave", mensagem: "capacidade acima de 50.000 kg/h é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["tipo_combustivel", "capacidade_producao_vapor_kgh", "fabricante", "estado"], complementares: ["pressao_trabalho_bar", "modelo", "ano"] }
+    },
+    "chiller": {
+      campos_obrigatorios: ["capacidade_tr", "fabricante"],
+      campos_opcionais: ["tipo_fluido_refrigerante", "modelo", "ano"],
+      campos_normalizados: {"capacidade_tr": "TR"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_tr", "tipo_fluido_refrigerante"],
+      faixas_esperadas: {"capacidade_tr": [1, 2000]},
+      validacoes: [
+        { campo: "capacidade_tr", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+        { campo: "capacidade_tr", tipo: "max", valor: 2000, nivel: "suave", mensagem: "capacidade acima de 2000 TR é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["capacidade_tr", "fabricante", "estado"], complementares: ["tipo_fluido_refrigerante", "modelo", "ano"] }
+    },
+    "torre_resfriamento": {
+      campos_obrigatorios: ["capacidade_tr", "fabricante"],
+      campos_opcionais: ["material", "modelo", "ano"],
+      campos_normalizados: {"capacidade_tr": "TR"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_tr", "material"],
+      faixas_esperadas: {"capacidade_tr": [10, 5000]},
+      validacoes: [
+        { campo: "capacidade_tr", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_tr", "fabricante", "estado"], complementares: ["material", "modelo", "ano"] }
+    },
+    "hvac": {
+      campos_obrigatorios: ["capacidade_tr_ou_btu", "fabricante"],
+      campos_opcionais: ["tipo", "modelo", "ano"],
+      campos_normalizados: {"capacidade_tr_ou_btu": "TR ou BTU/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_tr_ou_btu", "tipo"],
+      faixas_esperadas: {"capacidade_tr_ou_btu": [1, 1000]},
+      validacoes: [
+        { campo: "capacidade_tr_ou_btu", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_tr_ou_btu", "fabricante", "estado"], complementares: ["tipo", "modelo", "ano"] }
+    },
+    "transformador": {
+      campos_obrigatorios: ["potencia_kva", "tensao_primaria_v", "tensao_secundaria_v", "fabricante"],
+      campos_opcionais: ["tipo", "modelo", "ano"],
+      campos_normalizados: {"potencia_kva": "kVA", "tensao_primaria_v": "V", "tensao_secundaria_v": "V"},
+      campos_ocr_prioritarios: ["fabricante", "potencia_kva", "tensao_primaria_v", "tensao_secundaria_v"],
+      faixas_esperadas: {"potencia_kva": [5, 50000]},
+      validacoes: [
+        { campo: "potencia_kva", tipo: "min", valor: 0, nivel: "rigida", mensagem: "potência precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["potencia_kva", "tensao_primaria_v", "tensao_secundaria_v", "fabricante", "estado"], complementares: ["tipo", "modelo", "ano"] }
+    },
+    "painel_eletrico": {
+      campos_obrigatorios: ["tensao_v", "fabricante"],
+      campos_opcionais: ["num_circuitos", "corrente_a", "modelo", "ano"],
+      campos_normalizados: {"tensao_v": "V", "corrente_a": "A"},
+      campos_ocr_prioritarios: ["fabricante", "tensao_v", "corrente_a"],
+      faixas_esperadas: {"tensao_v": [110, 13800]},
+      validacoes: [
+        { campo: "tensao_v", tipo: "min", valor: 0, nivel: "rigida", mensagem: "tensão precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tensao_v", "fabricante", "estado"], complementares: ["num_circuitos", "corrente_a", "modelo", "ano"] }
+    },
+    "gerador": {
+      campos_obrigatorios: ["potencia_kva", "tipo_combustivel", "fabricante"],
+      campos_opcionais: ["tensao_v", "modelo", "ano", "horas_uso"],
+      campos_normalizados: {"potencia_kva": "kVA", "tensao_v": "V", "horas_uso": "h"},
+      campos_ocr_prioritarios: ["fabricante", "potencia_kva", "tipo_combustivel"],
+      faixas_esperadas: {"potencia_kva": [5, 3000]},
+      validacoes: [
+        { campo: "potencia_kva", tipo: "min", valor: 0, nivel: "rigida", mensagem: "potência precisa ser maior que zero" },
+        { campo: "potencia_kva", tipo: "max", valor: 3000, nivel: "suave", mensagem: "potência acima de 3000 kVA é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["potencia_kva", "tipo_combustivel", "fabricante", "estado"], complementares: ["tensao_v", "modelo", "ano", "horas_uso"] }
+    },
+    "clp": {
+      campos_obrigatorios: ["fabricante", "modelo"],
+      campos_opcionais: ["num_entradas_saidas", "protocolo_comunicacao", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["num_entradas_saidas", "protocolo_comunicacao", "ano"] }
+    },
+    "inversor": {
+      campos_obrigatorios: ["potencia_cv", "tensao_v", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"potencia_cv": "CV", "tensao_v": "V"},
+      campos_ocr_prioritarios: ["fabricante", "potencia_cv", "tensao_v"],
+      faixas_esperadas: {"potencia_cv": [0.5, 1000]},
+      validacoes: [
+        { campo: "potencia_cv", tipo: "min", valor: 0, nivel: "rigida", mensagem: "potência precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["potencia_cv", "tensao_v", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "instrumentacao": {
+      campos_obrigatorios: ["tipo_instrumento", "fabricante"],
+      campos_opcionais: ["faixa_medicao", "protocolo_saida", "modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "tipo_instrumento", "faixa_medicao"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["tipo_instrumento", "fabricante", "estado"], complementares: ["faixa_medicao", "protocolo_saida", "modelo", "ano"] }
+    },
     "envasadora": {
       campos_obrigatorios: ["capacidade_bph", "fabricante"],
       campos_opcionais: ["modelo", "tipo_envase", "ano", "nivel_automacao"],
