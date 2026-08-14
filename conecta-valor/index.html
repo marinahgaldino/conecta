@@ -112,6 +112,7 @@
 - O campo "resumo" deve ter no m\xE1ximo 4 frases \u2014 seja direto, sem repetir o racioc\xEDnio da pesquisa.`;
   var DEFAULT_CONFIG = {
     titulo: "Conecta Valor",
+    headerBgImage: null,
     marcaPlaceholder: "Ex: WEG, Zegla, SEW-EURODRIVE\u2026",
     pasteLabel: "Se preferir, insira os dados aqui para preencher sua busca automaticamente",
     pastePlaceholder: "Cole aqui as informa\xE7\xF5es t\xE9cnicas para preenchimento autom\xE1tico",
@@ -4792,6 +4793,16 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       });
       e.target.value = "";
     }
+    function handleHeaderBgUpload(e) {
+      const file = (e.target.files || [])[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setConfigDraft((c) => ({ ...c, headerBgImage: ev.target.result }));
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    }
     function removerFoto(idx) {
       setPhotos((prev) => prev.filter((_, i) => i !== idx));
     }
@@ -5752,6 +5763,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-family: 'IBM Plex Sans', sans-serif;
           font-size: 0.9rem;
         }
+        .header-bg-preview-wrap { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.6rem; }
+        .header-bg-preview { width: 160px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #C7C2B8; background: #0A0A0B; }
         .admin-textarea { min-height: 5rem; font-family: 'IBM Plex Mono', monospace; }
         .admin-actions { display: flex; align-items: center; gap: 1rem; }
         .admin-section {
@@ -5975,7 +5988,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         title: "Sair"
       },
       "\u23FB"
-    )), /* @__PURE__ */ React.createElement("div", { className: "hero" }, /* @__PURE__ */ React.createElement("img", { className: "hero-bg-graphic", "aria-hidden": "true", alt: "", src: `data:image/jpeg;base64,${HERO_GRAPHIC_B64}` }), /* @__PURE__ */ React.createElement("div", { className: "hero-bg-fade" }), /* @__PURE__ */ React.createElement("h1", { className: "page-heading" }, t("Quanto vale este item?", "What is this item worth?")), /* @__PURE__ */ React.createElement("p", null, t("Descreva o equipamento e busque compar\xE1veis reais no mercado", "Describe the equipment and search for real market comparables")))))), /* @__PURE__ */ React.createElement("div", { className: "tabs-row" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "hero" }, config.headerBgImage && /* @__PURE__ */ React.createElement("img", { className: "hero-bg-graphic", "aria-hidden": "true", alt: "", src: config.headerBgImage }), config.headerBgImage && /* @__PURE__ */ React.createElement("div", { className: "hero-bg-fade" }), /* @__PURE__ */ React.createElement("h1", { className: "page-heading" }, t("Quanto vale este item?", "What is this item worth?")), /* @__PURE__ */ React.createElement("p", null, t("Descreva o equipamento e busque compar\xE1veis reais no mercado", "Describe the equipment and search for real market comparables")))))), /* @__PURE__ */ React.createElement("div", { className: "tabs-row" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "pill-tab" + (tab === "dashboard" ? " active" : ""),
@@ -6193,7 +6206,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onClick: () => setManualResults((prev) => prev.filter((_, idx) => idx !== i))
       },
       "\u2715"
-    ))))))) : tab === "config" ? /* @__PURE__ */ React.createElement("div", { className: "panel admin-panel" }, /* @__PURE__ */ React.createElement(PanelTitle, null, "Configura\xE7\xF5es e textos"), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Mude os textos e listas abaixo \u2014 fica salvo neste navegador, sem precisar mexer no c\xF3digo."), /* @__PURE__ */ React.createElement("div", { className: "admin-field" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "cfg-marca" }, "Exemplos de marca/fabricante (aparece como dica no campo)"), /* @__PURE__ */ React.createElement(
+    ))))))) : tab === "config" ? /* @__PURE__ */ React.createElement("div", { className: "panel admin-panel" }, /* @__PURE__ */ React.createElement(PanelTitle, null, "Configura\xE7\xF5es e textos"), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Mude os textos e listas abaixo \u2014 fica salvo neste navegador, sem precisar mexer no c\xF3digo."), /* @__PURE__ */ React.createElement("div", { className: "admin-field" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "cfg-headerbg" }, "Imagem de fundo do cabe\xE7alho (opcional)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Aparece atr\xE1s do t\xEDtulo \"Quanto vale este item?\". Se n\xE3o subir nada, fica sem imagem."), configDraft.headerBgImage && /* @__PURE__ */ React.createElement("div", { className: "header-bg-preview-wrap" }, /* @__PURE__ */ React.createElement("img", { src: configDraft.headerBgImage, className: "header-bg-preview", alt: "" }), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setConfigDraft((c) => ({ ...c, headerBgImage: null })) }, "remover imagem")), /* @__PURE__ */ React.createElement("input", { id: "cfg-headerbg", type: "file", accept: "image/*", onChange: handleHeaderBgUpload })), /* @__PURE__ */ React.createElement("div", { className: "admin-field" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "cfg-marca" }, "Exemplos de marca/fabricante (aparece como dica no campo)"), /* @__PURE__ */ React.createElement(
       "input",
       {
         id: "cfg-marca",
