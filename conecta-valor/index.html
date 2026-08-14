@@ -1178,6 +1178,31 @@
       return v === void 0 || v === null || v === "";
     });
   }
+  // Mapeia os campos estruturados j\xE1 existentes (formul\xE1rios antigos, flat) pros nomes
+  // normalizados do SCHEMA_FUNCAO, pra gravar em atributos_normalizados sem re-extrair texto.
+  function atributosNormalizadosDe(obj) {
+    if (!obj) return null;
+    const mapa = {
+      fabricante: obj.fabricante || obj.marca,
+      modelo: obj.modelo,
+      potencia_cv: obj.potencia_cv ?? obj.potenciaCv,
+      potencia_kw: obj.potencia_kw ?? obj.potenciaKw,
+      peso_kg: obj.peso_kg ?? obj.pesoKg,
+      ano: obj.ano || obj.anoFabricacao,
+      rpm: obj.rpm,
+      tensao_v: obj.tensao,
+      polaridade: obj.polaridade,
+      carcaca: obj.carcaca,
+      capacidade: obj.capacidade,
+      localizacao: obj.localizacao
+    };
+    const limpo = {};
+    Object.keys(mapa).forEach((k) => {
+      const v = mapa[k];
+      if (v !== void 0 && v !== null && v !== "") limpo[k] = v;
+    });
+    return Object.keys(limpo).length > 0 ? limpo : null;
+  }
 
   // ===== PIPELINE: texto \u2192 classifica\xE7\xE3o \u2192 extra\xE7\xE3o por schema \u2192 normaliza\xE7\xE3o \u2192 valida\xE7\xE3o =====
   // Gen\xE9rico: funciona pra qualquer categoria com SCHEMA_FUNCAO, guiado pelo NOME do campo.
@@ -4136,6 +4161,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const { data: itemRow, error: itemErr } = await client.from("itens_avaliados").insert({
           categoria: item.categoria || null,
           categoria_id: resolverCategoriaId(item.categoria),
+          atributos_normalizados: atributosNormalizadosDe(item),
           marca: item.marca || null,
           modelo: item.modelo || null,
           potencia_kw: item.potenciaKw ? Number(item.potenciaKw) : null,
@@ -4406,6 +4432,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const rows = collectorResults.map((it) => ({
           categoria: normalizarCategoria(it.categoria),
           categoria_id: resolverCategoriaId(it.categoria),
+          atributos_normalizados: atributosNormalizadosDe(it),
           marca: it.marca || null,
           modelo: it.modelo || null,
           potencia_cv: it.potencia_cv ?? null,
@@ -4535,6 +4562,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const rows = manualResults.map((it) => ({
           categoria: normalizarCategoria(it.categoria),
           categoria_id: resolverCategoriaId(it.categoria),
+          atributos_normalizados: atributosNormalizadosDe(it),
           marca: it.marca || null,
           modelo: it.modelo || null,
           potencia_cv: it.potencia_cv ?? null,
@@ -4588,6 +4616,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const row = {
           categoria: normalizarCategoria(entryForm.categoria),
           categoria_id: resolverCategoriaId(entryForm.categoria),
+          atributos_normalizados: atributosNormalizadosDe(entryForm),
           marca: normalizarMarca(entryForm.marca) || null,
           modelo: entryForm.modelo || null,
           capacidade: completarCapacidade(entryForm.capacidade, entryForm.categoria) || null,
