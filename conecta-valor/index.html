@@ -243,6 +243,318 @@
     });
   }
   var SCHEMA_FUNCAO = {
+    "pasteurizador": {
+      campos_obrigatorios: ["capacidade_lh", "tipo", "fabricante"],
+      campos_opcionais: ["modelo", "ano", "material"],
+      campos_normalizados: {"capacidade_lh": "L/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_lh", "tipo"],
+      faixas_esperadas: {"capacidade_lh": [100, 50000]},
+      validacoes: [
+        { campo: "capacidade_lh", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_lh", "tipo", "fabricante", "estado"], complementares: ["modelo", "ano", "material"] }
+    },
+    "homogeneizador": {
+      campos_obrigatorios: ["capacidade_lh", "pressao_bar", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_lh": "L/h", "pressao_bar": "bar"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_lh", "pressao_bar"],
+      faixas_esperadas: {"capacidade_lh": [100, 50000], "pressao_bar": [50, 1000]},
+      validacoes: [
+        { campo: "capacidade_lh", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_lh", "pressao_bar", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "centrifuga_desnatadeira": {
+      campos_obrigatorios: ["capacidade_lh", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_lh": "L/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_lh"],
+      faixas_esperadas: {"capacidade_lh": [100, 30000]},
+      validacoes: [
+        { campo: "capacidade_lh", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_lh", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "carbonatador": {
+      campos_obrigatorios: ["capacidade_lh", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_lh": "L/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_lh"],
+      faixas_esperadas: {"capacidade_lh": [100, 30000]},
+      validacoes: [
+        { campo: "capacidade_lh", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_lh", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "resfriador_leite": {
+      campos_obrigatorios: ["capacidade_l", "fabricante"],
+      campos_opcionais: ["modelo", "ano", "tipo_resfriamento"],
+      campos_normalizados: {"capacidade_l": "L"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_l"],
+      faixas_esperadas: {"capacidade_l": [100, 50000]},
+      validacoes: [
+        { campo: "capacidade_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_l", "fabricante", "estado"], complementares: ["modelo", "ano", "tipo_resfriamento"] }
+    },
+    "misturador": {
+      campos_obrigatorios: ["volume_l", "fabricante"],
+      campos_opcionais: ["potencia_cv", "modelo", "ano"],
+      campos_normalizados: {"volume_l": "L", "potencia_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "volume_l", "potencia_cv"],
+      faixas_esperadas: {"volume_l": [10, 50000]},
+      validacoes: [
+        { campo: "volume_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "volume precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["volume_l", "fabricante", "estado"], complementares: ["potencia_cv", "modelo", "ano"] }
+    },
+    "resfriador_garrafas": {
+      campos_obrigatorios: ["capacidade_bph", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph"],
+      faixas_esperadas: {"capacidade_bph": [500, 60000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "lavadora_industrial": {
+      campos_obrigatorios: ["capacidade_bph_ou_kgh", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph_ou_kgh"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["capacidade_bph_ou_kgh", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "envasadora_tribloco": {
+      campos_obrigatorios: ["capacidade_bph", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph"],
+      faixas_esperadas: {"capacidade_bph": [1000, 40000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "envasadora_monobloco": {
+      campos_obrigatorios: ["capacidade_bph", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_bph": "unid/h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_bph"],
+      faixas_esperadas: {"capacidade_bph": [1000, 60000]},
+      validacoes: [
+        { campo: "capacidade_bph", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_bph", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "balanca": {
+      campos_obrigatorios: ["capacidade_max_kg", "fabricante"],
+      campos_opcionais: ["tipo", "modelo", "ano"],
+      campos_normalizados: {"capacidade_max_kg": "kg"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_max_kg", "tipo"],
+      faixas_esperadas: {"capacidade_max_kg": [1, 100000]},
+      validacoes: [
+        { campo: "capacidade_max_kg", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_max_kg", "fabricante", "estado"], complementares: ["tipo", "modelo", "ano"] }
+    },
+    "valvula_industrial": {
+      campos_obrigatorios: ["tipo", "diametro_pol", "fabricante"],
+      campos_opcionais: ["material", "pressao_bar", "ano"],
+      campos_normalizados: {"diametro_pol": "pol", "pressao_bar": "bar"},
+      campos_ocr_prioritarios: ["fabricante", "tipo", "diametro_pol"],
+      faixas_esperadas: {"diametro_pol": [0.5, 48]},
+      validacoes: [
+        { campo: "diametro_pol", tipo: "min", valor: 0, nivel: "rigida", mensagem: "diâmetro precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tipo", "diametro_pol", "fabricante", "estado"], complementares: ["material", "pressao_bar", "ano"] }
+    },
+    "filtro_industrial": {
+      campos_obrigatorios: ["tipo", "fabricante"],
+      campos_opcionais: ["capacidade_m3h", "material", "ano"],
+      campos_normalizados: {"capacidade_m3h": "m³/h"},
+      campos_ocr_prioritarios: ["fabricante", "tipo", "capacidade_m3h"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["tipo", "fabricante", "estado"], complementares: ["capacidade_m3h", "material", "ano"] }
+    },
+    "luminaria_industrial": {
+      campos_obrigatorios: ["potencia_w", "tipo"],
+      campos_opcionais: ["fabricante", "ano"],
+      campos_normalizados: {"potencia_w": "W"},
+      campos_ocr_prioritarios: ["potencia_w", "tipo", "fabricante"],
+      faixas_esperadas: {"potencia_w": [10, 2000]},
+      validacoes: [
+        { campo: "potencia_w", tipo: "min", valor: 0, nivel: "rigida", mensagem: "potência precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["potencia_w", "tipo", "estado"], complementares: ["fabricante", "ano"] }
+    },
+    "espectrofotometro": {
+      campos_obrigatorios: ["fabricante", "modelo"],
+      campos_opcionais: ["faixa_comprimento_onda", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["faixa_comprimento_onda", "ano"] }
+    },
+    "jateamento": {
+      campos_obrigatorios: ["tipo", "fabricante"],
+      campos_opcionais: ["dimensoes_cabine", "modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "tipo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["tipo", "fabricante", "estado"], complementares: ["dimensoes_cabine", "modelo", "ano"] }
+    },
+    "detector_metais": {
+      campos_obrigatorios: ["largura_esteira_mm", "fabricante"],
+      campos_opcionais: ["sensibilidade", "modelo", "ano"],
+      campos_normalizados: {"largura_esteira_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "largura_esteira_mm"],
+      faixas_esperadas: {"largura_esteira_mm": [100, 1500]},
+      validacoes: [
+        { campo: "largura_esteira_mm", tipo: "min", valor: 0, nivel: "rigida", mensagem: "largura precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["largura_esteira_mm", "fabricante", "estado"], complementares: ["sensibilidade", "modelo", "ano"] }
+    },
+    "checkweigher": {
+      campos_obrigatorios: ["capacidade_max_kg", "fabricante"],
+      campos_opcionais: ["precisao_g", "modelo", "ano"],
+      campos_normalizados: {"capacidade_max_kg": "kg"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_max_kg"],
+      faixas_esperadas: {"capacidade_max_kg": [0.1, 50]},
+      validacoes: [
+        { campo: "capacidade_max_kg", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_max_kg", "fabricante", "estado"], complementares: ["precisao_g", "modelo", "ano"] }
+    },
+    "exaustor": {
+      campos_obrigatorios: ["vazao_m3h", "fabricante"],
+      campos_opcionais: ["potencia_cv", "modelo", "ano"],
+      campos_normalizados: {"vazao_m3h": "m³/h", "potencia_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "vazao_m3h"],
+      faixas_esperadas: {"vazao_m3h": [500, 100000]},
+      validacoes: [
+        { campo: "vazao_m3h", tipo: "min", valor: 0, nivel: "rigida", mensagem: "vazão precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["vazao_m3h", "fabricante", "estado"], complementares: ["potencia_cv", "modelo", "ano"] }
+    },
+    "forno_industrial": {
+      campos_obrigatorios: ["tipo_combustivel", "capacidade_kgh_ou_m3", "fabricante"],
+      campos_opcionais: ["temperatura_max_c", "modelo", "ano"],
+      campos_normalizados: {"temperatura_max_c": "°C"},
+      campos_ocr_prioritarios: ["fabricante", "tipo_combustivel", "capacidade_kgh_ou_m3"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["tipo_combustivel", "capacidade_kgh_ou_m3", "fabricante", "estado"], complementares: ["temperatura_max_c", "modelo", "ano"] }
+    },
+    "secador_ar": {
+      campos_obrigatorios: ["capacidade_m3min", "fabricante"],
+      campos_opcionais: ["tipo", "modelo", "ano"],
+      campos_normalizados: {"capacidade_m3min": "m³/min"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_m3min"],
+      faixas_esperadas: {"capacidade_m3min": [0.5, 100]},
+      validacoes: [
+        { campo: "capacidade_m3min", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_m3min", "fabricante", "estado"], complementares: ["tipo", "modelo", "ano"] }
+    },
+    "reservatorio_ar": {
+      campos_obrigatorios: ["volume_l", "pressao_max_bar", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"volume_l": "L", "pressao_max_bar": "bar"},
+      campos_ocr_prioritarios: ["fabricante", "volume_l", "pressao_max_bar"],
+      faixas_esperadas: {"volume_l": [50, 20000]},
+      validacoes: [
+        { campo: "volume_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "volume precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["volume_l", "pressao_max_bar", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "religadora": {
+      campos_obrigatorios: ["tensao_kv", "corrente_a", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"tensao_kv": "kV", "corrente_a": "A"},
+      campos_ocr_prioritarios: ["fabricante", "tensao_kv", "corrente_a"],
+      faixas_esperadas: {"tensao_kv": [5, 35]},
+      validacoes: [
+        { campo: "tensao_kv", tipo: "min", valor: 0, nivel: "rigida", mensagem: "tensão precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tensao_kv", "corrente_a", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "qgbt": {
+      campos_obrigatorios: ["corrente_a", "tensao_v", "fabricante"],
+      campos_opcionais: ["num_circuitos", "modelo", "ano"],
+      campos_normalizados: {"corrente_a": "A", "tensao_v": "V"},
+      campos_ocr_prioritarios: ["fabricante", "corrente_a", "tensao_v"],
+      faixas_esperadas: {"corrente_a": [100, 6000]},
+      validacoes: [
+        { campo: "corrente_a", tipo: "min", valor: 0, nivel: "rigida", mensagem: "corrente precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["corrente_a", "tensao_v", "fabricante", "estado"], complementares: ["num_circuitos", "modelo", "ano"] }
+    },
+    "robo_industrial": {
+      campos_obrigatorios: ["num_eixos", "capacidade_carga_kg", "fabricante"],
+      campos_opcionais: ["alcance_mm", "modelo", "ano"],
+      campos_normalizados: {"capacidade_carga_kg": "kg", "alcance_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "num_eixos", "capacidade_carga_kg"],
+      faixas_esperadas: {"num_eixos": [3, 7], "capacidade_carga_kg": [1, 2000]},
+      validacoes: [
+        { campo: "num_eixos", tipo: "min", valor: 0, nivel: "rigida", mensagem: "número de eixos precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["num_eixos", "capacidade_carga_kg", "fabricante", "estado"], complementares: ["alcance_mm", "modelo", "ano"] }
+    },
+    "unidade_hidraulica": {
+      campos_obrigatorios: ["pressao_bar", "vazao_lmin", "fabricante"],
+      campos_opcionais: ["potencia_cv", "modelo", "ano"],
+      campos_normalizados: {"pressao_bar": "bar", "vazao_lmin": "L/min", "potencia_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "pressao_bar", "vazao_lmin"],
+      faixas_esperadas: {"pressao_bar": [10, 500]},
+      validacoes: [
+        { campo: "pressao_bar", tipo: "min", valor: 0, nivel: "rigida", mensagem: "pressão precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["pressao_bar", "vazao_lmin", "fabricante", "estado"], complementares: ["potencia_cv", "modelo", "ano"] }
+    },
+    "atuador_eletrico": {
+      campos_obrigatorios: ["tipo", "fabricante"],
+      campos_opcionais: ["torque_nm_ou_forca_n", "curso_mm", "modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "tipo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["tipo", "fabricante", "estado"], complementares: ["torque_nm_ou_forca_n", "curso_mm", "modelo", "ano"] }
+    },
+    "sucata": {
+      campos_obrigatorios: ["tipo_material", "peso_ton"],
+      campos_opcionais: ["origem", "ano"],
+      campos_normalizados: {"peso_ton": "ton"},
+      campos_ocr_prioritarios: ["tipo_material", "peso_ton"],
+      faixas_esperadas: {"peso_ton": [0.1, 10000]},
+      validacoes: [
+        { campo: "peso_ton", tipo: "min", valor: 0, nivel: "rigida", mensagem: "peso precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tipo_material", "peso_ton", "estado"], complementares: ["origem", "ano"] }
+    },
+    "lavadora_piso": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["autonomia_min_ou_area_m2h", "tipo", "modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "tipo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "estado"], complementares: ["autonomia_min_ou_area_m2h", "tipo", "modelo", "ano"] }
+    },
     "empilhadeira": {
       campos_obrigatorios: ["capacidade_carga_kg", "tipo_energia", "fabricante"],
       campos_opcionais: ["altura_elevacao_m", "modelo", "ano", "horas_uso"],
