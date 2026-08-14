@@ -136,7 +136,7 @@
   var CATEGORIA_CANONICA = [
     { id: "resfriador_leite", nome: "Resfriador de Leite", grupo: "processo_alimenticio", synonyms: ["resfriador de leite a granel", "tanque resfriador de leite"], re: /resfriador(?:a)?\s*(?:de\s*)?leite|resfriador\s*industrial/i, comum: false, ativo: true },
     { id: "caldeira", nome: "Caldeira", grupo: "utilidades", synonyms: ["caldeira a vapor", "caldeira a lenha", "caldeira a cavaco", "gerador de vapor"], re: /caldeira/i, comum: true, ativo: true },
-    { id: "centrifuga_desnatadeira", nome: "Centrífuga/Desnatadeira", grupo: "processo_alimenticio", synonyms: ["desnatadeira", "clarificadora de leite", "centrífuga de leite"], re: /centr[íi]fuga|desnatadeira|clarificadora/i, comum: false, ativo: true },
+    { id: "centrifuga_desnatadeira", nome: "Centrífuga/Desnatadeira", grupo: "processo_alimenticio", synonyms: ["desnatadeira", "clarificadora de leite", "centrífuga de leite"], re: /centr[íi]fuga|desnatadeira|clarificadora/i, excludeRe: /bomba/i, comum: false, ativo: true },
     { id: "homogeneizador", nome: "Homogeneizador", grupo: "processo_alimenticio", synonyms: ["homogeneizador de leite", "homogeneizador de alta pressão"], re: /homogeneizador|homogenizador/i, comum: false, ativo: true },
     { id: "trocador_calor", nome: "Trocador de Calor", grupo: "mecanica", synonyms: ["trocador de placas", "placas de troca térmica", "heat exchanger"], re: /trocador de (calor|placas)|placas? de troca t[ée]rmica/i, comum: false, ativo: true },
     { id: "torre_resfriamento", nome: "Torre de Resfriamento", grupo: "utilidades", synonyms: ["cooling tower", "torre de arrefecimento"], re: /torre de resfriamento/i, comum: false, ativo: true },
@@ -1177,6 +1177,139 @@
       const v = atributos && atributos[c];
       return v === void 0 || v === null || v === "";
     });
+  }
+
+  // ===== PIPELINE: texto \u2192 classifica\xE7\xE3o \u2192 extra\xE7\xE3o por schema \u2192 normaliza\xE7\xE3o \u2192 valida\xE7\xE3o =====
+  // Gen\xE9rico: funciona pra qualquer categoria com SCHEMA_FUNCAO, guiado pelo NOME do campo.
+  // Conven\xE7\xF5es de nome de campo usadas pra decidir como extrair:
+  //   *_cv, *_kva, *_kw, *_hp, *_ton, *_toneladas, *_kg, *_l, *_m2, *_m3h, *_bph, *_mm, *_a, *_bar, *_mca, *_w
+  //     -> n\xFAmero pr\xF3ximo \xE0 unidade correspondente no texto
+  //   *_v (tens\xE3o), tensao_*    -> n\xFAmero(s) seguido de V (pode haver v\xE1rios: 220/380/440V)
+  //   rpm                          -> n\xFAmero pr\xF3ximo a "RPM" ou "r/min"
+  //   ano                          -> ano de 4 d\xEDgitos plaus\xEDvel (1950\u2013ano atual+1)
+  //   fabricante                   -> match contra MARCAS_CONHECIDAS
+  //   carcaca                      -> c\xF3digo tipo "200M", "112M"
+  //   demais campos texto (tipo, material, modelo...) -> confian\xE7a baixa, fica pra revis\xE3o humana
+
+  var UNIDADE_POR_SUFIXO = {
+    "_cv": "CV", "_kva": "kVA", "_kw": "kW", "_hp": "HP",
+    "_ton": "ton", "_toneladas": "ton", "_kg": "kg", "_l": "L",
+    "_m2": "m\u00B2", "_m3h": "m\u00B3/h", "_m3min": "m\u00B3/min", "_bph": "unid/h",
+    "_mm": "mm", "_a": "A", "_bar": "bar", "_mca": "mca", "_w": "W",
+    "_nm": "Nm", "_kv": "kV", "_pol": "pol", "_lmin": "L/min", "_g": "g"
+  };
+
+  function extrairNumeroComUnidade(texto, unidade) {
+    // procura "NUMERO UNIDADE" ou "UNIDADE NUMERO" (unidade escapada p/ regex)
+    var u = unidade.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    var re1 = new RegExp("(\\d+(?:[.,]\\d+)?)\\s*" + u + "\\b", "i");
+    var re2 = new RegExp("\\b" + u + "\\s*[:\\-]?\\s*(\\d+(?:[.,]\\d+)?)", "i");
+    var m = texto.match(re1) || texto.match(re2);
+    if (!m) return null;
+    var num = parseFloat(m[1].replace(",", "."));
+    if (Number.isNaN(num)) return null;
+    return { valor: num, confianca: 0.92 };
+  }
+
+  function extrairTensao(texto) {
+    // pega o primeiro valor de tensão típico (110-13800), aceita "220/380/440V"
+    var m = texto.match(/(\d{2,3}(?:\s*\/\s*\d{2,3}){0,3})\s*V\b/i);
+    if (!m) return null;
+    var primeiro = parseInt(m[1].split("/")[0].trim(), 10);
+    if (Number.isNaN(primeiro)) return null;
+    return { valor: primeiro, confianca: 0.9 };
+  }
+
+  function extrairRPM(texto) {
+    var m = texto.match(/(\d{3,4})\s*(?:RPM|rpm|r\/min)\b/i);
+    if (!m) return null;
+    return { valor: parseInt(m[1], 10), confianca: 0.9 };
+  }
+
+  function extrairAno(texto) {
+    var anoAtual = new Date().getFullYear();
+    var candidatos = texto.match(/\b(19[5-9]\d|20[0-4]\d)\b/g);
+    if (!candidatos || !candidatos.length) return null;
+    var ano = parseInt(candidatos[candidatos.length - 1], 10);
+    if (ano < 1950 || ano > anoAtual + 1) return null;
+    return { valor: ano, confianca: 0.75 };
+  }
+
+  function extrairFabricante(texto) {
+    var tUpper = texto.toUpperCase();
+    for (var i = 0; i < MARCAS_CONHECIDAS.length; i++) {
+      var marca = MARCAS_CONHECIDAS[i];
+      if (new RegExp("\\b" + marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(tUpper)) {
+        return { valor: marca, confianca: 0.95 };
+      }
+    }
+    return null;
+  }
+
+  function extrairCarcaca(texto) {
+    var m = texto.match(/\bcarca[çc]a\s*[:\-]?\s*(\d{2,3}[A-Z]{1,2})\b/i) || texto.match(/\b(\d{2,3}[A-Z])\b/);
+    if (!m) return null;
+    return { valor: m[1].toUpperCase(), confianca: 0.7 };
+  }
+
+  // extrai UM campo, decidindo a estratégia pelo nome
+  function extrairCampo(campo, texto) {
+    if (campo === "fabricante") return extrairFabricante(texto);
+    if (campo === "rpm" || campo === "rpm_agitador") return extrairRPM(texto);
+    if (campo === "ano" || campo === "ano_construcao") return extrairAno(texto);
+    if (campo === "carcaca") return extrairCarcaca(texto);
+    if (/^tensao|_v$/.test(campo) && campo !== "válvula") return extrairTensao(texto);
+    for (var sufixo in UNIDADE_POR_SUFIXO) {
+      if (campo.endsWith(sufixo)) {
+        return extrairNumeroComUnidade(texto, UNIDADE_POR_SUFIXO[sufixo]);
+      }
+    }
+    return null; // campo textual (tipo, material, modelo...) — fica pra revisão humana
+  }
+
+  // extrai TODOS os campos do schema de uma categoria a partir do texto
+  function extrairAtributosPorSchema(texto, categoryId) {
+    var schema = SCHEMA_FUNCAO[categoryId];
+    if (!schema) return { atributos: {}, confiancas: {} };
+    var todosCampos = schema.campos_obrigatorios.concat(schema.campos_opcionais);
+    var atributos = {};
+    var confiancas = {};
+    todosCampos.forEach(function (campo) {
+      var r = extrairCampo(campo, texto);
+      if (r) {
+        atributos[campo] = r.valor;
+        confiancas[campo] = r.confianca;
+      }
+    });
+    return { atributos: atributos, confiancas: confiancas };
+  }
+
+  // PIPELINE COMPLETO: texto -> classificação -> extração -> validação -> campos p/ revisão
+  function processarTextoParaAtributos(texto) {
+    var classe = classificarFuncao(texto);
+    if (!classe.category_id) {
+      return { category_id: null, category_name: null, confidence: 0, atributos: {}, confiancas: {}, alertas: [], erros: [], campos_para_revisao: [] };
+    }
+    var extracao = extrairAtributosPorSchema(texto, classe.category_id);
+    var validacao = validarAtributos(classe.category_id, extracao.atributos);
+    var faltando = schemaCamposObrigatoriosFaltando(classe.category_id, extracao.atributos);
+    var LIMIAR_CONFIANCA = 0.85;
+    var camposBaixaConfianca = Object.keys(extracao.confiancas).filter(function (c) {
+      return extracao.confiancas[c] < LIMIAR_CONFIANCA;
+    });
+    var camposComAlerta = validacao.avisos.map(function (a) { return a.campo; });
+    var campos_para_revisao = Array.from(new Set(camposBaixaConfianca.concat(camposComAlerta).concat(faltando)));
+    return {
+      category_id: classe.category_id,
+      category_name: classe.category_name,
+      confidence: classe.confidence,
+      atributos: extracao.atributos,
+      confiancas: extracao.confiancas,
+      alertas: validacao.avisos,
+      erros: validacao.erros,
+      campos_faltando: faltando,
+      campos_para_revisao: campos_para_revisao
+    };
   }
 
   var GRUPO_LABELS = {
@@ -3501,6 +3634,28 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   function PanelTitle({ children, style }) {
     return /* @__PURE__ */ React.createElement("div", { className: "panel-title-row", style }, /* @__PURE__ */ React.createElement("span", { className: "rivet rivet-inline", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("h3", { className: "admin-title" }, children));
   }
+  var LIMIAR_CONFIANCA_REVISAO = 0.85;
+  function AttributeReviewPanel({ resultado, valores, onChangeValor }) {
+    if (!resultado) return null;
+    if (!resultado.category_id) {
+      return /* @__PURE__ */ React.createElement("div", { className: "error-box" }, "N\xE3o consegui identificar a fun\xE7\xE3o (categoria) a partir desse texto. Tente descrever com mais detalhes, ou selecione manualmente.");
+    }
+    const schema = SCHEMA_FUNCAO[resultado.category_id];
+    const todosCampos = schema ? schema.campos_obrigatorios.concat(schema.campos_opcionais) : Object.keys(valores || {});
+    const alertaPorCampo = {};
+    (resultado.alertas || []).forEach((a) => { alertaPorCampo[a.campo] = a.mensagem; });
+    return /* @__PURE__ */ React.createElement("div", { className: "review-panel" }, /* @__PURE__ */ React.createElement("div", { className: "review-header" }, /* @__PURE__ */ React.createElement("span", { className: "review-category" }, resultado.category_name), /* @__PURE__ */ React.createElement(
+      "span",
+      { className: "confidence-badge " + (resultado.confidence >= LIMIAR_CONFIANCA_REVISAO ? "confidence-ok" : "confidence-low") },
+      "confian\xE7a da categoria: ", Math.round(resultado.confidence * 100), "%"
+    )), resultado.erros && resultado.erros.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, resultado.erros.map((e, i) => /* @__PURE__ */ React.createElement("div", { key: i }, "\u26D4 ", e.campo, ": ", e.mensagem))), /* @__PURE__ */ React.createElement("div", { className: "review-fields" }, todosCampos.map((campo) => {
+      const confianca = resultado.confiancas ? resultado.confiancas[campo] : void 0;
+      const precisaRevisao = (resultado.campos_para_revisao || []).includes(campo);
+      const valor = valores ? valores[campo] : resultado.atributos[campo];
+      const obrigatorio = schema && schema.campos_obrigatorios.includes(campo);
+      return /* @__PURE__ */ React.createElement("div", { key: campo, className: "review-field" + (precisaRevisao ? " review-field-flag" : "") }, /* @__PURE__ */ React.createElement("label", null, campo, obrigatorio && /* @__PURE__ */ React.createElement("span", { className: "review-required" }, " *"), confianca !== void 0 && /* @__PURE__ */ React.createElement("span", { className: "confidence-badge " + (confianca >= LIMIAR_CONFIANCA_REVISAO ? "confidence-ok" : "confidence-low") }, Math.round(confianca * 100), "%")), /* @__PURE__ */ React.createElement("input", { value: valor || "", onChange: (e) => onChangeValor && onChangeValor(campo, e.target.value), placeholder: obrigatorio ? "obrigat\xF3rio, confira" : "" }), alertaPorCampo[campo] && /* @__PURE__ */ React.createElement("p", { className: "field-hint review-alert" }, "\u26A0 ", alertaPorCampo[campo]));
+    })));
+  }
   var BATCH_COLUMNS = ["categoria", "marca", "modelo", "potenciaKw", "potenciaCv", "pesoKg", "anoFabricacao", "rpm", "estado", "obs"];
   function downloadTextFile(filename, content, mime) {
     const blob = new Blob([content], { type: mime });
@@ -3598,6 +3753,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [inputMode, setInputMode] = (0, import_react.useState)("form");
     const [mostrarMaisDetalhes, setMostrarMaisDetalhes] = (0, import_react.useState)(false);
     const [mostrarMaisDetalhesEntry, setMostrarMaisDetalhesEntry] = (0, import_react.useState)(false);
+    const [testeExtracaoTexto, setTesteExtracaoTexto] = (0, import_react.useState)("");
+    const [testeExtracaoResultado, setTesteExtracaoResultado] = (0, import_react.useState)(null);
+    const [testeExtracaoValores, setTesteExtracaoValores] = (0, import_react.useState)({});
     const [config, setConfig] = (0, import_react.useState)(DEFAULT_CONFIG);
     const [configDraft, setConfigDraft] = (0, import_react.useState)(DEFAULT_CONFIG);
     const [configSaved, setConfigSaved] = (0, import_react.useState)(false);
@@ -5064,6 +5222,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           border-radius: 4px;
           font-size: 0.9rem;
         }
+        .review-panel { margin: 1.2rem 1.5rem 0; border: 1px solid #C7C2B8; border-radius: 6px; padding: 1.1rem; background: #FBFAF7; }
+        .review-header { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
+        .review-category { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 1.05rem; }
+        .confidence-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 999px; }
+        .confidence-ok { background: #E3F2E9; color: #2F6F4E; }
+        .confidence-low { background: #FBEFD9; color: #8A5A00; }
+        .review-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 0.8rem; }
+        .review-field label { display: flex; align-items: center; gap: 0.4rem; font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; text-transform: uppercase; color: #4A5568; margin-bottom: 0.25rem; }
+        .review-required { color: #C0392B; }
+        .review-field-flag input { border-color: #D98E04; background: #FFFBF2; }
+        .review-alert { color: #8A5A00; }
         .tag-card {
           background: #FFFFFF;
           border: 1px solid #C7C2B8;
@@ -5874,7 +6043,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         value: entryForm.preco,
         onChange: (e) => setEntryForm((f) => ({ ...f, preco: e.target.value.replace(/[^\d.,]/g, "") }))
       }
-    ), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Pode usar v\xEDrgula pros centavos, do jeito que voc\xEA j\xE1 escreve (ex: 280.000,50).")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-estado" }, "Estado"), /* @__PURE__ */ React.createElement("select", { id: "entry-estado", value: entryEstado, onChange: (e) => setEntryEstado(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Novo"), /* @__PURE__ */ React.createElement("option", null, "Seminovo"), /* @__PURE__ */ React.createElement("option", null, "Usado"), /* @__PURE__ */ React.createElement("option", null, "Recondicionado"))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhesEntry((v) => !v) }, mostrarMaisDetalhesEntry ? "\u2212 esconder detalhes extras" : "+ mais detalhes (capacidade, tens\xE3o, ano, local, canal\u2026)")), mostrarMaisDetalhesEntry && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-cv" }, "Capacidade"), /* @__PURE__ */ React.createElement("input", { id: "entry-cv", value: entryForm.capacidade, onChange: (e) => setEntryForm((f) => ({ ...f, capacidade: e.target.value })), placeholder: "Ex: 30 CV, 500 GPH, 100 kVA \u2014 ou s\xF3 o n\xFAmero, a unidade \xE9 inferida pela categoria" })), isRotativeEquipment(entryForm.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-polaridade" }, "Polaridade"), /* @__PURE__ */ React.createElement("input", { id: "entry-polaridade", value: entryForm.polaridade, onChange: (e) => setEntryForm((f) => ({ ...f, polaridade: e.target.value })), placeholder: "Ex: 4 polos" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-tensao" }, "Tens\xE3o"), /* @__PURE__ */ React.createElement("input", { id: "entry-tensao", value: entryForm.tensao, onChange: (e) => setEntryForm((f) => ({ ...f, tensao: e.target.value })), placeholder: "Ex: 220/380/440V" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-carcaca" }, "Carca\xE7a"), /* @__PURE__ */ React.createElement("input", { id: "entry-carcaca", value: entryForm.carcaca, onChange: (e) => setEntryForm((f) => ({ ...f, carcaca: e.target.value })), placeholder: "Ex: 112M" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-rpm" }, "RPM"), /* @__PURE__ */ React.createElement("input", { id: "entry-rpm", type: "number", min: "0", value: entryForm.rpm, onChange: (e) => setEntryForm((f) => ({ ...f, rpm: e.target.value })) }))), !isRotativeEquipment(entryForm.categoria) && /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-detalhes" }, "Detalhes t\xE9cnicos (material, capacidade, dimens\xF5es\u2026)"), /* @__PURE__ */ React.createElement("input", { id: "entry-detalhes", value: entryForm.detalhes, onChange: (e) => setEntryForm((f) => ({ ...f, detalhes: e.target.value })), placeholder: "Ex: Material: A\xE7o Carbono; Capacidade: 20.000L" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-ano" }, "Ano"), /* @__PURE__ */ React.createElement("input", { id: "entry-ano", value: entryForm.ano, onChange: (e) => setEntryForm((f) => ({ ...f, ano: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-local" }, "Localiza\xE7\xE3o"), /* @__PURE__ */ React.createElement("input", { id: "entry-local", value: entryForm.localizacao, onChange: (e) => setEntryForm((f) => ({ ...f, localizacao: e.target.value })), placeholder: "Cidade/UF" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-tipo" }, "Tipo de mercado"), /* @__PURE__ */ React.createElement("select", { id: "entry-tipo", value: entryTipoMercado, onChange: (e) => setEntryTipoMercado(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Venda Direta"), /* @__PURE__ */ React.createElement("option", null, "Leil\xE3o"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-canal" }, "Canal"), /* @__PURE__ */ React.createElement("select", { id: "entry-canal", value: entryCanal, onChange: (e) => setEntryCanal(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Revenda/Terceiro"), /* @__PURE__ */ React.createElement("option", null, "Fabricante Direto"), /* @__PURE__ */ React.createElement("option", null, "Venda Realizada"), /* @__PURE__ */ React.createElement("option", null, "Venda p/ Intermedi\xE1rio (ser\xE1 revendido mais caro)")), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, 'Use "Venda p/ Intermedi\xE1rio" quando voc\xEA souber que esse pre\xE7o \xE9 de atacado \u2014 ainda vai ter markup numa revenda futura, n\xE3o \xE9 o pre\xE7o final de mercado.')), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-moeda" }, "Moeda do pre\xE7o"), /* @__PURE__ */ React.createElement("select", { id: "entry-moeda", value: entryMoeda, onChange: (e) => setEntryMoeda(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "BRL" }, "R$ Real (BRL)"), /* @__PURE__ */ React.createElement("option", { value: "EUR" }, "\u20AC Euro (EUR)"), /* @__PURE__ */ React.createElement("option", { value: "USD" }, "$ D\xF3lar (USD)"), /* @__PURE__ */ React.createElement("option", { value: "GBP" }, "\xA3 Libra (GBP)")))), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: saveManualEntry, disabled: entrySaving || !entryForm.categoria.trim() || !entryForm.preco }, entrySaving ? "Salvando\u2026" : "Salvar e adicionar outro"), entryJustSaved === "duplicado" && /* @__PURE__ */ React.createElement("span", { className: "field-hint", style: { marginLeft: "0.8rem" } }, "j\xE1 existia na base (duplicata ignorada)"), entryJustSaved === true && /* @__PURE__ */ React.createElement("span", { className: "saved-note", style: { marginLeft: "0.8rem" } }, "salvo \u2713"), entrySavedTotal > 0 && /* @__PURE__ */ React.createElement("span", { className: "field-hint", style: { marginLeft: "0.8rem" } }, entrySavedTotal, " salvos nesta sess\xE3o"))), entryError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, entryError), /* @__PURE__ */ React.createElement(PanelTitle, { style: { marginTop: "2rem" } }, "Coletor de mercado (s\xF3 fatos)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Busca categoria/termo nos sites configurados como seguros (edite a lista na aba Admin) e salva s\xF3 dados t\xE9cnicos e pre\xE7o \u2014 nunca descri\xE7\xE3o completa ou foto do an\xFAncio."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Sites que ser\xE3o buscados"), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, (config.coletorSites || []).join(", ") || "nenhum configurado \u2014 v\xE1 na aba Admin")), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: verificarCoberturaCategorias, disabled: coberturaLoading || collectorRunning }, coberturaLoading ? "Verificando\u2026" : "Ver cobertura antes de rodar")), coberturaCategorias && /* @__PURE__ */ React.createElement("div", { className: "field-full cobertura-tabela" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Escolha quais categorias vale rodar de novo"), coberturaCategorias.map((c) => {
+    ), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Pode usar v\xEDrgula pros centavos, do jeito que voc\xEA j\xE1 escreve (ex: 280.000,50).")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-estado" }, "Estado"), /* @__PURE__ */ React.createElement("select", { id: "entry-estado", value: entryEstado, onChange: (e) => setEntryEstado(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Novo"), /* @__PURE__ */ React.createElement("option", null, "Seminovo"), /* @__PURE__ */ React.createElement("option", null, "Usado"), /* @__PURE__ */ React.createElement("option", null, "Recondicionado"))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhesEntry((v) => !v) }, mostrarMaisDetalhesEntry ? "\u2212 esconder detalhes extras" : "+ mais detalhes (capacidade, tens\xE3o, ano, local, canal\u2026)")), mostrarMaisDetalhesEntry && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-cv" }, "Capacidade"), /* @__PURE__ */ React.createElement("input", { id: "entry-cv", value: entryForm.capacidade, onChange: (e) => setEntryForm((f) => ({ ...f, capacidade: e.target.value })), placeholder: "Ex: 30 CV, 500 GPH, 100 kVA \u2014 ou s\xF3 o n\xFAmero, a unidade \xE9 inferida pela categoria" })), isRotativeEquipment(entryForm.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-polaridade" }, "Polaridade"), /* @__PURE__ */ React.createElement("input", { id: "entry-polaridade", value: entryForm.polaridade, onChange: (e) => setEntryForm((f) => ({ ...f, polaridade: e.target.value })), placeholder: "Ex: 4 polos" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-tensao" }, "Tens\xE3o"), /* @__PURE__ */ React.createElement("input", { id: "entry-tensao", value: entryForm.tensao, onChange: (e) => setEntryForm((f) => ({ ...f, tensao: e.target.value })), placeholder: "Ex: 220/380/440V" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-carcaca" }, "Carca\xE7a"), /* @__PURE__ */ React.createElement("input", { id: "entry-carcaca", value: entryForm.carcaca, onChange: (e) => setEntryForm((f) => ({ ...f, carcaca: e.target.value })), placeholder: "Ex: 112M" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-rpm" }, "RPM"), /* @__PURE__ */ React.createElement("input", { id: "entry-rpm", type: "number", min: "0", value: entryForm.rpm, onChange: (e) => setEntryForm((f) => ({ ...f, rpm: e.target.value })) }))), !isRotativeEquipment(entryForm.categoria) && /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-detalhes" }, "Detalhes t\xE9cnicos (material, capacidade, dimens\xF5es\u2026)"), /* @__PURE__ */ React.createElement("input", { id: "entry-detalhes", value: entryForm.detalhes, onChange: (e) => setEntryForm((f) => ({ ...f, detalhes: e.target.value })), placeholder: "Ex: Material: A\xE7o Carbono; Capacidade: 20.000L" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-ano" }, "Ano"), /* @__PURE__ */ React.createElement("input", { id: "entry-ano", value: entryForm.ano, onChange: (e) => setEntryForm((f) => ({ ...f, ano: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-local" }, "Localiza\xE7\xE3o"), /* @__PURE__ */ React.createElement("input", { id: "entry-local", value: entryForm.localizacao, onChange: (e) => setEntryForm((f) => ({ ...f, localizacao: e.target.value })), placeholder: "Cidade/UF" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-tipo" }, "Tipo de mercado"), /* @__PURE__ */ React.createElement("select", { id: "entry-tipo", value: entryTipoMercado, onChange: (e) => setEntryTipoMercado(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Venda Direta"), /* @__PURE__ */ React.createElement("option", null, "Leil\xE3o"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-canal" }, "Canal"), /* @__PURE__ */ React.createElement("select", { id: "entry-canal", value: entryCanal, onChange: (e) => setEntryCanal(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Revenda/Terceiro"), /* @__PURE__ */ React.createElement("option", null, "Fabricante Direto"), /* @__PURE__ */ React.createElement("option", null, "Venda Realizada"), /* @__PURE__ */ React.createElement("option", null, "Venda p/ Intermedi\xE1rio (ser\xE1 revendido mais caro)")), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, 'Use "Venda p/ Intermedi\xE1rio" quando voc\xEA souber que esse pre\xE7o \xE9 de atacado \u2014 ainda vai ter markup numa revenda futura, n\xE3o \xE9 o pre\xE7o final de mercado.')), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-moeda" }, "Moeda do pre\xE7o"), /* @__PURE__ */ React.createElement("select", { id: "entry-moeda", value: entryMoeda, onChange: (e) => setEntryMoeda(e.target.value) }, /* @__PURE__ */ React.createElement("option", { value: "BRL" }, "R$ Real (BRL)"), /* @__PURE__ */ React.createElement("option", { value: "EUR" }, "\u20AC Euro (EUR)"), /* @__PURE__ */ React.createElement("option", { value: "USD" }, "$ D\xF3lar (USD)"), /* @__PURE__ */ React.createElement("option", { value: "GBP" }, "\xA3 Libra (GBP)")))), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: saveManualEntry, disabled: entrySaving || !entryForm.categoria.trim() || !entryForm.preco }, entrySaving ? "Salvando\u2026" : "Salvar e adicionar outro"), entryJustSaved === "duplicado" && /* @__PURE__ */ React.createElement("span", { className: "field-hint", style: { marginLeft: "0.8rem" } }, "j\xE1 existia na base (duplicata ignorada)"), entryJustSaved === true && /* @__PURE__ */ React.createElement("span", { className: "saved-note", style: { marginLeft: "0.8rem" } }, "salvo \u2713"), entrySavedTotal > 0 && /* @__PURE__ */ React.createElement("span", { className: "field-hint", style: { marginLeft: "0.8rem" } }, entrySavedTotal, " salvos nesta sess\xE3o"))), entryError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, entryError), /* @__PURE__ */ React.createElement(PanelTitle, { style: { marginTop: "2rem" } }, "Testar extra\xE7\xE3o autom\xE1tica (novo)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Cole uma descri\xE7\xE3o ou anexo de an\xFAncio: o sistema classifica a fun\xE7\xE3o, extrai os atributos do schema, normaliza e mostra s\xF3 os campos que precisam de revis\xE3o (confian\xE7a baixa ou alerta)."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1rem" } }, /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "teste-extracao" }, "Texto do an\xFAncio"), /* @__PURE__ */ React.createElement("textarea", { id: "teste-extracao", rows: 3, value: testeExtracaoTexto, onChange: (e) => setTesteExtracaoTexto(e.target.value), placeholder: "Ex: Motor WEG 40 CV 380V 1760 RPM carca\xE7a 200M ano 2018" })), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => {
+      const r = processarTextoParaAtributos(testeExtracaoTexto);
+      setTesteExtracaoResultado(r);
+      setTesteExtracaoValores(r.atributos || {});
+    }, disabled: !testeExtracaoTexto.trim() }, "Classificar e extrair"))), /* @__PURE__ */ React.createElement(AttributeReviewPanel, { resultado: testeExtracaoResultado, valores: testeExtracaoValores, onChangeValor: (campo, val) => setTesteExtracaoValores((v) => ({ ...v, [campo]: val })) }), /* @__PURE__ */ React.createElement(PanelTitle, { style: { marginTop: "2rem" } }, "Coletor de mercado (s\xF3 fatos)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Busca categoria/termo nos sites configurados como seguros (edite a lista na aba Admin) e salva s\xF3 dados t\xE9cnicos e pre\xE7o \u2014 nunca descri\xE7\xE3o completa ou foto do an\xFAncio."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Sites que ser\xE3o buscados"), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, (config.coletorSites || []).join(", ") || "nenhum configurado \u2014 v\xE1 na aba Admin")), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: verificarCoberturaCategorias, disabled: coberturaLoading || collectorRunning }, coberturaLoading ? "Verificando\u2026" : "Ver cobertura antes de rodar")), coberturaCategorias && /* @__PURE__ */ React.createElement("div", { className: "field-full cobertura-tabela" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Escolha quais categorias vale rodar de novo"), coberturaCategorias.map((c) => {
       const dias = c.ultima ? Math.floor((/* @__PURE__ */ new Date() - new Date(c.ultima)) / (1e3 * 60 * 60 * 24)) : null;
       return /* @__PURE__ */ React.createElement("label", { key: c.categoria, className: "checkbox-row cobertura-linha" }, /* @__PURE__ */ React.createElement(
         "input",
