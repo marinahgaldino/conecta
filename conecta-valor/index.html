@@ -242,6 +242,170 @@
       return s ? s.nome : id;
     });
   }
+  var SCHEMA_FUNCAO = {
+    "motor_eletrico": {
+      campos_obrigatorios: ["potencia_cv", "fabricante"],
+      campos_opcionais: ["modelo", "rpm", "tensao_v", "polaridade", "carcaca", "ano", "peso_kg"],
+      campos_normalizados: {"potencia_cv": "CV", "peso_kg": "kg", "tensao_v": "V"},
+      campos_ocr_prioritarios: ["fabricante", "potencia_cv", "rpm", "tensao_v", "carcaca", "polaridade"],
+      faixas_esperadas: {"potencia_cv": [0.25, 3000], "rpm": [300, 3600]},
+      validacoes: [
+        { campo: "potencia_cv", tipo: "min", valor: 0, nivel: "rigida", mensagem: "potência precisa ser maior que zero" },
+        { campo: "ano", tipo: "min", valor: 1970, nivel: "suave", mensagem: "ano anterior a 1970 é incomum, confira" },
+        { campo: "ano", tipo: "maxAnoAtual", valor: 1, nivel: "suave", mensagem: "ano no futuro, confira" },
+        { campo: "potencia_cv", tipo: "max", valor: 3000, nivel: "suave", mensagem: "potência acima de 3000 CV é incomum, confira" },
+        { campo: "rpm", tipo: "faixa", valor: [300, 3600], nivel: "suave", mensagem: "RPM fora da faixa usual, confira" },
+      ],
+      valuation: { obrigatorios: ["potencia_cv", "fabricante", "estado"], complementares: ["ano", "rpm", "tensao_v", "carcaca"] }
+    },
+    "motorredutor": {
+      campos_obrigatorios: ["potencia_cv", "relacao_reducao", "fabricante"],
+      campos_opcionais: ["modelo", "torque_nm", "montagem", "ano", "peso_kg"],
+      campos_normalizados: {"potencia_cv": "CV", "torque_nm": "Nm"},
+      campos_ocr_prioritarios: ["fabricante", "potencia_cv", "relacao_reducao", "torque_nm"],
+      faixas_esperadas: {"potencia_cv": [0.16, 500], "relacao_reducao": [1, 200]},
+      validacoes: [
+        { campo: "potencia_cv", tipo: "min", valor: 0, nivel: "rigida", mensagem: "potência precisa ser maior que zero" },
+        { campo: "relacao_reducao", tipo: "min", valor: 0, nivel: "rigida", mensagem: "relação de redução precisa ser maior que zero" },
+        { campo: "potencia_cv", tipo: "max", valor: 500, nivel: "suave", mensagem: "potência acima de 500 CV é incomum pra motorredutor, confira" },
+        { campo: "relacao_reducao", tipo: "max", valor: 200, nivel: "suave", mensagem: "relação acima de 1:200 é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["potencia_cv", "relacao_reducao", "fabricante", "estado"], complementares: ["ano", "torque_nm", "montagem"] }
+    },
+    "redutor": {
+      campos_obrigatorios: ["relacao_reducao", "fabricante"],
+      campos_opcionais: ["modelo", "torque_nominal_nm", "potencia_admissivel_cv", "montagem", "ano"],
+      campos_normalizados: {"torque_nominal_nm": "Nm", "potencia_admissivel_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "relacao_reducao", "torque_nominal_nm"],
+      faixas_esperadas: {"relacao_reducao": [1, 300]},
+      validacoes: [
+        { campo: "relacao_reducao", tipo: "min", valor: 0, nivel: "rigida", mensagem: "relação de redução precisa ser maior que zero" },
+        { campo: "relacao_reducao", tipo: "max", valor: 300, nivel: "suave", mensagem: "relação acima de 1:300 é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["relacao_reducao", "fabricante", "estado"], complementares: ["torque_nominal_nm", "potencia_admissivel_cv", "ano"] }
+    },
+    "bomba": {
+      campos_obrigatorios: ["tipo", "vazao_m3h", "fabricante"],
+      campos_opcionais: ["modelo", "pressao_mca", "potencia_motor_cv", "material", "ano"],
+      campos_normalizados: {"vazao_m3h": "m³/h", "pressao_mca": "mca", "potencia_motor_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "tipo", "vazao_m3h", "pressao_mca", "potencia_motor_cv"],
+      faixas_esperadas: {"vazao_m3h": [0.1, 10000], "pressao_mca": [1, 500]},
+      validacoes: [
+        { campo: "vazao_m3h", tipo: "min", valor: 0, nivel: "rigida", mensagem: "vazão precisa ser maior que zero" },
+        { campo: "vazao_m3h", tipo: "max", valor: 10000, nivel: "suave", mensagem: "vazão acima de 10.000 m³/h é incomum, confira" },
+        { campo: "pressao_mca", tipo: "max", valor: 500, nivel: "suave", mensagem: "pressão acima de 500 mca é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["tipo", "vazao_m3h", "fabricante", "estado"], complementares: ["pressao_mca", "potencia_motor_cv", "material", "ano"] }
+    },
+    "trocador_calor": {
+      campos_obrigatorios: ["num_placas_ou_area", "fabricante", "material"],
+      campos_opcionais: ["pressao_projeto_bar", "temperatura_projeto_c", "modelo", "ano"],
+      campos_normalizados: {"num_placas_ou_area": "placas ou m²", "pressao_projeto_bar": "bar", "temperatura_projeto_c": "°C"},
+      campos_ocr_prioritarios: ["fabricante", "num_placas_ou_area", "material", "pressao_projeto_bar"],
+      faixas_esperadas: {"num_placas_ou_area": [5, 500]},
+      validacoes: [
+        { campo: "num_placas_ou_area", tipo: "min", valor: 0, nivel: "rigida", mensagem: "número de placas/área precisa ser maior que zero" },
+        { campo: "num_placas_ou_area", tipo: "max", valor: 500, nivel: "suave", mensagem: "acima de 500 placas é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["num_placas_ou_area", "material", "fabricante", "estado"], complementares: ["pressao_projeto_bar", "temperatura_projeto_c", "ano"] }
+    },
+    "tanque": {
+      campos_obrigatorios: ["volume_l", "material"],
+      campos_opcionais: ["fabricante", "modelo", "dimensoes", "pressao_projeto_bar", "isolamento", "ano"],
+      campos_normalizados: {"volume_l": "L"},
+      campos_ocr_prioritarios: ["volume_l", "material", "fabricante"],
+      faixas_esperadas: {"volume_l": [10, 5000000]},
+      validacoes: [
+        { campo: "volume_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "volume precisa ser maior que zero" },
+        { campo: "volume_l", tipo: "max", valor: 5000000, nivel: "suave", mensagem: "volume acima de 5 milhões de litros é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["volume_l", "material", "estado"], complementares: ["fabricante", "pressao_projeto_bar", "isolamento", "ano"] }
+    },
+    "tanque_misturador": {
+      campos_obrigatorios: ["volume_l", "material", "tipo_agitador"],
+      campos_opcionais: ["potencia_agitador_cv", "rpm_agitador", "fabricante", "modelo", "ano"],
+      campos_normalizados: {"volume_l": "L", "potencia_agitador_cv": "CV"},
+      campos_ocr_prioritarios: ["volume_l", "material", "tipo_agitador", "potencia_agitador_cv"],
+      faixas_esperadas: {"volume_l": [10, 500000], "potencia_agitador_cv": [0.25, 200]},
+      validacoes: [
+        { campo: "volume_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "volume precisa ser maior que zero" },
+        { campo: "volume_l", tipo: "max", valor: 500000, nivel: "suave", mensagem: "volume acima de 500 mil litros é incomum pra tanque com agitador, confira" },
+      ],
+      valuation: { obrigatorios: ["volume_l", "material", "tipo_agitador", "estado"], complementares: ["potencia_agitador_cv", "fabricante", "ano"] }
+    },
+    "reator": {
+      campos_obrigatorios: ["volume_l", "material", "pressao_projeto_bar"],
+      campos_opcionais: ["temperatura_projeto_c", "tipo_agitacao", "fabricante", "ano"],
+      campos_normalizados: {"volume_l": "L", "pressao_projeto_bar": "bar", "temperatura_projeto_c": "°C"},
+      campos_ocr_prioritarios: ["volume_l", "pressao_projeto_bar", "material", "fabricante"],
+      faixas_esperadas: {"volume_l": [10, 200000], "pressao_projeto_bar": [0, 100]},
+      validacoes: [
+        { campo: "volume_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "volume precisa ser maior que zero" },
+        { campo: "pressao_projeto_bar", tipo: "max", valor: 100, nivel: "suave", mensagem: "pressão de projeto acima de 100 bar é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["volume_l", "material", "pressao_projeto_bar", "estado"], complementares: ["temperatura_projeto_c", "tipo_agitacao", "fabricante", "ano"] }
+    },
+    "vaso_pressao": {
+      campos_obrigatorios: ["volume_l", "pressao_projeto_bar", "material"],
+      campos_opcionais: ["tuv_certificacao", "fabricante", "ano", "dimensoes"],
+      campos_normalizados: {"volume_l": "L", "pressao_projeto_bar": "bar"},
+      campos_ocr_prioritarios: ["volume_l", "pressao_projeto_bar", "material", "fabricante"],
+      faixas_esperadas: {"volume_l": [5, 200000], "pressao_projeto_bar": [0.5, 300]},
+      validacoes: [
+        { campo: "volume_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "volume precisa ser maior que zero" },
+        { campo: "pressao_projeto_bar", tipo: "min", valor: 0, nivel: "rigida", mensagem: "pressão de projeto precisa ser maior que zero" },
+        { campo: "pressao_projeto_bar", tipo: "max", valor: 300, nivel: "suave", mensagem: "pressão acima de 300 bar é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["volume_l", "pressao_projeto_bar", "material", "estado"], complementares: ["fabricante", "ano", "tuv_certificacao"] }
+    },
+    "silo": {
+      campos_obrigatorios: ["capacidade_ton", "material"],
+      campos_opcionais: ["dimensoes", "fabricante", "tipo_descarga", "ano"],
+      campos_normalizados: {"capacidade_ton": "ton"},
+      campos_ocr_prioritarios: ["capacidade_ton", "material", "fabricante"],
+      faixas_esperadas: {"capacidade_ton": [1, 50000]},
+      validacoes: [
+        { campo: "capacidade_ton", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+        { campo: "capacidade_ton", tipo: "max", valor: 50000, nivel: "suave", mensagem: "capacidade acima de 50 mil toneladas é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["capacidade_ton", "material", "estado"], complementares: ["fabricante", "tipo_descarga", "ano"] }
+    },
+  };
+
+  // ===== Validador gen\xE9rico de atributos por fun\xE7\xE3o, usando SCHEMA_FUNCAO =====
+  // N\xEDvel "rigida": bloqueia (valor imposs\xEDvel, ex: pot\xEAncia negativa)
+  // N\xEDvel "suave": aceita mas marca como suspeito pra revis\xE3o humana
+  function validarAtributos(categoriaId, atributos) {
+    const schema = SCHEMA_FUNCAO[categoriaId];
+    const resultado = { erros: [], avisos: [] };
+    if (!schema || !atributos) return resultado;
+    const anoAtual = new Date().getFullYear();
+    for (const regra of schema.validacoes) {
+      const valor = atributos[regra.campo];
+      if (valor === void 0 || valor === null || valor === "") continue;
+      const num = typeof valor === "number" ? valor : parseFloat(String(valor).replace(",", "."));
+      if (Number.isNaN(num)) continue;
+      let violou = false;
+      if (regra.tipo === "min" && num < regra.valor) violou = true;
+      if (regra.tipo === "max" && num > regra.valor) violou = true;
+      if (regra.tipo === "faixa" && (num < regra.valor[0] || num > regra.valor[1])) violou = true;
+      if (regra.tipo === "maxAnoAtual" && num > anoAtual + regra.valor) violou = true;
+      if (violou) {
+        const alvo = regra.nivel === "rigida" ? resultado.erros : resultado.avisos;
+        alvo.push({ campo: regra.campo, mensagem: regra.mensagem, valor: num });
+      }
+    }
+    return resultado;
+  }
+  function schemaCamposObrigatoriosFaltando(categoriaId, atributos) {
+    const schema = SCHEMA_FUNCAO[categoriaId];
+    if (!schema) return [];
+    return schema.campos_obrigatorios.filter((c) => {
+      const v = atributos && atributos[c];
+      return v === void 0 || v === null || v === "";
+    });
+  }
+
   var GRUPO_LABELS = {
     imoveis: "Im\xF3veis",
     envase_embalagem: "Envase e Embalagem",
