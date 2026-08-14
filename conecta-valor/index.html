@@ -243,6 +243,249 @@
     });
   }
   var SCHEMA_FUNCAO = {
+    "empilhadeira": {
+      campos_obrigatorios: ["capacidade_carga_kg", "tipo_energia", "fabricante"],
+      campos_opcionais: ["altura_elevacao_m", "modelo", "ano", "horas_uso"],
+      campos_normalizados: {"capacidade_carga_kg": "kg", "altura_elevacao_m": "m", "horas_uso": "h"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_carga_kg", "tipo_energia"],
+      faixas_esperadas: {"capacidade_carga_kg": [500, 15000]},
+      validacoes: [
+        { campo: "capacidade_carga_kg", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+        { campo: "capacidade_carga_kg", tipo: "max", valor: 15000, nivel: "suave", mensagem: "capacidade acima de 15 toneladas é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["capacidade_carga_kg", "tipo_energia", "fabricante", "estado"], complementares: ["altura_elevacao_m", "modelo", "ano", "horas_uso"] }
+    },
+    "ponte_rolante": {
+      campos_obrigatorios: ["capacidade_carga_ton", "vao_m", "fabricante"],
+      campos_opcionais: ["tipo", "altura_elevacao_m", "modelo", "ano"],
+      campos_normalizados: {"capacidade_carga_ton": "ton", "vao_m": "m"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_carga_ton", "vao_m", "tipo"],
+      faixas_esperadas: {"capacidade_carga_ton": [0.5, 100], "vao_m": [3, 40]},
+      validacoes: [
+        { campo: "capacidade_carga_ton", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_carga_ton", "vao_m", "fabricante", "estado"], complementares: ["tipo", "altura_elevacao_m", "modelo", "ano"] }
+    },
+    "talha": {
+      campos_obrigatorios: ["capacidade_carga_ton", "tipo_acionamento", "fabricante"],
+      campos_opcionais: ["altura_elevacao_m", "modelo", "ano"],
+      campos_normalizados: {"capacidade_carga_ton": "ton"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_carga_ton", "tipo_acionamento"],
+      faixas_esperadas: {"capacidade_carga_ton": [0.25, 50]},
+      validacoes: [
+        { campo: "capacidade_carga_ton", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_carga_ton", "tipo_acionamento", "fabricante", "estado"], complementares: ["altura_elevacao_m", "modelo", "ano"] }
+    },
+    "esteira_transportadora": {
+      campos_obrigatorios: ["comprimento_m", "largura_mm", "fabricante"],
+      campos_opcionais: ["capacidade_kgh", "tipo_correia", "ano"],
+      campos_normalizados: {"comprimento_m": "m", "largura_mm": "mm", "capacidade_kgh": "kg/h"},
+      campos_ocr_prioritarios: ["fabricante", "comprimento_m", "largura_mm"],
+      faixas_esperadas: {"comprimento_m": [0.5, 200], "largura_mm": [100, 3000]},
+      validacoes: [
+        { campo: "comprimento_m", tipo: "min", valor: 0, nivel: "rigida", mensagem: "comprimento precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["comprimento_m", "largura_mm", "fabricante", "estado"], complementares: ["capacidade_kgh", "tipo_correia", "ano"] }
+    },
+    "elevador_graos": {
+      campos_obrigatorios: ["capacidade_ton_h", "altura_m", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"capacidade_ton_h": "ton/h", "altura_m": "m"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_ton_h", "altura_m"],
+      faixas_esperadas: {"capacidade_ton_h": [1, 500], "altura_m": [3, 60]},
+      validacoes: [
+        { campo: "capacidade_ton_h", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_ton_h", "altura_m", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "torno": {
+      campos_obrigatorios: ["distancia_pontas_mm", "diametro_admissivel_mm", "fabricante"],
+      campos_opcionais: ["tipo", "potencia_cv", "modelo", "ano"],
+      campos_normalizados: {"distancia_pontas_mm": "mm", "diametro_admissivel_mm": "mm", "potencia_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "distancia_pontas_mm", "diametro_admissivel_mm", "tipo"],
+      faixas_esperadas: {"distancia_pontas_mm": [300, 6000]},
+      validacoes: [
+        { campo: "distancia_pontas_mm", tipo: "min", valor: 0, nivel: "rigida", mensagem: "distância entre pontas precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["distancia_pontas_mm", "diametro_admissivel_mm", "fabricante", "estado"], complementares: ["tipo", "potencia_cv", "modelo", "ano"] }
+    },
+    "fresadora": {
+      campos_obrigatorios: ["curso_x_mm", "curso_y_mm", "fabricante"],
+      campos_opcionais: ["curso_z_mm", "tipo", "potencia_cv", "modelo", "ano"],
+      campos_normalizados: {"curso_x_mm": "mm", "curso_y_mm": "mm", "curso_z_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "curso_x_mm", "curso_y_mm", "tipo"],
+      faixas_esperadas: {"curso_x_mm": [100, 3000]},
+      validacoes: [
+        { campo: "curso_x_mm", tipo: "min", valor: 0, nivel: "rigida", mensagem: "curso X precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["curso_x_mm", "curso_y_mm", "fabricante", "estado"], complementares: ["curso_z_mm", "tipo", "potencia_cv", "modelo", "ano"] }
+    },
+    "centro_usinagem_cnc": {
+      campos_obrigatorios: ["num_eixos", "curso_x_mm", "fabricante"],
+      campos_opcionais: ["curso_y_mm", "curso_z_mm", "comando_cnc", "modelo", "ano"],
+      campos_normalizados: {"curso_x_mm": "mm", "curso_y_mm": "mm", "curso_z_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "num_eixos", "comando_cnc", "curso_x_mm"],
+      faixas_esperadas: {"num_eixos": [3, 6]},
+      validacoes: [
+        { campo: "num_eixos", tipo: "min", valor: 0, nivel: "rigida", mensagem: "número de eixos precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["num_eixos", "curso_x_mm", "fabricante", "estado"], complementares: ["curso_y_mm", "curso_z_mm", "comando_cnc", "modelo", "ano"] }
+    },
+    "maquina_solda": {
+      campos_obrigatorios: ["tipo_processo", "corrente_max_a", "fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {"corrente_max_a": "A"},
+      campos_ocr_prioritarios: ["fabricante", "tipo_processo", "corrente_max_a"],
+      faixas_esperadas: {"corrente_max_a": [50, 1000]},
+      validacoes: [
+        { campo: "corrente_max_a", tipo: "min", valor: 0, nivel: "rigida", mensagem: "corrente precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tipo_processo", "corrente_max_a", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "retifica": {
+      campos_obrigatorios: ["tipo", "curso_mm", "fabricante"],
+      campos_opcionais: ["diametro_admissivel_mm", "modelo", "ano"],
+      campos_normalizados: {"curso_mm": "mm", "diametro_admissivel_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "tipo", "curso_mm"],
+      faixas_esperadas: {"curso_mm": [100, 3000]},
+      validacoes: [
+        { campo: "curso_mm", tipo: "min", valor: 0, nivel: "rigida", mensagem: "curso precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tipo", "curso_mm", "fabricante", "estado"], complementares: ["diametro_admissivel_mm", "modelo", "ano"] }
+    },
+    "prensa": {
+      campos_obrigatorios: ["capacidade_toneladas", "tipo", "fabricante"],
+      campos_opcionais: ["curso_mm", "modelo", "ano"],
+      campos_normalizados: {"capacidade_toneladas": "ton", "curso_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "capacidade_toneladas", "tipo"],
+      faixas_esperadas: {"capacidade_toneladas": [1, 2000]},
+      validacoes: [
+        { campo: "capacidade_toneladas", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_toneladas", "tipo", "fabricante", "estado"], complementares: ["curso_mm", "modelo", "ano"] }
+    },
+    "guilhotina": {
+      campos_obrigatorios: ["comprimento_corte_mm", "espessura_max_mm", "fabricante"],
+      campos_opcionais: ["tipo_acionamento", "modelo", "ano"],
+      campos_normalizados: {"comprimento_corte_mm": "mm", "espessura_max_mm": "mm"},
+      campos_ocr_prioritarios: ["fabricante", "comprimento_corte_mm", "espessura_max_mm"],
+      faixas_esperadas: {"comprimento_corte_mm": [500, 6000]},
+      validacoes: [
+        { campo: "comprimento_corte_mm", tipo: "min", valor: 0, nivel: "rigida", mensagem: "comprimento de corte precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["comprimento_corte_mm", "espessura_max_mm", "fabricante", "estado"], complementares: ["tipo_acionamento", "modelo", "ano"] }
+    },
+    "dobradeira": {
+      campos_obrigatorios: ["comprimento_dobra_mm", "capacidade_toneladas", "fabricante"],
+      campos_opcionais: ["tipo_acionamento", "modelo", "ano"],
+      campos_normalizados: {"comprimento_dobra_mm": "mm", "capacidade_toneladas": "ton"},
+      campos_ocr_prioritarios: ["fabricante", "comprimento_dobra_mm", "capacidade_toneladas"],
+      faixas_esperadas: {"comprimento_dobra_mm": [500, 6000], "capacidade_toneladas": [10, 1000]},
+      validacoes: [
+        { campo: "comprimento_dobra_mm", tipo: "min", valor: 0, nivel: "rigida", mensagem: "comprimento de dobra precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["comprimento_dobra_mm", "capacidade_toneladas", "fabricante", "estado"], complementares: ["tipo_acionamento", "modelo", "ano"] }
+    },
+    "injetora": {
+      campos_obrigatorios: ["forca_fechamento_ton", "fabricante"],
+      campos_opcionais: ["capacidade_injecao_g", "modelo", "ano"],
+      campos_normalizados: {"forca_fechamento_ton": "ton", "capacidade_injecao_g": "g"},
+      campos_ocr_prioritarios: ["fabricante", "forca_fechamento_ton", "capacidade_injecao_g"],
+      faixas_esperadas: {"forca_fechamento_ton": [10, 2000]},
+      validacoes: [
+        { campo: "forca_fechamento_ton", tipo: "min", valor: 0, nivel: "rigida", mensagem: "força de fechamento precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["forca_fechamento_ton", "fabricante", "estado"], complementares: ["capacidade_injecao_g", "modelo", "ano"] }
+    },
+    "peca_acessorio_maquina": {
+      campos_obrigatorios: ["descricao_peca", "maquina_compativel"],
+      campos_opcionais: ["fabricante", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["descricao_peca", "maquina_compativel"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["descricao_peca", "estado"], complementares: ["maquina_compativel", "fabricante", "ano"] }
+    },
+    "caminhao": {
+      campos_obrigatorios: ["tipo_carroceria", "capacidade_carga_ton", "fabricante", "ano"],
+      campos_opcionais: ["modelo", "quilometragem_km"],
+      campos_normalizados: {"capacidade_carga_ton": "ton", "quilometragem_km": "km"},
+      campos_ocr_prioritarios: ["fabricante", "modelo", "ano", "capacidade_carga_ton"],
+      faixas_esperadas: {"capacidade_carga_ton": [1, 50], "ano": [1980, 2027]},
+      validacoes: [
+        { campo: "capacidade_carga_ton", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade de carga precisa ser maior que zero" },
+        { campo: "ano", tipo: "min", valor: 1980, nivel: "suave", mensagem: "ano anterior a 1980 é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["tipo_carroceria", "capacidade_carga_ton", "fabricante", "ano", "estado"], complementares: ["modelo", "quilometragem_km"] }
+    },
+    "carreta": {
+      campos_obrigatorios: ["tipo_carroceria", "num_eixos", "fabricante"],
+      campos_opcionais: ["capacidade_carga_ton", "ano"],
+      campos_normalizados: {"capacidade_carga_ton": "ton"},
+      campos_ocr_prioritarios: ["fabricante", "tipo_carroceria", "num_eixos"],
+      faixas_esperadas: {"num_eixos": [2, 4]},
+      validacoes: [
+        { campo: "num_eixos", tipo: "min", valor: 0, nivel: "rigida", mensagem: "número de eixos precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["tipo_carroceria", "num_eixos", "fabricante", "estado"], complementares: ["capacidade_carga_ton", "ano"] }
+    },
+    "veiculo_leve": {
+      campos_obrigatorios: ["tipo", "fabricante", "modelo", "ano"],
+      campos_opcionais: ["quilometragem_km", "combustivel"],
+      campos_normalizados: {"quilometragem_km": "km"},
+      campos_ocr_prioritarios: ["fabricante", "modelo", "ano"],
+      faixas_esperadas: {"ano": [1990, 2027]},
+      validacoes: [
+        { campo: "ano", tipo: "min", valor: 1990, nivel: "suave", mensagem: "ano anterior a 1990 é incomum, confira" },
+      ],
+      valuation: { obrigatorios: ["tipo", "fabricante", "modelo", "ano", "estado"], complementares: ["quilometragem_km", "combustivel"] }
+    },
+    "terreno": {
+      campos_obrigatorios: ["area_total_m2", "zoneamento"],
+      campos_opcionais: ["localizacao", "infraestrutura"],
+      campos_normalizados: {"area_total_m2": "m²"},
+      campos_ocr_prioritarios: ["area_total_m2", "zoneamento", "localizacao"],
+      faixas_esperadas: {"area_total_m2": [100, 1000000]},
+      validacoes: [
+        { campo: "area_total_m2", tipo: "min", valor: 0, nivel: "rigida", mensagem: "área precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["area_total_m2", "zoneamento", "estado"], complementares: ["localizacao", "infraestrutura"] }
+    },
+    "galpao": {
+      campos_obrigatorios: ["area_construida_m2", "pe_direito_m"],
+      campos_opcionais: ["localizacao", "ano_construcao"],
+      campos_normalizados: {"area_construida_m2": "m²", "pe_direito_m": "m"},
+      campos_ocr_prioritarios: ["area_construida_m2", "pe_direito_m"],
+      faixas_esperadas: {"area_construida_m2": [100, 100000]},
+      validacoes: [
+        { campo: "area_construida_m2", tipo: "min", valor: 0, nivel: "rigida", mensagem: "área construída precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["area_construida_m2", "pe_direito_m", "estado"], complementares: ["localizacao", "ano_construcao"] }
+    },
+    "predio_administrativo": {
+      campos_obrigatorios: ["area_construida_m2", "num_pavimentos"],
+      campos_opcionais: ["localizacao", "ano_construcao"],
+      campos_normalizados: {"area_construida_m2": "m²"},
+      campos_ocr_prioritarios: ["area_construida_m2", "num_pavimentos"],
+      faixas_esperadas: {"area_construida_m2": [50, 50000]},
+      validacoes: [
+        { campo: "area_construida_m2", tipo: "min", valor: 0, nivel: "rigida", mensagem: "área construída precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["area_construida_m2", "num_pavimentos", "estado"], complementares: ["localizacao", "ano_construcao"] }
+    },
+    "planta_industrial": {
+      campos_obrigatorios: ["area_terreno_m2", "area_construida_m2"],
+      campos_opcionais: ["equipamentos_inclusos", "localizacao", "ano_construcao"],
+      campos_normalizados: {"area_terreno_m2": "m²", "area_construida_m2": "m²"},
+      campos_ocr_prioritarios: ["area_terreno_m2", "area_construida_m2"],
+      faixas_esperadas: {"area_construida_m2": [500, 500000]},
+      validacoes: [
+        { campo: "area_construida_m2", tipo: "min", valor: 0, nivel: "rigida", mensagem: "área construída precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["area_terreno_m2", "area_construida_m2", "estado"], complementares: ["equipamentos_inclusos", "localizacao", "ano_construcao"] }
+    },
     "compressor": {
       campos_obrigatorios: ["tipo", "pressao_bar", "vazao_m3min", "fabricante"],
       campos_opcionais: ["modelo", "potencia_cv", "ano"],
