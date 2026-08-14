@@ -163,7 +163,7 @@
     { id: "galpao", nome: "Galpão", grupo: "imoveis", synonyms: ["galpão industrial", "galpão logístico"], re: /\bgalp[ãa]o\b/i, comum: true, ativo: true },
     { id: "terreno", nome: "Terreno", grupo: "imoveis", synonyms: ["terreno industrial", "área industrial"], re: /\bterreno\b/i, comum: true, ativo: true },
     { id: "peca_acessorio_maquina", nome: "Peça/Acessório para Máquina", grupo: "maquinas_ferramenta", synonyms: ["peça de reposição", "acessório de máquina"], re: /\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i, requireRe: /torno|fresa|retificadora?/i, comum: false, ativo: true },
-    { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", synonyms: ["retificadora cilíndrica", "retificadora plana"], re: /retific(adora|a)\b|barramento/i, comum: true, ativo: true },
+    { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", synonyms: ["retificadora cilíndrica", "retificadora plana"], re: /ret[íi]fic(adora|a)\b|barramento/i, comum: true, ativo: true },
     { id: "elevador_graos", nome: "Elevador de Grãos", grupo: "movimentacao", synonyms: ["elevador de canecas", "elevador de grãos"], re: /elevador de (gr[ãa]os|canecas)/i, comum: false, ativo: true },
     { id: "religadora", nome: "Religadora", grupo: "eletrica_automacao", synonyms: ["religador automático"], re: /religadora/i, comum: false, ativo: true },
     { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /gerador|eletrog[êe]neo/i, comum: true, ativo: true },
@@ -181,9 +181,9 @@
     { id: "tampadora", nome: "Tampadora", grupo: "envase_embalagem", synonyms: ["capping machine", "máquina de tampar"], re: /capping machine|tampador/i, comum: false, ativo: true },
     { id: "lavadora_industrial", nome: "Lavadora Industrial", grupo: "processo_alimenticio", synonyms: ["lavadora de garrafas", "washing machine"], re: /washing machine|lavadora(?! de piso)/i, comum: false, ativo: true },
     { id: "linha_envase", nome: "Linha de Envase", grupo: "envase_embalagem", synonyms: ["linha de engarrafamento", "linha completa de envase", "bottling line"], re: /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie/i, comum: true, ativo: true },
-    { id: "misturador", nome: "Misturador", grupo: "processo_alimenticio", synonyms: ["misturador industrial", "mixer"], re: /mixer(?! ?grinder)/i, comum: true, ativo: true },
-    { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /cooling machine|spray.*cool/i, comum: false, ativo: true },
-    { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /packing machine|pouch.*packing/i, comum: false, ativo: true },
+    { id: "misturador", nome: "Misturador", grupo: "processo_alimenticio", synonyms: ["misturador industrial", "mixer"], re: /misturador|mixer(?! ?grinder)/i, comum: true, ativo: true },
+    { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
+    { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing/i, comum: false, ativo: true },
     { id: "sucata", nome: "Sucata", grupo: "outros", synonyms: ["sucata metálica", "sucata industrial"], re: /sucata/i, comum: true, ativo: true },
     { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad/i, comum: true, ativo: true },
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
@@ -201,7 +201,7 @@
     { id: "compressor", nome: "Compressor", grupo: "utilidades", synonyms: ["compressor de ar", "compressor de parafuso", "compressor de pistão"], re: /compressor/i, comum: true, ativo: true },
     { id: "bomba", nome: "Bomba", grupo: "mecanica", synonyms: ["bomba centrífuga", "bomba dosadora", "bomba de vácuo"], re: /bomba/i, comum: true, ativo: true },
     { id: "chiller", nome: "Chiller", grupo: "utilidades", synonyms: ["chiller industrial", "unidade frigorífica"], re: /chiller|frigor[íi]fica/i, comum: false, ativo: true },
-    { id: "injetora", nome: "Injetora", grupo: "maquinas_ferramenta", synonyms: ["injetora de plástico", "máquina de moldagem por injeção"], re: /moldagem por inje[çc][ãa]o/i, comum: false, ativo: true },
+    { id: "injetora", nome: "Injetora", grupo: "maquinas_ferramenta", synonyms: ["injetora de plástico", "máquina de moldagem por injeção"], re: /injetora|moldagem por inje[çc][ãa]o/i, comum: false, ativo: true },
     { id: "checkweigher", nome: "Checkweigher", grupo: "instrumentos_utilidades", synonyms: ["balança checadora", "balança dinâmica de linha"], re: /checkweigher|balan[çc]a checadora|balan[çc]a din[âa]mica/i, comum: false, ativo: true },
     { id: "balanca", nome: "Balança", grupo: "instrumentos_utilidades", synonyms: ["balança industrial", "balança de plataforma", "balança rodoviária"], re: /balan[çc]a/i, comum: true, ativo: true },
     { id: "lavadora_piso", nome: "Lavadora de Piso", grupo: "instrumentos_utilidades", synonyms: ["lavadora varredora"], re: /lavadora de piso/i, comum: false, ativo: true },
@@ -1310,6 +1310,14 @@
     if (campo === "rpm" || campo === "rpm_agitador") return extrairRPM(texto);
     if (campo === "ano" || campo === "ano_construcao") return extrairAno(texto);
     if (campo === "carcaca") return extrairCarcaca(texto);
+    if (campo === "num_cavidades") {
+      var mCav = texto.match(/(\d+)\s*cavidades?/i);
+      return mCav ? { valor: parseInt(mCav[1], 10), confianca: 0.9 } : null;
+    }
+    if (campo === "capacidade_paletes_hora") {
+      var mPal = texto.match(/(\d+(?:[.,]\d+)?)\s*paletes?\s*\/?\s*h(?:ora)?\b/i);
+      return mPal ? { valor: parseNumeroBR(mPal[1]), confianca: 0.9 } : null;
+    }
     if (/^tensao|_v$/.test(campo) && campo !== "válvula") return extrairTensao(texto);
     for (var sufixo in UNIDADE_POR_SUFIXO) {
       if (campo.endsWith(sufixo)) {
