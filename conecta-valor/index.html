@@ -161,6 +161,7 @@
     { id: "veiculo_leve", nome: "Veículo Leve", grupo: "veiculos", synonyms: ["veículo utilitário", "carro de passeio"], re: /ve[íi]culo leve|utilit[áa]rio\b/i, comum: false, ativo: true },
     { id: "predio_administrativo", nome: "Prédio Administrativo", grupo: "imoveis", synonyms: ["escritório comercial", "prédio comercial"], re: /pr[ée]dio administrativo|escrit[óo]rio comercial/i, comum: false, ativo: true },
     { id: "galpao", nome: "Galpão", grupo: "imoveis", synonyms: ["galpão industrial", "galpão logístico"], re: /\bgalp[ãa]o\b/i, comum: true, ativo: true },
+    { id: "planta_industrial", nome: "Planta Industrial", grupo: "imoveis", synonyms: ["fábrica completa", "planta industrial completa"], re: /f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i, comum: false, ativo: true },
     { id: "terreno", nome: "Terreno", grupo: "imoveis", synonyms: ["terreno industrial", "área industrial"], re: /\bterreno\b/i, comum: true, ativo: true },
     { id: "peca_acessorio_maquina", nome: "Peça/Acessório para Máquina", grupo: "maquinas_ferramenta", synonyms: ["peça de reposição", "acessório de máquina"], re: /\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i, requireRe: /torno|fresa|retificadora?/i, comum: false, ativo: true },
     { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", synonyms: ["retificadora cilíndrica", "retificadora plana"], re: /ret[íi]fic(adora|a)\b|barramento/i, comum: true, ativo: true },
@@ -168,7 +169,6 @@
     { id: "religadora", nome: "Religadora", grupo: "eletrica_automacao", synonyms: ["religador automático"], re: /religadora/i, comum: false, ativo: true },
     { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /gerador|eletrog[êe]neo/i, comum: true, ativo: true },
     { id: "luminaria_industrial", nome: "Luminária Industrial", grupo: "instrumentos_utilidades", synonyms: ["luminária LED industrial", "refletor industrial"], re: /lumin[áa]ria|refletor|plafon(ier)?/i, comum: false, ativo: true },
-    { id: "planta_industrial", nome: "Planta Industrial", grupo: "imoveis", synonyms: ["fábrica completa", "planta industrial completa"], re: /f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i, comum: false, ativo: true },
     { id: "seladora", nome: "Seladora", grupo: "envase_embalagem", synonyms: ["seladora de embalagens", "heat sealer"], re: /selador/i, comum: false, ativo: true },
     { id: "espectrofotometro", nome: "Espectrofotômetro", grupo: "instrumentos_utilidades", synonyms: ["espectrômetro", "spectrophotometer"], re: /espectr[oô]fot[ôo]metro|espectr[ôo]metro/i, comum: false, ativo: true },
     { id: "jateamento", nome: "Jateamento", grupo: "instrumentos_utilidades", synonyms: ["jato de granalha", "cabine de jateamento", "shot blasting"], re: /jato de areia|jato de granalha|granalha|jateamento/i, comum: true, ativo: true },
@@ -1317,6 +1317,24 @@
     if (campo === "capacidade_paletes_hora") {
       var mPal = texto.match(/(\d+(?:[.,]\d+)?)\s*paletes?\s*\/?\s*h(?:ora)?\b/i);
       return mPal ? { valor: parseNumeroBR(mPal[1]), confianca: 0.9 } : null;
+    }
+    if (campo === "area_terreno_m2") {
+      var mAt = texto.match(/(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)\s*de\s*terreno/i) || texto.match(/terreno\s*(?:de|:)?\s*(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)/i);
+      if (mAt) return { valor: parseNumeroBR(mAt[1]), confianca: 0.88 };
+      return extrairNumeroComUnidade(texto, "m\u00B2");
+    }
+    if (campo === "area_construida_m2") {
+      var mAc = texto.match(/(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)\s*(?:de\s*)?constru[íi]d[oa]s?/i) || texto.match(/[áa]rea\s*constru[íi]da\s*(?:de|:)?\s*(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)/i);
+      if (mAc) return { valor: parseNumeroBR(mAc[1]), confianca: 0.88 };
+      return extrairNumeroComUnidade(texto, "m\u00B2");
+    }
+    if (campo === "pe_direito_m") {
+      var mPd = texto.match(/p[ée][\s-]?direito\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*m(?:etros)?\b/i) || texto.match(/(\d+(?:[.,]\d+)?)\s*m(?:etros)?\s*de\s*p[ée][\s-]?direito/i);
+      return mPd ? { valor: parseNumeroBR(mPd[1]), confianca: 0.88 } : null;
+    }
+    if (campo === "num_pavimentos") {
+      var mPav = texto.match(/(\d+)\s*pavimentos?/i) || texto.match(/(\d+)\s*andares?/i);
+      return mPav ? { valor: parseInt(mPav[1], 10), confianca: 0.88 } : null;
     }
     if (/^tensao|_v$/.test(campo) && campo !== "válvula") return extrairTensao(texto);
     for (var sufixo in UNIDADE_POR_SUFIXO) {
