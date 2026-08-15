@@ -1156,6 +1156,18 @@
     }
   });
 
+  // regras_condicionais: só formalizadas onde JÁ existe a lógica no código
+  // (isRotativeEquipment, usada hoje no formul\xE1rio manual pra mostrar/esconder
+  // RPM e polaridade). N\xE3o inventamos regra nova pras outras 74 categorias.
+  var CATEGORIAS_ROTATIVAS = ["motor_eletrico", "motorredutor", "redutor", "bomba", "compressor", "gerador"];
+  CATEGORIAS_ROTATIVAS.forEach(function (id) {
+    if (SCHEMA_FUNCAO[id]) {
+      SCHEMA_FUNCAO[id].regras_condicionais = [
+        { se: "equipamento rotativo (j\xE1 \xE9 o caso desta categoria)", entao: "RPM e polaridade tornam-se campos relevantes para revis\xE3o" }
+      ];
+    }
+  });
+
   // ===== Validador gen\xE9rico de atributos por fun\xE7\xE3o, usando SCHEMA_FUNCAO =====
   // N\xEDvel "rigida": bloqueia (valor imposs\xEDvel, ex: pot\xEAncia negativa)
   // N\xEDvel "suave": aceita mas marca como suspeito pra revis\xE3o humana
@@ -1263,6 +1275,7 @@
     if (!m) return null;
     var vals = [parseNumeroBR(m[1]), parseNumeroBR(m[2])];
     if (m[3]) vals.push(parseNumeroBR(m[3]));
+    vals.textoOriginal = m[0].trim();
     return vals;
   }
 
@@ -1304,7 +1317,7 @@
     }
     if (melhor) {
       var num = parseNumeroBR(melhor[1]);
-      if (!Number.isNaN(num)) return { valor: num, confianca: 0.92, fimMatch: fromIndex + melhor.index + melhor[0].length };
+      if (!Number.isNaN(num)) return { valor: num, confianca: 0.92, fimMatch: fromIndex + melhor.index + melhor[0].length, original: melhor[0].trim() };
     }
     // não achou na unidade nativa — tenta converter de uma unidade equivalente
     var conversoes = UNIDADE_CONVERSOES[unidade];
@@ -1312,7 +1325,7 @@
       for (var c = 0; c < conversoes.length; c++) {
         var conv = extrairNumeroComUnidade(texto, conversoes[c].unidade, fromIndex);
         if (conv) {
-          return { valor: Math.round(conv.valor * conversoes[c].fator * 100) / 100, confianca: 0.85, fimMatch: conv.fimMatch, convertidoDe: conversoes[c].unidade };
+          return { valor: Math.round(conv.valor * conversoes[c].fator * 100) / 100, confianca: 0.85, fimMatch: conv.fimMatch, convertidoDe: conversoes[c].unidade, original: conv.original };
         }
       }
     }
@@ -1324,13 +1337,13 @@
     var m = texto.match(/(\d{2,6}(?:\s*\/\s*\d{2,6}){0,3})\s*V\b/i);
     if (m) {
       var primeiro = parseInt(m[1].split("/")[0].trim(), 10);
-      if (!Number.isNaN(primeiro)) return { valor: primeiro, confianca: 0.9 };
+      if (!Number.isNaN(primeiro)) return { valor: primeiro, confianca: 0.9, original: m[0].trim() };
     }
     // não achou em V — tenta converter de kV (ex: "13,8 kV" -> 13800)
     var mKv = texto.match(/(\d+(?:[.,]\d+)?)\s*kV\b/i);
     if (mKv) {
       var num = parseNumeroBR(mKv[1]);
-      if (!Number.isNaN(num)) return { valor: Math.round(num * 1000), confianca: 0.85 };
+      if (!Number.isNaN(num)) return { valor: Math.round(num * 1000), confianca: 0.85, original: mKv[0].trim() };
     }
     return null;
   }
@@ -1342,13 +1355,13 @@
     if (!m) return null;
     var partes = m[1].split("/").map(function (s) { return parseInt(s.trim(), 10); });
     if (partes[indice] === void 0 || Number.isNaN(partes[indice])) return null;
-    return { valor: partes[indice], confianca: 0.9 };
+    return { valor: partes[indice], confianca: 0.9, original: m[0].trim() };
   }
 
   function extrairRPM(texto) {
     var m = texto.match(/(\d{3,4})\s*(?:RPM|rpm|r\/min)\b/i);
     if (!m) return null;
-    return { valor: parseInt(m[1], 10), confianca: 0.9 };
+    return { valor: parseInt(m[1], 10), confianca: 0.9, original: m[0].trim() };
   }
 
   function extrairAno(texto) {
@@ -1357,7 +1370,7 @@
     if (!candidatos || !candidatos.length) return null;
     var ano = parseInt(candidatos[candidatos.length - 1], 10);
     if (ano < 1950 || ano > anoAtual + 1) return null;
-    return { valor: ano, confianca: 0.75 };
+    return { valor: ano, confianca: 0.75, original: String(ano) };
   }
 
   function extrairFabricante(texto) {
@@ -1365,7 +1378,7 @@
     for (var i = 0; i < MARCAS_CONHECIDAS.length; i++) {
       var marca = MARCAS_CONHECIDAS[i];
       if (new RegExp("\\b" + marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(tUpper)) {
-        return { valor: normalizarMarca(marca), confianca: 0.95 };
+        return { valor: normalizarMarca(marca), confianca: 0.95, original: marca };
       }
     }
     return null;
@@ -1374,7 +1387,7 @@
   function extrairCarcaca(texto) {
     var m = texto.match(/\bcarca[çc]a\s*[:\-]?\s*(\d{2,3}[A-Z]{1,2})\b/i) || texto.match(/\b(\d{2,3}[A-Z])\b/);
     if (!m) return null;
-    return { valor: m[1].toUpperCase(), confianca: 0.7 };
+    return { valor: m[1].toUpperCase(), confianca: 0.7, original: m[0].trim() };
   }
 
   // extrai UM campo, decidindo a estratégia pelo nome
@@ -1386,28 +1399,28 @@
     if (campo === "carcaca") return extrairCarcaca(texto);
     if (campo === "num_cavidades") {
       var mCav = texto.match(/(\d+)\s*cavidades?/i);
-      return mCav ? { valor: parseInt(mCav[1], 10), confianca: 0.9 } : null;
+      return mCav ? { valor: parseInt(mCav[1], 10), confianca: 0.9, original: mCav[0].trim() } : null;
     }
     if (campo === "num_circuitos") {
       var mCirc = texto.match(/(\d+)\s*circuitos?/i);
-      return mCirc ? { valor: parseInt(mCirc[1], 10), confianca: 0.85 } : null;
+      return mCirc ? { valor: parseInt(mCirc[1], 10), confianca: 0.85, original: mCirc[0].trim() } : null;
     }
     if (campo === "num_placas_ou_area") {
       var mPlacas = texto.match(/(\d+(?:[.,]\d+)?)\s*placas?/i);
-      if (mPlacas) return { valor: parseNumeroBR(mPlacas[1]), confianca: 0.88 };
+      if (mPlacas) return { valor: parseNumeroBR(mPlacas[1]), confianca: 0.88, original: mPlacas[0].trim() };
       return extrairNumeroComUnidade(texto, "m\u00B2");
     }
     if (campo === "num_eixos") {
       var mEixos = texto.match(/(\d+)\s*eixos?/i);
-      return mEixos ? { valor: parseInt(mEixos[1], 10), confianca: 0.88 } : null;
+      return mEixos ? { valor: parseInt(mEixos[1], 10), confianca: 0.88, original: mEixos[0].trim() } : null;
     }
     if (campo === "num_pavimentos") {
       var mPav = texto.match(/(\d+)\s*pavimentos?/i) || texto.match(/(\d+)\s*andares?/i);
-      return mPav ? { valor: parseInt(mPav[1], 10), confianca: 0.88 } : null;
+      return mPav ? { valor: parseInt(mPav[1], 10), confianca: 0.88, original: mPav[0].trim() } : null;
     }
     if (campo === "capacidade_paletes_hora") {
       var mPal = texto.match(/(\d+(?:[.,]\d+)?)\s*paletes?\s*\/?\s*h(?:ora)?\b/i);
-      return mPal ? { valor: parseNumeroBR(mPal[1]), confianca: 0.9 } : null;
+      return mPal ? { valor: parseNumeroBR(mPal[1]), confianca: 0.9, original: mPal[0].trim() } : null;
     }
     if (campo === "capacidade_tr_ou_btu") {
       var rTr = extrairNumeroComUnidade(texto, "TR");
@@ -1416,17 +1429,17 @@
     }
     if (campo === "area_terreno_m2") {
       var mAt = texto.match(/(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)\s*de\s*terreno/i) || texto.match(/terreno\s*(?:de|:)?\s*(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)/i);
-      if (mAt) return { valor: parseNumeroBR(mAt[1]), confianca: 0.88 };
+      if (mAt) return { valor: parseNumeroBR(mAt[1]), confianca: 0.88, original: mAt[0].trim() };
       return extrairNumeroComUnidade(texto, "m\u00B2");
     }
     if (campo === "area_construida_m2") {
       var mAc = texto.match(/(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)\s*(?:de\s*)?constru[íi]d[oa]s?/i) || texto.match(/[áa]rea\s*constru[íi]da\s*(?:de|:)?\s*(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)/i);
-      if (mAc) return { valor: parseNumeroBR(mAc[1]), confianca: 0.88 };
+      if (mAc) return { valor: parseNumeroBR(mAc[1]), confianca: 0.88, original: mAc[0].trim() };
       return extrairNumeroComUnidade(texto, "m\u00B2");
     }
     if (campo === "pe_direito_m") {
       var mPd = texto.match(/p[ée][\s-]?direito\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*m(?:etros)?\b/i) || texto.match(/(\d+(?:[.,]\d+)?)\s*m(?:etros)?\s*de\s*p[ée][\s-]?direito/i);
-      return mPd ? { valor: parseNumeroBR(mPd[1]), confianca: 0.88 } : null;
+      return mPd ? { valor: parseNumeroBR(mPd[1]), confianca: 0.88, original: mPd[0].trim() } : null;
     }
     if (campo === "tensao_primaria_v") return extrairTensaoEm(texto, 0);
     if (campo === "tensao_secundaria_v") return extrairTensaoEm(texto, 1);
@@ -1435,7 +1448,7 @@
       var dims = extrairDimensoesXYZ(texto);
       if (dims) {
         var idx = campo === "curso_x_mm" ? 0 : campo === "curso_y_mm" ? 1 : 2;
-        if (dims[idx] !== void 0) return { valor: dims[idx], confianca: 0.85 };
+        if (dims[idx] !== void 0) return { valor: dims[idx], confianca: 0.85, original: dims.textoOriginal };
         return null; // padrão AxB reconhecido, mas essa dimensão não veio — não adivinha
       }
     }
@@ -1457,26 +1470,28 @@
   // extrai TODOS os campos do schema de uma categoria a partir do texto
   function extrairAtributosPorSchema(texto, categoryId) {
     var schema = SCHEMA_FUNCAO[categoryId];
-    if (!schema) return { atributos: {}, confiancas: {} };
+    if (!schema) return { atributos: {}, confiancas: {}, originais: {} };
     var todosCampos = schema.campos_obrigatorios.concat(schema.campos_opcionais);
     var atributos = {};
     var confiancas = {};
+    var originais = {};
     var cursorPorUnidade = {};
     todosCampos.forEach(function (campo) {
       var r = extrairCampo(campo, texto, cursorPorUnidade);
       if (r) {
         atributos[campo] = r.valor;
         confiancas[campo] = r.confianca;
+        if (r.original !== void 0) originais[campo] = r.original;
       }
     });
-    return { atributos: atributos, confiancas: confiancas };
+    return { atributos: atributos, confiancas: confiancas, originais: originais };
   }
 
   // PIPELINE COMPLETO: texto -> classificação -> extração -> validação -> campos p/ revisão
   function processarTextoParaAtributos(texto) {
     var classe = classificarFuncao(texto);
     if (!classe.category_id) {
-      return { category_id: null, category_name: null, confidence: 0, atributos: {}, confiancas: {}, alertas: [], erros: [], campos_para_revisao: [] };
+      return { category_id: null, category_name: null, confidence: 0, atributos: {}, confiancas: {}, atributos_originais: {}, alertas: [], erros: [], campos_para_revisao: [] };
     }
     var extracao = extrairAtributosPorSchema(texto, classe.category_id);
     var validacao = validarAtributos(classe.category_id, extracao.atributos);
@@ -1493,6 +1508,7 @@
       confidence: classe.confidence,
       atributos: extracao.atributos,
       confiancas: extracao.confiancas,
+      atributos_originais: extracao.originais,
       alertas: validacao.avisos,
       erros: validacao.erros,
       campos_faltando: faltando,
