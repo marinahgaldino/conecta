@@ -3704,13 +3704,13 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     }
   }
   async function callEdgeAvaliar(item, supaUrl, supaKey, accessToken) {
-    if (!supaUrl || !supaKey || !accessToken) return null;
+    if (!supaUrl || !supaKey) return null;
     try {
       const res = await fetch(`${supaUrl}/functions/v1/Avaliar`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${accessToken}`,
+          "Authorization": `Bearer ${accessToken || supaKey}`,
           "apikey": supaKey
         },
         body: JSON.stringify(item)
