@@ -3534,25 +3534,31 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       ...listaFotos.map((p) => ({ type: "image", source: { type: "base64", media_type: p.mediaType, data: p.base64 } })),
       { type: "text", text: promptText }
     ] : promptText;
-    try {
-      const headers = { "Content-Type": "application/json" };
-      if (apiKey) {
-        headers["x-api-key"] = apiKey;
-        headers["anthropic-version"] = "2023-06-01";
-        headers["anthropic-dangerous-direct-browser-access"] = "true";
+    const headers = { "Content-Type": "application/json" };
+    if (apiKey) {
+      headers["x-api-key"] = apiKey;
+      headers["anthropic-version"] = "2023-06-01";
+      headers["anthropic-dangerous-direct-browser-access"] = "true";
+    }
+    const corpo = JSON.stringify({
+      model: "claude-sonnet-5",
+      max_tokens: maxTokens || 4e3,
+      messages: [{ role: "user", content }],
+      tools: [{ type: "web_search_20250305", name: "web_search" }]
+    });
+    let ultimoErro;
+    for (let tentativa = 0; tentativa < 2; tentativa++) {
+      try {
+        response = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", headers, body: corpo });
+        ultimoErro = null;
+        break;
+      } catch (networkErr) {
+        ultimoErro = networkErr;
+        console.error(`Erro de rede ao chamar a API (tentativa ${tentativa + 1}/2):`, networkErr);
+        if (tentativa === 0) await new Promise((r) => setTimeout(r, 2e3));
       }
-      response = await fetch("https://api.anthropic.com/v1/messages", {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          model: "claude-sonnet-5",
-          max_tokens: maxTokens || 4e3,
-          messages: [{ role: "user", content }],
-          tools: [{ type: "web_search_20250305", name: "web_search" }]
-        })
-      });
-    } catch (networkErr) {
-      console.error("Erro de rede ao chamar a API:", networkErr);
+    }
+    if (ultimoErro) {
       throw new Error("N\xE3o consegui conectar ao servi\xE7o de busca. Verifique a conex\xE3o e tente de novo.");
     }
     if (!response.ok) {
@@ -4648,7 +4654,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       setCollectorResults([]);
       setCollectorSavedCount(null);
       const acumulado = [];
-      const CONCORRENCIA = 3;
+      const CONCORRENCIA = 1;
       try {
         for (let i = 0; i < categorias.length; i += CONCORRENCIA) {
           const lote = categorias.slice(i, i + CONCORRENCIA);
@@ -5137,7 +5143,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       setBatchRows(current);
       const itemDurations = [];
       let doneCount = 0;
-      const CONCORRENCIA = 3;
+      const CONCORRENCIA = 1;
       async function processarItem(i) {
         current = current.map((r, idx) => idx === i ? { ...r, status: "avaliando" } : r);
         setBatchRows(current);
