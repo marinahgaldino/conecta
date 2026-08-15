@@ -3914,7 +3914,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     downloadTextFile("modelo-lote.csv", header + "\n" + exemplo + "\n", "text/csv;charset=utf-8");
   }
   function parseBatchCSV(fileText) {
-    const parsed = import_papaparse.default.parse(fileText, { header: true, skipEmptyLines: true });
+    if (!import_papaparse || !import_papaparse.default) {
+      throw new Error("Biblioteca de leitura de CSV n\xE3o carregou. Tente recarregar a p\xE1gina.");
+    }
+    const textoLimpo = (fileText || "").replace(/^\uFEFF/, ""); // remove BOM se existir (comum em CSV salvo pelo Excel)
+    const parsed = import_papaparse.default.parse(textoLimpo, { header: true, skipEmptyLines: true });
     return parsed.data.map((row, i) => {
       const item = { ...EMPTY_FORM };
       BATCH_COLUMNS.forEach((col) => {
@@ -5107,12 +5111,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       } else {
         const reader = new FileReader();
         reader.onload = (ev) => {
-          const rows = parseBatchCSV(ev.target.result).map((r) => ({ ...r, status: "pendente", result: null, error: null }));
-          if (rows.length === 0) {
-            setBatchError("O arquivo foi lido, mas nenhuma linha com dados foi encontrada \u2014 confira o cabe\xE7alho e se tem pelo menos uma linha preenchida.");
-            return;
+          try {
+            const rows = parseBatchCSV(ev.target.result).map((r) => ({ ...r, status: "pendente", result: null, error: null }));
+            if (rows.length === 0) {
+              setBatchError("O arquivo foi lido, mas nenhuma linha com dados foi encontrada \u2014 confira o cabe\xE7alho e se tem pelo menos uma linha preenchida.");
+              return;
+            }
+            setBatchRows(rows);
+          } catch (err) {
+            setBatchError("N\xE3o consegui ler esse CSV. (" + (err && err.message || String(err)) + ")");
           }
-          setBatchRows(rows);
+        };
+        reader.onerror = () => {
+          setBatchError("N\xE3o consegui abrir o arquivo \u2014 tente selecionar de novo.");
         };
         reader.readAsText(file);
       }
