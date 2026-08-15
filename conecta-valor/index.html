@@ -5076,27 +5076,42 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       setBatchError(null);
       const nomeArquivo = file.name.toLowerCase();
       if (nomeArquivo.endsWith(".xlsx") || nomeArquivo.endsWith(".xls")) {
-        if (!window.XLSX) {
-          setBatchError("Biblioteca de Excel ainda n\xE3o carregou \u2014 tente de novo em alguns segundos.");
-          return;
-        }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          try {
-            const wb = window.XLSX.read(ev.target.result, { type: "array" });
-            const primeiraAba = wb.SheetNames[0];
-            const csvTexto = window.XLSX.utils.sheet_to_csv(wb.Sheets[primeiraAba]);
-            const rows = parseBatchCSV(csvTexto).map((r) => ({ ...r, status: "pendente", result: null, error: null }));
-            setBatchRows(rows);
-          } catch (err) {
-            setBatchError("N\xE3o consegui ler esse Excel \u2014 confira se a primeira aba tem as colunas certas. (" + err.message + ")");
+        const tentarLerExcel = (tentativasRestantes) => {
+          if (!window.XLSX) {
+            if (tentativasRestantes > 0) {
+              setTimeout(() => tentarLerExcel(tentativasRestantes - 1), 500);
+              return;
+            }
+            setBatchError("N\xE3o consegui carregar a biblioteca de leitura de Excel (poss\xEDvel bloqueio de rede/firewall). Tente recarregar a p\xE1gina, ou exporte a planilha como CSV e suba o CSV em vez do .xlsx.");
+            return;
           }
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            try {
+              const wb = window.XLSX.read(ev.target.result, { type: "array" });
+              const primeiraAba = wb.SheetNames[0];
+              const csvTexto = window.XLSX.utils.sheet_to_csv(wb.Sheets[primeiraAba]);
+              const rows = parseBatchCSV(csvTexto).map((r) => ({ ...r, status: "pendente", result: null, error: null }));
+              if (rows.length === 0) {
+                setBatchError("A planilha foi lida, mas nenhuma linha com dados foi encontrada \u2014 confira se a primeira aba tem o cabe\xE7alho certo (categoria, marca, modelo...) e pelo menos uma linha preenchida.");
+                return;
+              }
+              setBatchRows(rows);
+            } catch (err) {
+              setBatchError("N\xE3o consegui ler esse Excel \u2014 confira se a primeira aba tem as colunas certas. (" + err.message + ")");
+            }
+          };
+          reader.readAsArrayBuffer(file);
         };
-        reader.readAsArrayBuffer(file);
+        tentarLerExcel(16); // tenta por at\xE9 ~8 segundos (16 x 500ms) antes de desistir
       } else {
         const reader = new FileReader();
         reader.onload = (ev) => {
           const rows = parseBatchCSV(ev.target.result).map((r) => ({ ...r, status: "pendente", result: null, error: null }));
+          if (rows.length === 0) {
+            setBatchError("O arquivo foi lido, mas nenhuma linha com dados foi encontrada \u2014 confira o cabe\xE7alho e se tem pelo menos uma linha preenchida.");
+            return;
+          }
           setBatchRows(rows);
         };
         reader.readAsText(file);
