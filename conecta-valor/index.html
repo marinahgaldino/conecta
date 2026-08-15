@@ -1146,6 +1146,16 @@
     },
   };
 
+  // Gera ranking_importancia pras 80 categorias, de forma mecânica (nada inventado):
+  // ordem = valuation.obrigatorios primeiro, depois valuation.complementares — já é
+  // a prioridade real que cada schema define pra precificação.
+  Object.keys(SCHEMA_FUNCAO).forEach(function (id) {
+    var s = SCHEMA_FUNCAO[id];
+    if (s.valuation) {
+      s.ranking_importancia = (s.valuation.obrigatorios || []).concat(s.valuation.complementares || []);
+    }
+  });
+
   // ===== Validador gen\xE9rico de atributos por fun\xE7\xE3o, usando SCHEMA_FUNCAO =====
   // N\xEDvel "rigida": bloqueia (valor imposs\xEDvel, ex: pot\xEAncia negativa)
   // N\xEDvel "suave": aceita mas marca como suspeito pra revis\xE3o humana
