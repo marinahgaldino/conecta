@@ -3559,7 +3559,8 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       }
     }
     if (ultimoErro) {
-      throw new Error("N\xE3o consegui conectar ao servi\xE7o de busca. Verifique a conex\xE3o e tente de novo.");
+      const detalheReal = (ultimoErro && (ultimoErro.message || String(ultimoErro))) || "erro desconhecido";
+      throw new Error("N\xE3o consegui conectar ao servi\xE7o de busca (detalhe t\xE9cnico: " + detalheReal + "). Verifique a conex\xE3o e tente de novo.");
     }
     if (!response.ok) {
       let bodyText = "";
