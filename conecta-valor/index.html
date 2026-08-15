@@ -1490,8 +1490,9 @@
   // PIPELINE COMPLETO: texto -> classificação -> extração -> validação -> campos p/ revisão
   function processarTextoParaAtributos(texto) {
     var classe = classificarFuncao(texto);
+    var setorIds = inferirSetores(texto);
     if (!classe.category_id) {
-      return { category_id: null, category_name: null, confidence: 0, atributos: {}, confiancas: {}, atributos_originais: {}, alertas: [], erros: [], campos_para_revisao: [] };
+      return { category_id: null, category_name: null, confidence: 0, atributos: {}, confiancas: {}, atributos_originais: {}, setor_ids: setorIds, setor_nomes: nomesDosSetores(setorIds), alertas: [], erros: [], campos_para_revisao: [] };
     }
     var extracao = extrairAtributosPorSchema(texto, classe.category_id);
     var validacao = validarAtributos(classe.category_id, extracao.atributos);
@@ -1509,6 +1510,8 @@
       atributos: extracao.atributos,
       confiancas: extracao.confiancas,
       atributos_originais: extracao.originais,
+      setor_ids: setorIds,
+      setor_nomes: nomesDosSetores(setorIds),
       alertas: validacao.avisos,
       erros: validacao.erros,
       campos_faltando: faltando,
@@ -3864,7 +3867,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     return /* @__PURE__ */ React.createElement("div", { className: "panel-title-row", style }, /* @__PURE__ */ React.createElement("span", { className: "rivet rivet-inline", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("h3", { className: "admin-title" }, children));
   }
   var LIMIAR_CONFIANCA_REVISAO = 0.85;
-  function AttributeReviewPanel({ resultado, valores, onChangeValor }) {
+  function AttributeReviewPanel({ resultado, valores, onChangeValor, setores, onChangeSetores }) {
     if (!resultado) return null;
     if (!resultado.category_id) {
       return /* @__PURE__ */ React.createElement("div", { className: "error-box" }, "N\xE3o consegui identificar a fun\xE7\xE3o (categoria) a partir desse texto. Tente descrever com mais detalhes, ou selecione manualmente.");
@@ -3873,11 +3876,18 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const todosCampos = schema ? schema.campos_obrigatorios.concat(schema.campos_opcionais) : Object.keys(valores || {});
     const alertaPorCampo = {};
     (resultado.alertas || []).forEach((a) => { alertaPorCampo[a.campo] = a.mensagem; });
+    const setoresAtivos = setores !== void 0 ? setores : resultado.setor_ids || [];
     return /* @__PURE__ */ React.createElement("div", { className: "review-panel" }, /* @__PURE__ */ React.createElement("div", { className: "review-header" }, /* @__PURE__ */ React.createElement("span", { className: "review-category" }, resultado.category_name), /* @__PURE__ */ React.createElement(
       "span",
       { className: "confidence-badge " + (resultado.confidence >= LIMIAR_CONFIANCA_REVISAO ? "confidence-ok" : "confidence-low") },
       "confian\xE7a da categoria: ", Math.round(resultado.confidence * 100), "%"
-    )), resultado.erros && resultado.erros.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, resultado.erros.map((e, i) => /* @__PURE__ */ React.createElement("div", { key: i }, "\u26D4 ", e.campo, ": ", e.mensagem))), /* @__PURE__ */ React.createElement("div", { className: "review-fields" }, todosCampos.map((campo) => {
+    )), onChangeSetores && /* @__PURE__ */ React.createElement("div", { className: "review-setores" }, /* @__PURE__ */ React.createElement("span", { className: "review-setores-label" }, "Setor (opcional, pode marcar mais de um \u2014 n\xE3o influencia a fun\xE7\xE3o)"), /* @__PURE__ */ React.createElement("div", { className: "review-setores-chips" }, SETORES.map((s) => {
+      const ativo = setoresAtivos.includes(s.id);
+      return /* @__PURE__ */ React.createElement("button", { key: s.id, type: "button", className: "setor-chip" + (ativo ? " setor-chip-ativo" : ""), onClick: () => {
+        const novos = ativo ? setoresAtivos.filter((x) => x !== s.id) : [...setoresAtivos, s.id];
+        onChangeSetores(novos);
+      } }, s.nome);
+    }))), resultado.erros && resultado.erros.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, resultado.erros.map((e, i) => /* @__PURE__ */ React.createElement("div", { key: i }, "\u26D4 ", e.campo, ": ", e.mensagem))), /* @__PURE__ */ React.createElement("div", { className: "review-fields" }, todosCampos.map((campo) => {
       const confianca = resultado.confiancas ? resultado.confiancas[campo] : void 0;
       const precisaRevisao = (resultado.campos_para_revisao || []).includes(campo);
       const valor = valores ? valores[campo] : resultado.atributos[campo];
@@ -3985,6 +3995,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [testeExtracaoTexto, setTesteExtracaoTexto] = (0, import_react.useState)("");
     const [testeExtracaoResultado, setTesteExtracaoResultado] = (0, import_react.useState)(null);
     const [testeExtracaoValores, setTesteExtracaoValores] = (0, import_react.useState)({});
+    const [testeExtracaoSetores, setTesteExtracaoSetores] = (0, import_react.useState)([]);
     const [config, setConfig] = (0, import_react.useState)(DEFAULT_CONFIG);
     const [configDraft, setConfigDraft] = (0, import_react.useState)(DEFAULT_CONFIG);
     const [configSaved, setConfigSaved] = (0, import_react.useState)(false);
@@ -5535,6 +5546,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .review-required { color: #C0392B; }
         .review-field-flag input { border-color: #D98E04; background: #FFFBF2; }
         .review-alert { color: #8A5A00; }
+        .review-setores { margin-bottom: 1rem; }
+        .review-setores-label { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; text-transform: uppercase; color: #4A5568; margin-bottom: 0.4rem; }
+        .review-setores-chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .setor-chip { font-family: 'IBM Plex Sans', sans-serif; font-size: 0.78rem; padding: 0.3rem 0.7rem; border-radius: 999px; border: 1px solid #C7C2B8; background: #FFFFFF; color: #4A5568; cursor: pointer; }
+        .setor-chip-ativo { background: #2E5FA0; border-color: #2E5FA0; color: #FFFFFF; }
         .tag-card {
           background: #FFFFFF;
           border: 1px solid #C7C2B8;
@@ -6351,7 +6367,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       const r = processarTextoParaAtributos(testeExtracaoTexto);
       setTesteExtracaoResultado(r);
       setTesteExtracaoValores(r.atributos || {});
-    }, disabled: !testeExtracaoTexto.trim() }, "Classificar e extrair"))), /* @__PURE__ */ React.createElement(AttributeReviewPanel, { resultado: testeExtracaoResultado, valores: testeExtracaoValores, onChangeValor: (campo, val) => setTesteExtracaoValores((v) => ({ ...v, [campo]: val })) }), /* @__PURE__ */ React.createElement(PanelTitle, { style: { marginTop: "2rem" } }, "Coletor de mercado (s\xF3 fatos)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Busca categoria/termo nos sites configurados como seguros (edite a lista na aba Admin) e salva s\xF3 dados t\xE9cnicos e pre\xE7o \u2014 nunca descri\xE7\xE3o completa ou foto do an\xFAncio."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Sites que ser\xE3o buscados"), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, (config.coletorSites || []).join(", ") || "nenhum configurado \u2014 v\xE1 na aba Admin")), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: verificarCoberturaCategorias, disabled: coberturaLoading || collectorRunning }, coberturaLoading ? "Verificando\u2026" : "Ver cobertura antes de rodar")), coberturaCategorias && /* @__PURE__ */ React.createElement("div", { className: "field-full cobertura-tabela" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Escolha quais categorias vale rodar de novo"), coberturaCategorias.map((c) => {
+      setTesteExtracaoSetores(r.setor_ids || []);
+    }, disabled: !testeExtracaoTexto.trim() }, "Classificar e extrair"))), /* @__PURE__ */ React.createElement(AttributeReviewPanel, { resultado: testeExtracaoResultado, valores: testeExtracaoValores, onChangeValor: (campo, val) => setTesteExtracaoValores((v) => ({ ...v, [campo]: val })), setores: testeExtracaoSetores, onChangeSetores: setTesteExtracaoSetores }), /* @__PURE__ */ React.createElement(PanelTitle, { style: { marginTop: "2rem" } }, "Coletor de mercado (s\xF3 fatos)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Busca categoria/termo nos sites configurados como seguros (edite a lista na aba Admin) e salva s\xF3 dados t\xE9cnicos e pre\xE7o \u2014 nunca descri\xE7\xE3o completa ou foto do an\xFAncio."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Sites que ser\xE3o buscados"), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, (config.coletorSites || []).join(", ") || "nenhum configurado \u2014 v\xE1 na aba Admin")), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: verificarCoberturaCategorias, disabled: coberturaLoading || collectorRunning }, coberturaLoading ? "Verificando\u2026" : "Ver cobertura antes de rodar")), coberturaCategorias && /* @__PURE__ */ React.createElement("div", { className: "field-full cobertura-tabela" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Escolha quais categorias vale rodar de novo"), coberturaCategorias.map((c) => {
       const dias = c.ultima ? Math.floor((/* @__PURE__ */ new Date() - new Date(c.ultima)) / (1e3 * 60 * 60 * 24)) : null;
       return /* @__PURE__ */ React.createElement("label", { key: c.categoria, className: "checkbox-row cobertura-linha" }, /* @__PURE__ */ React.createElement(
         "input",
