@@ -145,7 +145,8 @@
     { id: "centro_usinagem_cnc", nome: "Centro de Usinagem CNC", grupo: "maquinas_ferramenta", synonyms: ["centro de usinagem", "CNC machining center"], re: /centro de usinagem|usinagem CNC/i, excludeRe: /torno|fresa/i, comum: false, ativo: true },
     { id: "fresadora", nome: "Fresadora", grupo: "maquinas_ferramenta", synonyms: ["fresadora universal", "fresadora ferramenteira"], re: /fresadora|fresa\b(?!dor)/i, comum: true, ativo: true },
     { id: "maquina_solda", nome: "Máquina de Solda", grupo: "maquinas_ferramenta", synonyms: ["máquina de solda MIG/MAG", "soldadora", "welding machine"], re: /m[áa]quina de solda(r)?\b|soldadora\b|welding machine/i, comum: false, ativo: true },
-    { id: "prensa", nome: "Prensa", grupo: "maquinas_ferramenta", synonyms: ["prensa hidráulica", "prensa excêntrica"], re: /prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i, excludeRe: /imprensa/i, comum: true, ativo: true },
+    { id: "peca_acessorio_maquina", nome: "Peça/Acessório para Máquina", grupo: "maquinas_ferramenta", synonyms: ["peça de reposição", "acessório de máquina"], re: /\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|placa de identifica[çc][ãa]o|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i, requireRe: /torno|fresa|retificadora?/i, comum: false, ativo: true },
+    { id: "prensa", nome: "Prensa", grupo: "maquinas_ferramenta", synonyms: ["prensa hidráulica", "prensa excêntrica"], re: /prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i, excludeRe: /imprensa|filtro/i, comum: true, ativo: true },
     { id: "guilhotina", nome: "Guilhotina", grupo: "maquinas_ferramenta", synonyms: ["guilhotina hidráulica", "tesoura guilhotina"], re: /guilhotina/i, comum: true, ativo: true },
     { id: "paletizador", nome: "Paletizador", grupo: "envase_embalagem", synonyms: ["paletizadora automática", "palletizer"], re: /paletizador(a)?/i, comum: false, ativo: true },
     { id: "empilhadeira", nome: "Empilhadeira", grupo: "movimentacao", synonyms: ["empilhadeira a gás", "empilhadeira elétrica", "forklift"], re: /empilhadeira/i, comum: true, ativo: true },
@@ -164,7 +165,6 @@
     { id: "galpao", nome: "Galpão", grupo: "imoveis", synonyms: ["galpão industrial", "galpão logístico"], re: /\bgalp[ãa]o\b/i, comum: true, ativo: true },
     { id: "planta_industrial", nome: "Planta Industrial", grupo: "imoveis", synonyms: ["fábrica completa", "planta industrial completa"], re: /f[áa]brica de|planta industrial|f[áa]brica metal[úu]rgica/i, comum: false, ativo: true },
     { id: "terreno", nome: "Terreno", grupo: "imoveis", synonyms: ["terreno industrial", "área industrial"], re: /\bterreno\b/i, comum: true, ativo: true },
-    { id: "peca_acessorio_maquina", nome: "Peça/Acessório para Máquina", grupo: "maquinas_ferramenta", synonyms: ["peça de reposição", "acessório de máquina"], re: /\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i, requireRe: /torno|fresa|retificadora?/i, comum: false, ativo: true },
     { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", synonyms: ["retificadora cilíndrica", "retificadora plana"], re: /ret[íi]fic(adora|a)\b|barramento/i, comum: true, ativo: true },
     { id: "elevador_graos", nome: "Elevador de Grãos", grupo: "movimentacao", synonyms: ["elevador de canecas", "elevador de grãos"], re: /elevador de (gr[ãa]os|canecas)/i, comum: false, ativo: true },
     { id: "religadora", nome: "Religadora", grupo: "eletrica_automacao", synonyms: ["religador automático"], re: /religadora/i, comum: false, ativo: true },
@@ -180,7 +180,7 @@
     { id: "envasadora_tribloco", nome: "Envasadora Tribloco", grupo: "envase_embalagem", synonyms: ["monobloco tribloco", "enchedora tribloco"], re: /\btriblo(co|ck)\b/i, comum: false, ativo: true },
     { id: "envasadora_monobloco", nome: "Envasadora Monobloco", grupo: "envase_embalagem", synonyms: ["enchedora monobloco"], re: /\bmonoblo(co|ck)\b/i, comum: false, ativo: true },
     { id: "tampadora", nome: "Tampadora", grupo: "envase_embalagem", synonyms: ["capping machine", "máquina de tampar"], re: /capping machine|tampador/i, comum: false, ativo: true },
-    { id: "lavadora_industrial", nome: "Lavadora Industrial", grupo: "processo_alimenticio", synonyms: ["lavadora de garrafas", "washing machine"], re: /washing machine|lavadora(?! de piso)/i, comum: false, ativo: true },
+    { id: "lavadora_industrial", nome: "Lavadora Industrial", grupo: "processo_alimenticio", synonyms: ["lavadora de garrafas", "washing machine"], re: /washing machine|lavadora(?! de piso)(?! varredora)/i, comum: false, ativo: true },
     { id: "linha_envase", nome: "Linha de Envase", grupo: "envase_embalagem", synonyms: ["linha de engarrafamento", "linha completa de envase", "bottling line"], re: /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie/i, comum: true, ativo: true },
     { id: "misturador", nome: "Misturador", grupo: "processo_alimenticio", synonyms: ["misturador industrial", "mixer"], re: /misturador|mixer(?! ?grinder)/i, comum: true, ativo: true },
     { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
@@ -205,9 +205,9 @@
     { id: "injetora", nome: "Injetora", grupo: "maquinas_ferramenta", synonyms: ["injetora de plástico", "máquina de moldagem por injeção"], re: /injetora|moldagem por inje[çc][ãa]o/i, comum: false, ativo: true },
     { id: "checkweigher", nome: "Checkweigher", grupo: "instrumentos_utilidades", synonyms: ["balança checadora", "balança dinâmica de linha"], re: /checkweigher|balan[çc]a checadora|balan[çc]a din[âa]mica/i, comum: false, ativo: true },
     { id: "balanca", nome: "Balança", grupo: "instrumentos_utilidades", synonyms: ["balança industrial", "balança de plataforma", "balança rodoviária"], re: /balan[çc]a/i, comum: true, ativo: true },
-    { id: "lavadora_piso", nome: "Lavadora de Piso", grupo: "instrumentos_utilidades", synonyms: ["lavadora varredora"], re: /lavadora de piso/i, comum: false, ativo: true },
-    { id: "filtro_industrial", nome: "Filtro Industrial", grupo: "instrumentos_utilidades", synonyms: ["filtro de areia", "filtro prensa"], re: /filtro de areia|filtro industrial/i, comum: true, ativo: true },
-    { id: "forno_industrial", nome: "Forno Industrial", grupo: "utilidades", synonyms: ["forno de secagem", "estufa industrial"], re: /forno industrial/i, comum: true, ativo: true },
+    { id: "lavadora_piso", nome: "Lavadora de Piso", grupo: "instrumentos_utilidades", synonyms: ["lavadora varredora"], re: /lavadora de piso|lavadora varredora|varredora autopropelida/i, comum: false, ativo: true },
+    { id: "filtro_industrial", nome: "Filtro Industrial", grupo: "instrumentos_utilidades", synonyms: ["filtro de areia", "filtro prensa"], re: /filtro de areia|filtro industrial|filtro prensa/i, comum: true, ativo: true },
+    { id: "forno_industrial", nome: "Forno Industrial", grupo: "utilidades", synonyms: ["forno de secagem", "estufa industrial"], re: /forno industrial|forno de secagem|estufa industrial/i, comum: true, ativo: true },
     { id: "valvula_industrial", nome: "Válvula Industrial", grupo: "instrumentos_utilidades", synonyms: ["válvula de esfera", "válvula borboleta", "válvula gaveta"], re: /v[áa]lvula/i, comum: true, ativo: true },
     { id: "atuador_eletrico", nome: "Atuador Elétrico", grupo: "mecanica", synonyms: ["atuador pneumático", "atuador elétrico"], re: /atuador/i, comum: false, ativo: true },
     { id: "exaustor", nome: "Exaustor", grupo: "utilidades", synonyms: ["exaustor industrial", "ventilador exaustor"], re: /exaustor/i, comum: true, ativo: true },
@@ -1223,7 +1223,7 @@
     "_m2": "m\u00B2", "_m3h": "m\u00B3/h", "_m3min": "m\u00B3/min", "_bph": "unid/h",
     "_mm": "mm", "_a": "A", "_bar": "bar", "_mca": "mca", "_w": "W",
     "_nm": "Nm", "_kv": "kV", "_pol": "pol", "_lmin": "L/min", "_g": "g",
-    "_kgh": "kg/h", "_tr": "TR", "_ton_h": "ton/h", "_m": "m"
+    "_kgh": "kg/h", "_tr": "TR", "_ton_h": "ton/h", "_m": "m", "_lh": "L/h"
   };
   var UNIDADE_ALIASES = {
     "ton": ["ton", "toneladas", "tonelada", "t\\b"],
@@ -1239,9 +1239,11 @@
     "kW": ["kW", "kw", "quilowatts"],
     "kg/h": ["kg/h", "kg vapor/h", "kg/hora", "kg ?vapor ?/ ?h"],
     "TR": ["TR"],
-    "ton/h": ["ton/h", "toneladas/h", "ton/hora", "ton ?/ ?h"],
+    "ton/h": ["ton/h", "toneladas/h", "ton/hora", "ton ?/ ?h", "t/h"],
     "m": ["m", "metros"],
-    "BTU/h": ["BTU/h", "BTUs?"]
+    "BTU/h": ["BTU/h", "BTUs?"],
+    "L/h": ["L/h", "l/h", "litros/h", "litros/hora"],
+    "pol": ["pol", "polegadas", "polegada", "\""]
   };
 
   // Reconhece medidas do tipo "800x400x300mm" (ou "800 x 400mm") e devolve
@@ -1264,6 +1266,17 @@
     return parseFloat(str);
   }
 
+  // Conversões aceitas quando o texto usa uma unidade diferente da esperada
+  // pelo campo (ex: campo espera Litros mas o anúncio diz "2 m³").
+  var UNIDADE_CONVERSOES = {
+    "L": [{ unidade: "m\u00B3", fator: 1000 }],
+    "kg": [{ unidade: "ton", fator: 1000 }],
+    "kg/h": [{ unidade: "ton/h", fator: 1000 }],
+    "V": [{ unidade: "kV", fator: 1000 }],
+    "kVA": [{ unidade: "MVA", fator: 1000 }],
+    "m\u00B3/h": [{ unidade: "L/h", fator: 0.001 }]
+  };
+
   function extrairNumeroComUnidade(texto, unidade, fromIndex) {
     fromIndex = fromIndex || 0;
     var resto = texto.slice(fromIndex);
@@ -1272,26 +1285,44 @@
     var melhor = null;
     for (var i = 0; i < aliases.length; i++) {
       var u = aliases[i];
-      var re1 = new RegExp(padraoNum + "\\s*" + u + "\\b", "i");
-      var re2 = new RegExp("\\b" + u + "\\s*[:\\-]?\\s*" + padraoNum, "i");
+      var re1 = new RegExp(padraoNum + "\\s*" + u + "(?![a-zA-Z0-9])", "i");
+      var re2 = new RegExp("(?<![a-zA-Z0-9])" + u + "\\s*[:\\-]?\\s*" + padraoNum, "i");
       var m1 = resto.match(re1);
       var m2 = resto.match(re2);
       var candidato = m1 && (!m2 || m1.index <= m2.index) ? m1 : m2;
       if (candidato && (melhor === null || candidato.index < melhor.index)) melhor = candidato;
     }
-    if (!melhor) return null;
-    var num = parseNumeroBR(melhor[1]);
-    if (Number.isNaN(num)) return null;
-    return { valor: num, confianca: 0.92, fimMatch: fromIndex + melhor.index + melhor[0].length };
+    if (melhor) {
+      var num = parseNumeroBR(melhor[1]);
+      if (!Number.isNaN(num)) return { valor: num, confianca: 0.92, fimMatch: fromIndex + melhor.index + melhor[0].length };
+    }
+    // não achou na unidade nativa — tenta converter de uma unidade equivalente
+    var conversoes = UNIDADE_CONVERSOES[unidade];
+    if (conversoes) {
+      for (var c = 0; c < conversoes.length; c++) {
+        var conv = extrairNumeroComUnidade(texto, conversoes[c].unidade, fromIndex);
+        if (conv) {
+          return { valor: Math.round(conv.valor * conversoes[c].fator * 100) / 100, confianca: 0.85, fimMatch: conv.fimMatch, convertidoDe: conversoes[c].unidade };
+        }
+      }
+    }
+    return null;
   }
 
   function extrairTensao(texto) {
     // pega o primeiro valor de tensão (110 a 138000V), aceita "220/380/440V" e média tensão "13800/380V"
     var m = texto.match(/(\d{2,6}(?:\s*\/\s*\d{2,6}){0,3})\s*V\b/i);
-    if (!m) return null;
-    var primeiro = parseInt(m[1].split("/")[0].trim(), 10);
-    if (Number.isNaN(primeiro)) return null;
-    return { valor: primeiro, confianca: 0.9 };
+    if (m) {
+      var primeiro = parseInt(m[1].split("/")[0].trim(), 10);
+      if (!Number.isNaN(primeiro)) return { valor: primeiro, confianca: 0.9 };
+    }
+    // não achou em V — tenta converter de kV (ex: "13,8 kV" -> 13800)
+    var mKv = texto.match(/(\d+(?:[.,]\d+)?)\s*kV\b/i);
+    if (mKv) {
+      var num = parseNumeroBR(mKv[1]);
+      if (!Number.isNaN(num)) return { valor: Math.round(num * 1000), confianca: 0.85 };
+    }
+    return null;
   }
 
   // Pega o N-\u00E9simo valor de uma seq\u00FC\u00EAncia tipo "13800/380V" (\u00EDndice 0 = primeiro/prim\u00E1rio,
@@ -1324,7 +1355,7 @@
     for (var i = 0; i < MARCAS_CONHECIDAS.length; i++) {
       var marca = MARCAS_CONHECIDAS[i];
       if (new RegExp("\\b" + marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(tUpper)) {
-        return { valor: marca, confianca: 0.95 };
+        return { valor: normalizarMarca(marca), confianca: 0.95 };
       }
     }
     return null;
@@ -1350,6 +1381,15 @@
     if (campo === "num_circuitos") {
       var mCirc = texto.match(/(\d+)\s*circuitos?/i);
       return mCirc ? { valor: parseInt(mCirc[1], 10), confianca: 0.85 } : null;
+    }
+    if (campo === "num_placas_ou_area") {
+      var mPlacas = texto.match(/(\d+(?:[.,]\d+)?)\s*placas?/i);
+      if (mPlacas) return { valor: parseNumeroBR(mPlacas[1]), confianca: 0.88 };
+      return extrairNumeroComUnidade(texto, "m\u00B2");
+    }
+    if (campo === "num_eixos") {
+      var mEixos = texto.match(/(\d+)\s*eixos?/i);
+      return mEixos ? { valor: parseInt(mEixos[1], 10), confianca: 0.88 } : null;
     }
     if (campo === "num_pavimentos") {
       var mPav = texto.match(/(\d+)\s*pavimentos?/i) || texto.match(/(\d+)\s*andares?/i);
@@ -1527,6 +1567,24 @@
     "KOHLBACH",
     "BOSCH",
     "DEMAG",
+    "ROMI",
+    "HAAS",
+    "STUDER",
+    "FANUC",
+    "MAZAK",
+    "OKUMA",
+    "LINCOLN ELECTRIC",
+    "ESAB",
+    "DELAVAL",
+    "ALFA LAVAL",
+    "GEA",
+    "TETRA PAK",
+    "TAMBFLEX",
+    "KRONES",
+    "SIDEL",
+    "KHS",
+    "MULTIVAC",
+    "KSB",
     "CATERPILLAR",
     "CAT",
     "VOLVO",
