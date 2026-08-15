@@ -3504,9 +3504,14 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   async function buscarNaBasePropria(item, supaUrl, supaKey) {
     if (!supaUrl || !supaKey || !item.categoria) return null;
     try {
+      const catId = item.categoria_id || resolverCategoriaId(item.categoria);
       const params = new URLSearchParams();
       params.set("select", "preco,moeda");
-      params.set("categoria", `ilike.*${item.categoria.trim()}*`);
+      if (catId) {
+        params.set("categoria_id", `eq.${catId}`);
+      } else {
+        params.set("categoria", `ilike.*${item.categoria.trim()}*`);
+      }
       if (item.marca) params.set("marca", `ilike.*${item.marca.trim()}*`);
       params.set("preco", "not.is.null");
       params.set("limit", "50");
