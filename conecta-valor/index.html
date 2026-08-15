@@ -1613,28 +1613,16 @@
   function extrairFatosDeTexto(texto) {
     const t = texto || "";
     const tUpper = t.toUpperCase();
-    let categoria = null;
-    if (/motor\s*redutor/i.test(t)) categoria = "Motorredutor";
-    else if (/transformador|\btrafo\b/i.test(t)) categoria = "Transformador";
-    else if (/tanque/i.test(t)) categoria = "Tanque";
-    else if (/reator/i.test(t)) categoria = "Reator";
-    else if (/vaso de press/i.test(t)) categoria = "Vaso de Press\xE3o";
-    else if (/caldeira/i.test(t)) categoria = "Caldeira";
-    else if (/linha (de )?envase|linha (completa )?(de )?enchimento|envasador/i.test(t)) categoria = "Linha de Envase";
-    else if (/rotulad/i.test(t)) categoria = "Rotuladora";
-    else if (/empilhadeira/i.test(t)) categoria = "Empilhadeira";
-    else if (/esteira|transportador/i.test(t)) categoria = "Esteira Transportadora";
-    else if (/mistura/i.test(t)) categoria = "Misturador";
-    else if (/bomba/i.test(t)) categoria = "Bomba";
-    else if (/compressor/i.test(t)) categoria = "Compressor";
-    else if (/gerador/i.test(t)) categoria = "Gerador";
-    else if (/chapa/i.test(t)) categoria = "Chapa (mat\xE9ria-prima)";
-    else if (/motor/i.test(t)) categoria = "Motor El\xE9trico";
-    let marca = null;
-    for (const m of MARCAS_CONHECIDAS) {
-      if (new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(tUpper)) {
-        marca = m === "SEW" ? "SEW-EURODRIVE" : m;
-        break;
+    const nova = processarTextoParaAtributos(t);
+    let categoria = nova.category_name;
+    if (!categoria && /chapa/i.test(t)) categoria = "Chapa (mat\xE9ria-prima)";
+    let marca = nova.atributos.fabricante || null;
+    if (!marca) {
+      for (const m of MARCAS_CONHECIDAS) {
+        if (new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(tUpper)) {
+          marca = m === "SEW" ? "SEW-EURODRIVE" : m;
+          break;
+        }
       }
     }
     const cvMatch = t.match(/(\d+(?:[.,]\d+)?)\s*cv/i);
@@ -1692,17 +1680,22 @@
     else if (kgHoraMatch) capacidade = `${kgHoraMatch[1]}${kgHoraMatch[2] || ""} kg/h`;
     else if (tonHoraMatch) capacidade = `${tonHoraMatch[1]} ton/h`;
     else if (capacidadeMatch) capacidade = `${capacidadeMatch[1]}${capacidadeMatch[2] || ""} ${/m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L"}`;
+    const potenciaCvFinal = nova.atributos.potencia_cv != null ? nova.atributos.potencia_cv : cvMatch ? Number(cvMatch[1].replace(",", ".")) : null;
+    const rpmFinal = nova.atributos.rpm != null ? nova.atributos.rpm : rpmMatch ? Number(rpmMatch[1]) : null;
+    const anoFinal = nova.atributos.ano != null ? String(nova.atributos.ano) : anoMatch ? anoMatch[0] : null;
+    const tensaoFinal = tensaoMatch ? tensaoMatch[1] + "V" : nova.atributos.tensao_v != null ? nova.atributos.tensao_v + "V" : null;
     return {
       categoria,
+      categoria_id: nova.category_id,
       marca,
       capacidade,
       finalidade,
-      potencia_cv: cvMatch ? Number(cvMatch[1].replace(",", ".")) : null,
+      potencia_cv: potenciaCvFinal,
       potencia_kw: kwMatch ? Number(kwMatch[1].replace(",", ".")) : null,
       polaridade: poloMatch ? `${poloMatch[1]} polos` : null,
-      tensao: tensaoMatch ? tensaoMatch[1] + "V" : null,
-      rpm: rpmMatch ? Number(rpmMatch[1]) : null,
-      ano: anoMatch ? anoMatch[0] : null,
+      tensao: tensaoFinal,
+      rpm: rpmFinal,
+      ano: anoFinal,
       estado,
       detalhes
     };
