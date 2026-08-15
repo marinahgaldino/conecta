@@ -3832,6 +3832,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [configDraft, setConfigDraft] = (0, import_react.useState)(DEFAULT_CONFIG);
     const [configSaved, setConfigSaved] = (0, import_react.useState)(false);
     const [session, setSession] = (0, import_react.useState)(null);
+    const [saldoCreditos, setSaldoCreditos] = (0, import_react.useState)(null);
     const isAdmin = !!(session && session.user && session.user.app_metadata && session.user.app_metadata.role === "admin");
     const papelUsuario = session && session.user && session.user.app_metadata ? session.user.app_metadata.role : null;
     const isColegaHilco = isAdmin || papelUsuario === "colega_hilco";
@@ -4255,6 +4256,35 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         loadStats();
       }
     }, [session, supaUrl, supaKey]);
+    (0, import_react.useEffect)(() => {
+      if (session && session.user) carregarSaldoCreditos();
+    }, [session]);
+    async function carregarSaldoCreditos() {
+      const client = getSupaClient();
+      if (!client) return;
+      try {
+        const { data, error } = await client.rpc("consultar_saldo");
+        if (!error) setSaldoCreditos(typeof data === "number" ? data : null);
+      } catch (e) {
+        console.warn("N\xE3o foi poss\xEDvel consultar saldo de cr\xE9ditos:", e);
+      }
+    }
+    async function consumirCredito(qtd) {
+      const client = getSupaClient();
+      if (!client) return true;
+      try {
+        const { data, error } = await client.rpc("consumir_credito", { qtd: qtd || 1 });
+        if (error) return true;
+        if (data === true) {
+          setSaldoCreditos((s) => s == null ? s : Math.max(0, s - (qtd || 1)));
+          return true;
+        }
+        return false;
+      } catch (e) {
+        console.warn("N\xE3o foi poss\xEDvel consumir cr\xE9dito:", e);
+        return true;
+      }
+    }
     const [recentUserEvals, setRecentUserEvals] = (0, import_react.useState)([]);
     async function loadRecentEvaluations() {
       const client = getSupaClient();
@@ -4808,6 +4838,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         if (photos.length === 0) {
           parsed = await buscarNaBasePropria(form, supaUrl, supaKey);
         }
+        if (!parsed && saldoCreditos !== null) {
+          const liberado = await consumirCredito(1);
+          if (!liberado) {
+            setError(t(
+              "Seus cr\xE9ditos acabaram. Entre em contato pra adquirir mais consultas.",
+              "You're out of credits. Get in touch to purchase more searches."
+            ));
+            setLoading(false);
+            return;
+          }
+        }
         if (!parsed && photos.length === 0) {
           parsed = await callEdgeAvaliar(form, supaUrl, supaKey);
         }
@@ -4908,6 +4949,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const itemStart = Date.now();
         try {
           let parsed = await buscarNaBasePropria(current[i].item, supaUrl, supaKey);
+          if (!parsed && saldoCreditos !== null) {
+            const liberado = await consumirCredito(1);
+            if (!liberado) {
+              current = current.map((r, idx) => idx === i ? { ...r, status: "erro", error: t("Cr\xE9ditos esgotados", "Out of credits") } : r);
+              itemDurations.push((Date.now() - itemStart) / 1e3);
+              doneCount += 1;
+              setBatchRows(current);
+              setBatchProgress({ done: doneCount, total: current.length, avgSeconds: itemDurations.reduce((a, b) => a + b, 0) / itemDurations.length });
+              return;
+            }
+          }
           if (!parsed) parsed = await callEdgeAvaliar(current[i].item, supaUrl, supaKey);
           if (!parsed) {
             parsed = await callClaude(buildPrompt(current[i].item, false, config), null, apiKey);
@@ -5150,6 +5202,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           cursor: pointer;
         }
         .lang-toggle:hover { border-color: #D98E04; color: #D98E04; }
+        .credit-badge {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.72rem;
+          font-weight: 700;
+          color: #D98E04;
+          border: 1px solid rgba(217,142,4,0.4);
+          padding: 0.3rem 0.6rem;
+          border-radius: 999px;
+          white-space: nowrap;
+        }
+        .credit-badge-zero { color: #E4675B; border-color: rgba(228,103,91,0.5); }
         .hero { padding: 1rem 1.8rem 1.8rem; flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
         .hero-bg-graphic { position: absolute; inset: 0; pointer-events: none; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
         .hero-bg-fade {
@@ -5953,7 +6016,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         @media (min-width: 901px) {
           .app { max-width: 900px; margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); }
         }
-      `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, /* @__PURE__ */ React.createElement(
+      `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "lang-toggle",
