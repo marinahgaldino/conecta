@@ -1222,7 +1222,8 @@
     "_ton": "ton", "_toneladas": "ton", "_kg": "kg", "_l": "L",
     "_m2": "m\u00B2", "_m3h": "m\u00B3/h", "_m3min": "m\u00B3/min", "_bph": "unid/h",
     "_mm": "mm", "_a": "A", "_bar": "bar", "_mca": "mca", "_w": "W",
-    "_nm": "Nm", "_kv": "kV", "_pol": "pol", "_lmin": "L/min", "_g": "g"
+    "_nm": "Nm", "_kv": "kV", "_pol": "pol", "_lmin": "L/min", "_g": "g",
+    "_kgh": "kg/h", "_tr": "TR", "_ton_h": "ton/h", "_m": "m"
   };
   var UNIDADE_ALIASES = {
     "ton": ["ton", "toneladas", "tonelada", "t\\b"],
@@ -1235,8 +1236,23 @@
     "L/min": ["L/min", "l/min", "litros/min"],
     "kVA": ["kVA", "kva"],
     "CV": ["CV", "cv"],
-    "kW": ["kW", "kw", "quilowatts"]
+    "kW": ["kW", "kw", "quilowatts"],
+    "kg/h": ["kg/h", "kg vapor/h", "kg/hora", "kg ?vapor ?/ ?h"],
+    "TR": ["TR"],
+    "ton/h": ["ton/h", "toneladas/h", "ton/hora", "ton ?/ ?h"],
+    "m": ["m", "metros"],
+    "BTU/h": ["BTU/h", "BTUs?"]
   };
+
+  // Reconhece medidas do tipo "800x400x300mm" (ou "800 x 400mm") e devolve
+  // os valores na ordem em que aparecem, pra atribuir curso_x/y/z corretamente.
+  function extrairDimensoesXYZ(texto) {
+    var m = texto.match(/(\d+(?:[.,]\d+)?)\s*[x\u00D7]\s*(\d+(?:[.,]\d+)?)\s*(?:[x\u00D7]\s*(\d+(?:[.,]\d+)?))?\s*mm\b/i);
+    if (!m) return null;
+    var vals = [parseNumeroBR(m[1]), parseNumeroBR(m[2])];
+    if (m[3]) vals.push(parseNumeroBR(m[3]));
+    return vals;
+  }
 
   // Interpreta número no formato BR: 10.000 (dez mil), 10.000,50 (dez mil e cinquenta
   // centavos), 15,5 (quinze vírgula cinco) e 15.5 (quinze vírgula cinco, formato solto).
@@ -1248,29 +1264,44 @@
     return parseFloat(str);
   }
 
-  function extrairNumeroComUnidade(texto, unidade) {
+  function extrairNumeroComUnidade(texto, unidade, fromIndex) {
+    fromIndex = fromIndex || 0;
+    var resto = texto.slice(fromIndex);
     var aliases = UNIDADE_ALIASES[unidade] || [unidade.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")];
     var padraoNum = "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d+)?|\\d+(?:\\.\\d+)?)";
+    var melhor = null;
     for (var i = 0; i < aliases.length; i++) {
       var u = aliases[i];
       var re1 = new RegExp(padraoNum + "\\s*" + u + "\\b", "i");
       var re2 = new RegExp("\\b" + u + "\\s*[:\\-]?\\s*" + padraoNum, "i");
-      var m = texto.match(re1) || texto.match(re2);
-      if (m) {
-        var num = parseNumeroBR(m[1]);
-        if (!Number.isNaN(num)) return { valor: num, confianca: 0.92 };
-      }
+      var m1 = resto.match(re1);
+      var m2 = resto.match(re2);
+      var candidato = m1 && (!m2 || m1.index <= m2.index) ? m1 : m2;
+      if (candidato && (melhor === null || candidato.index < melhor.index)) melhor = candidato;
     }
-    return null;
+    if (!melhor) return null;
+    var num = parseNumeroBR(melhor[1]);
+    if (Number.isNaN(num)) return null;
+    return { valor: num, confianca: 0.92, fimMatch: fromIndex + melhor.index + melhor[0].length };
   }
 
   function extrairTensao(texto) {
-    // pega o primeiro valor de tensão típico (110-13800), aceita "220/380/440V"
-    var m = texto.match(/(\d{2,3}(?:\s*\/\s*\d{2,3}){0,3})\s*V\b/i);
+    // pega o primeiro valor de tensão (110 a 138000V), aceita "220/380/440V" e média tensão "13800/380V"
+    var m = texto.match(/(\d{2,6}(?:\s*\/\s*\d{2,6}){0,3})\s*V\b/i);
     if (!m) return null;
     var primeiro = parseInt(m[1].split("/")[0].trim(), 10);
     if (Number.isNaN(primeiro)) return null;
     return { valor: primeiro, confianca: 0.9 };
+  }
+
+  // Pega o N-\u00E9simo valor de uma seq\u00FC\u00EAncia tipo "13800/380V" (\u00EDndice 0 = primeiro/prim\u00E1rio,
+  // \u00EDndice 1 = segundo/secund\u00E1rio) \u2014 pra n\u00E3o duplicar o mesmo valor nos dois campos.
+  function extrairTensaoEm(texto, indice) {
+    var m = texto.match(/(\d{2,6}(?:\s*\/\s*\d{2,6}){0,3})\s*V\b/i);
+    if (!m) return null;
+    var partes = m[1].split("/").map(function (s) { return parseInt(s.trim(), 10); });
+    if (partes[indice] === void 0 || Number.isNaN(partes[indice])) return null;
+    return { valor: partes[indice], confianca: 0.9 };
   }
 
   function extrairRPM(texto) {
@@ -1306,7 +1337,8 @@
   }
 
   // extrai UM campo, decidindo a estratégia pelo nome
-  function extrairCampo(campo, texto) {
+  function extrairCampo(campo, texto, cursorPorUnidade) {
+    cursorPorUnidade = cursorPorUnidade || {};
     if (campo === "fabricante") return extrairFabricante(texto);
     if (campo === "rpm" || campo === "rpm_agitador") return extrairRPM(texto);
     if (campo === "ano" || campo === "ano_construcao") return extrairAno(texto);
@@ -1315,9 +1347,22 @@
       var mCav = texto.match(/(\d+)\s*cavidades?/i);
       return mCav ? { valor: parseInt(mCav[1], 10), confianca: 0.9 } : null;
     }
+    if (campo === "num_circuitos") {
+      var mCirc = texto.match(/(\d+)\s*circuitos?/i);
+      return mCirc ? { valor: parseInt(mCirc[1], 10), confianca: 0.85 } : null;
+    }
+    if (campo === "num_pavimentos") {
+      var mPav = texto.match(/(\d+)\s*pavimentos?/i) || texto.match(/(\d+)\s*andares?/i);
+      return mPav ? { valor: parseInt(mPav[1], 10), confianca: 0.88 } : null;
+    }
     if (campo === "capacidade_paletes_hora") {
       var mPal = texto.match(/(\d+(?:[.,]\d+)?)\s*paletes?\s*\/?\s*h(?:ora)?\b/i);
       return mPal ? { valor: parseNumeroBR(mPal[1]), confianca: 0.9 } : null;
+    }
+    if (campo === "capacidade_tr_ou_btu") {
+      var rTr = extrairNumeroComUnidade(texto, "TR");
+      if (rTr) return rTr;
+      return extrairNumeroComUnidade(texto, "BTU/h");
     }
     if (campo === "area_terreno_m2") {
       var mAt = texto.match(/(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)\s*de\s*terreno/i) || texto.match(/terreno\s*(?:de|:)?\s*(\d{1,3}(?:\.\d{3})*(?:,\d+)?|\d+(?:\.\d+)?)\s*m(?:²|2)/i);
@@ -1333,14 +1378,27 @@
       var mPd = texto.match(/p[ée][\s-]?direito\s*(?:de|:)?\s*(\d+(?:[.,]\d+)?)\s*m(?:etros)?\b/i) || texto.match(/(\d+(?:[.,]\d+)?)\s*m(?:etros)?\s*de\s*p[ée][\s-]?direito/i);
       return mPd ? { valor: parseNumeroBR(mPd[1]), confianca: 0.88 } : null;
     }
-    if (campo === "num_pavimentos") {
-      var mPav = texto.match(/(\d+)\s*pavimentos?/i) || texto.match(/(\d+)\s*andares?/i);
-      return mPav ? { valor: parseInt(mPav[1], 10), confianca: 0.88 } : null;
+    if (campo === "tensao_primaria_v") return extrairTensaoEm(texto, 0);
+    if (campo === "tensao_secundaria_v") return extrairTensaoEm(texto, 1);
+    if ((campo === "tensao" || /_v$/.test(campo)) && campo !== "válvula") return extrairTensao(texto);
+    if (campo === "curso_x_mm" || campo === "curso_y_mm" || campo === "curso_z_mm") {
+      var dims = extrairDimensoesXYZ(texto);
+      if (dims) {
+        var idx = campo === "curso_x_mm" ? 0 : campo === "curso_y_mm" ? 1 : 2;
+        if (dims[idx] !== void 0) return { valor: dims[idx], confianca: 0.85 };
+        return null; // padrão AxB reconhecido, mas essa dimensão não veio — não adivinha
+      }
     }
-    if (/^tensao|_v$/.test(campo) && campo !== "válvula") return extrairTensao(texto);
     for (var sufixo in UNIDADE_POR_SUFIXO) {
       if (campo.endsWith(sufixo)) {
-        return extrairNumeroComUnidade(texto, UNIDADE_POR_SUFIXO[sufixo]);
+        var unidade = UNIDADE_POR_SUFIXO[sufixo];
+        var inicio = cursorPorUnidade[unidade] || 0;
+        var r = extrairNumeroComUnidade(texto, unidade, inicio);
+        if (r) {
+          cursorPorUnidade[unidade] = r.fimMatch;
+          return r;
+        }
+        return null;
       }
     }
     return null; // campo textual (tipo, material, modelo...) — fica pra revisão humana
@@ -1353,8 +1411,9 @@
     var todosCampos = schema.campos_obrigatorios.concat(schema.campos_opcionais);
     var atributos = {};
     var confiancas = {};
+    var cursorPorUnidade = {};
     todosCampos.forEach(function (campo) {
-      var r = extrairCampo(campo, texto);
+      var r = extrairCampo(campo, texto, cursorPorUnidade);
       if (r) {
         atributos[campo] = r.valor;
         confiancas[campo] = r.confianca;
