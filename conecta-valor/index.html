@@ -3527,6 +3527,31 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       throw new Error("N\xE3o entendi o formato do texto colado. Tente revisar e colar de novo.");
     }
   }
+  // Acha o primeiro JSON balanceado no texto (conta chaves/colchetes de
+  // verdade, em vez de "primeiro delimitador at\xE9 o \xFAltimo" como antes \u2014
+  // isso evita pegar lixo do meio quando h\xE1 texto extra antes/depois do
+  // JSON real, e detecta truncamento de forma confi\xE1vel (retorna null).
+  function extrairJsonBalanceadoGenerico(texto) {
+    const candidatos = [];
+    for (const [abre, fecha] of [["{", "}"], ["[", "]"]]) {
+      const inicio = texto.indexOf(abre);
+      if (inicio === -1) continue;
+      let profundidade = 0;
+      for (let i = inicio; i < texto.length; i++) {
+        if (texto[i] === abre) profundidade++;
+        else if (texto[i] === fecha) {
+          profundidade--;
+          if (profundidade === 0) {
+            candidatos.push(texto.slice(inicio, i + 1));
+            break;
+          }
+        }
+      }
+    }
+    if (candidatos.length === 0) return null;
+    // se achou os dois (objeto e lista), fica com o mais longo (mais completo)
+    return candidatos.reduce((a, b) => b.length > a.length ? b : a);
+  }
   async function callClaude(promptText, photos, apiKey, maxTokens) {
     let response;
     const listaFotos = Array.isArray(photos) ? photos : photos ? [photos] : [];
@@ -3600,24 +3625,16 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     try {
       return anexarMetadados(JSON.parse(clean));
     } catch (parseErr) {
-      const matchObjeto = clean.match(/\{[\s\S]*\}/);
-      const matchLista = clean.match(/\[[\s\S]*\]/);
-      const match = matchLista && (!matchObjeto || matchLista[0].length > matchObjeto[0].length) ? matchLista : matchObjeto;
-      if (match) {
+      const jsonBalanceado = extrairJsonBalanceadoGenerico(clean);
+      if (jsonBalanceado) {
         try {
-          return anexarMetadados(JSON.parse(match[0]));
+          return anexarMetadados(JSON.parse(jsonBalanceado));
         } catch (innerErr) {
-          console.error("Falha ao extrair JSON:", innerErr, clean);
+          console.error("Falha ao extrair JSON (balanceado):", innerErr, clean);
         }
       }
-      const firstDelim = Math.min(...[clean.indexOf("{"), clean.indexOf("[")].filter((n) => n !== -1));
-      const lastDelim = Math.max(clean.lastIndexOf("}"), clean.lastIndexOf("]"));
-      if (!isFinite(firstDelim) || lastDelim === -1 || lastDelim < firstDelim) {
-        console.error("Resposta sem JSON completo (prov\xE1vel corte no meio):", clean);
-        throw new Error("A resposta foi cortada no meio (item complexo demais para uma \xFAnica resposta). Tente novamente \u2014 geralmente resolve na segunda tentativa.");
-      }
-      console.error("Falha ao interpretar resposta:", parseErr, clean);
-      throw new Error("Recebi uma resposta em formato inesperado. Tente novamente.");
+      console.error("Nenhum JSON balanceado encontrado (prov\xE1vel corte no meio):", clean);
+      throw new Error("A resposta foi cortada no meio (item complexo demais para uma \xFAnica resposta). Tente novamente \u2014 geralmente resolve na segunda tentativa.");
     }
   }
   var _cotacoesCache = null;
@@ -5150,27 +5167,34 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         setBatchRows(current);
         const itemStart = Date.now();
         try {
-          let parsed = await buscarNaBasePropria(current[i].item, supaUrl, supaKey);
-          if (!parsed && saldoCreditos !== null && saldoCreditos <= 0) {
+          const TIMEOUT_MS = 90e3; // seguran\xE7a: nenhum item fica pendurado pra sempre
+          const resultadoOuTimeout = await Promise.race([
+            (async () => {
+              let parsed = await buscarNaBasePropria(current[i].item, supaUrl, supaKey);
+              if (!parsed && saldoCreditos !== null && saldoCreditos <= 0) {
+                return { tipo: "sem_credito" };
+              }
+              if (!parsed) parsed = await callEdgeAvaliar(current[i].item, supaUrl, supaKey, session && session.access_token);
+              if (!parsed) parsed = await callClaude(buildPrompt(current[i].item, false, config), null, apiKey);
+              if (!parsed) throw new Error(t("N\xE3o foi poss\xEDvel obter um resultado.", "Could not get a result."));
+              return { tipo: "ok", parsed };
+            })(),
+            new Promise((_, reject) => setTimeout(() => reject(new Error(t("Tempo esgotado (mais de 90s sem resposta).", "Timed out (over 90s with no response)."))), TIMEOUT_MS))
+          ]);
+
+          if (resultadoOuTimeout.tipo === "sem_credito") {
             current = current.map((r, idx) => idx === i ? { ...r, status: "erro", error: t("Cr\xE9ditos esgotados", "Out of credits") } : r);
-            itemDurations.push((Date.now() - itemStart) / 1e3);
-            doneCount += 1;
-            setBatchRows(current);
-            setBatchProgress({ done: doneCount, total: current.length, avgSeconds: itemDurations.reduce((a, b) => a + b, 0) / itemDurations.length });
-            return;
+          } else {
+            const parsed = resultadoOuTimeout.parsed;
+            current = current.map((r, idx) => idx === i ? { ...r, status: "conclu\xEDdo", result: parsed } : r);
+            const entry = { item: { ...current[i].item }, result: parsed, id: Date.now() + i, data: (/* @__PURE__ */ new Date()).toISOString() };
+            setHistory((h) => [entry, ...h].slice(0, 20));
+            saveHistoryEntry(entry);
+            if (parsed.origem !== "base_propria") saveToSupabase(current[i].item, parsed);
+            if (parsed.origem === "ia") carregarSaldoCreditos();
           }
-          if (!parsed) parsed = await callEdgeAvaliar(current[i].item, supaUrl, supaKey, session && session.access_token);
-          if (!parsed) {
-            parsed = await callClaude(buildPrompt(current[i].item, false, config), null, apiKey);
-          }
-          current = current.map((r, idx) => idx === i ? { ...r, status: "conclu\xEDdo", result: parsed } : r);
-          const entry = { item: { ...current[i].item }, result: parsed, id: Date.now() + i, data: (/* @__PURE__ */ new Date()).toISOString() };
-          setHistory((h) => [entry, ...h].slice(0, 20));
-          saveHistoryEntry(entry);
-          if (parsed.origem !== "base_propria") saveToSupabase(current[i].item, parsed);
-          if (parsed.origem === "ia") carregarSaldoCreditos();
         } catch (err) {
-          current = current.map((r, idx) => idx === i ? { ...r, status: "erro", error: err.message } : r);
+          current = current.map((r, idx) => idx === i ? { ...r, status: "erro", error: (err && err.message) || t("Erro desconhecido", "Unknown error") } : r);
         }
         itemDurations.push((Date.now() - itemStart) / 1e3);
         const avgSeconds = itemDurations.reduce((a, b) => a + b, 0) / itemDurations.length;
@@ -5178,12 +5202,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         setBatchRows(current);
         setBatchProgress({ done: doneCount, total: current.length, avgSeconds });
       }
-      for (let start = 0; start < current.length; start += CONCORRENCIA) {
-        const indices = [];
-        for (let i = start; i < Math.min(start + CONCORRENCIA, current.length); i++) indices.push(i);
-        await Promise.all(indices.map((i) => processarItem(i)));
+      try {
+        for (let start = 0; start < current.length; start += CONCORRENCIA) {
+          const indices = [];
+          for (let i = start; i < Math.min(start + CONCORRENCIA, current.length); i++) indices.push(i);
+          await Promise.allSettled(indices.map((i) => processarItem(i)));
+        }
+      } finally {
+        setBatchRunning(false);
       }
-      setBatchRunning(false);
     }
     if (!authChecked) {
       return /* @__PURE__ */ React.createElement("div", { className: "app", style: { minHeight: "100vh", background: "#EDECE6" } });
