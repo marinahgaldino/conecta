@@ -3624,7 +3624,10 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       return _cotacoesCache || null;
     }
     try {
-      const res = await fetch("https://api.frankfurter.app/latest?from=BRL&to=EUR,USD,GBP");
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6e3);
+      const res = await fetch("https://api.frankfurter.app/latest?from=BRL&to=EUR,USD,GBP", { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) return _cotacoesCache || null;
       const data = await res.json();
       const cotacoes = {
