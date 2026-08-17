@@ -5462,8 +5462,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           setLoading(false);
           return;
         }
-        if (!parsed && photos.length === 0) {
-          parsed = await callEdgeAvaliar(form, supaUrl, supaKey, session && session.access_token);
+        if (!parsed) {
+          const itemComFotos = photos.length > 0 ? { ...form, photos: photos.map((p) => ({ base64: p.base64, mediaType: p.mediaType })) } : form;
+          parsed = await callEdgeAvaliar(itemComFotos, supaUrl, supaKey, session && session.access_token);
         }
         if (!parsed) {
           const prompt = buildPrompt(form, photos.length > 0, config);
