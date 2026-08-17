@@ -9,6 +9,8 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -3932,6 +3934,364 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     a.click();
     URL.revokeObjectURL(url);
   }
+  function downloadBlob(filename, blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function exportarLotePDF(rows, config) {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("A biblioteca de PDF ainda n\xE3o carregou. Tente novamente em alguns segundos.");
+      return;
+    }
+    const resumo = resumoDoLote(rows);
+    const agora = /* @__PURE__ */ new Date();
+    const idLote = `LOTE-${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}-${String(agora.getHours()).padStart(2, "0")}${String(agora.getMinutes()).padStart(2, "0")}`;
+    const titulo = (config && config.titulo) || "Conecta Valor";
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const margin = 40;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const COR_DOURADO = [217, 142, 4];
+    const COR_ESCURO = [10, 10, 11];
+    const COR_VERDE = [21, 87, 36];
+    const COR_VERMELHO = [114, 28, 36];
+
+    function cabecalhoRodape(data) {
+      // cabeçalho
+      doc.setFillColor(...COR_ESCURO);
+      doc.rect(0, 0, pageWidth, 55, "F");
+      try {
+        doc.addImage(`data:image/jpeg;base64,${LOGO_FULL_B64}`, "JPEG", margin, 8, 110, 38);
+      } catch (e) {
+        console.warn("N\xE3o foi poss\xEDvel inserir o logo no PDF:", e);
+      }
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.text(titulo.toUpperCase(), pageWidth - margin, 22, { align: "right" });
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.text(`Lote: ${idLote}`, pageWidth - margin, 34, { align: "right" });
+      doc.text(`Gerado em ${agora.toLocaleDateString("pt-BR")} ${agora.toLocaleTimeString("pt-BR")}`, pageWidth - margin, 44, { align: "right" });
+      // rodapé
+      doc.setTextColor(120);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      const paginaAtual = doc.internal.getCurrentPageInfo ? doc.internal.getCurrentPageInfo().pageNumber : data.pageNumber;
+      doc.text(`P\xE1gina ${paginaAtual}`, pageWidth - margin, pageHeight - 18, { align: "right" });
+      doc.text("Estimativa com base em observa\xE7\xF5es de mercado p\xFAblicas \u2014 uso como refer\xEAncia, n\xE3o como laudo de avalia\xE7\xE3o.", margin, pageHeight - 18);
+      doc.setTextColor(0);
+    }
+
+    // --- Página inicial ---
+    let y = 90;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(18);
+    doc.setTextColor(0);
+    doc.text("Relat\xF3rio de Avalia\xE7\xE3o de Ativos Industriais", margin, y);
+    y += 30;
+
+    // --- Resumo executivo ---
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Resumo executivo", margin, y);
+    y += 8;
+    doc.autoTable({
+      startY: y,
+      margin: { left: margin, right: margin },
+      theme: "plain",
+      body: [[
+        `Total de ativos: ${resumo.total}`,
+        `Conclu\xEDdos: ${resumo.concluidos}`,
+        `Erros: ${resumo.erros}`
+      ], [
+        `Valor m\xEDnimo total: ${formatBRL(resumo.valorMinTotal)}`,
+        `Valor m\xE9dio total: ${formatBRL(resumo.valorMedioTotal)}`,
+        `Valor m\xE1ximo total: ${formatBRL(resumo.valorMaxTotal)}`
+      ]],
+      styles: { fontSize: 9, cellPadding: 4 },
+      didDrawPage: cabecalhoRodape
+    });
+    y = doc.lastAutoTable.finalY + 20;
+
+    // --- Tabela de resultados ---
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text("Tabela de resultados", margin, y);
+    y += 8;
+    const corpoTabela = rows.map((r, idx) => [
+      idx + 1,
+      nomeDoItem(r.item),
+      r.item.categoria || "",
+      r.status === "conclu\xEDdo" ? "Conclu\xEDdo" : r.status === "erro" ? "Erro" : r.status,
+      r.status === "conclu\xEDdo" && r.result ? formatBRL(r.result.faixa_min) : "\u2014",
+      r.status === "conclu\xEDdo" && r.result ? formatBRL(r.result.faixa_media) : "\u2014",
+      r.status === "conclu\xEDdo" && r.result ? formatBRL(r.result.faixa_max) : "\u2014"
+    ]);
+    doc.autoTable({
+      startY: y,
+      margin: { left: margin, right: margin, bottom: 50 },
+      head: [["N\xBA", "Item", "Categoria", "Status", "Faixa m\xEDnima", "Faixa m\xE9dia", "Faixa m\xE1xima"]],
+      body: corpoTabela,
+      styles: { fontSize: 8, cellPadding: 5 },
+      headStyles: { fillColor: COR_DOURADO, textColor: 255, fontStyle: "bold" },
+      alternateRowStyles: { fillColor: [245, 243, 238] },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 3) {
+          if (data.cell.raw === "Conclu\xEDdo") { data.cell.styles.textColor = COR_VERDE; data.cell.styles.fontStyle = "bold"; }
+          if (data.cell.raw === "Erro") { data.cell.styles.textColor = COR_VERMELHO; data.cell.styles.fontStyle = "bold"; }
+        }
+      },
+      didDrawPage: cabecalhoRodape
+    });
+    y = doc.lastAutoTable.finalY + 25;
+
+    // --- Fichas individuais (concluídos) + erros detalhados ---
+    doc.addPage();
+    cabecalhoRodape({ pageNumber: doc.internal.getNumberOfPages() });
+    y = 90;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.text("Detalhamento por item", margin, y);
+    y += 20;
+
+    rows.forEach((r, idx) => {
+      if (y > pageHeight - 140) {
+        doc.addPage();
+        cabecalhoRodape({ pageNumber: doc.internal.getNumberOfPages() });
+        y = 90;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10.5);
+      doc.setTextColor(0);
+      doc.text(`${idx + 1}. ${nomeDoItem(r.item)}`, margin, y);
+      y += 16;
+
+      if (r.status === "conclu\xEDdo" && r.result) {
+        const res = r.result;
+        const linhasFicha = [
+          ["Categoria", r.item.categoria || "\u2014"],
+          ["Faixa de venda direta", `${formatBRL(res.faixa_min)} \u2013 ${formatBRL(res.faixa_max)} (m\xE9dia ${formatBRL(res.faixa_media)})`],
+          res.leilao_min || res.leilao_max ? ["Faixa de leil\xE3o", `${formatBRL(res.leilao_min)} \u2013 ${formatBRL(res.leilao_max)}`] : null,
+          res.reais_por_kg ? ["R$/kg", formatBRL(res.reais_por_kg)] : null,
+          res.reais_por_cv ? ["R$/CV", formatBRL(res.reais_por_cv)] : null,
+          ["Origem", res.origem === "base_propria" ? "Base pr\xF3pria (sem custo de IA)" : "IA + busca de mercado"],
+          res.resumo ? ["Resumo", res.resumo] : null
+        ].filter(Boolean);
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin, bottom: 50 },
+          theme: "plain",
+          body: linhasFicha,
+          styles: { fontSize: 8.5, cellPadding: 3 },
+          columnStyles: { 0: { fontStyle: "bold", cellWidth: 140 } },
+          didDrawPage: cabecalhoRodape
+        });
+        y = doc.lastAutoTable.finalY + 16;
+      } else if (r.status === "erro") {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(...COR_VERMELHO);
+        const motivo = r.error || "Erro n\xE3o especificado.";
+        const linhasMotivo = doc.splitTextToSize(`Motivo do erro: ${motivo}`, pageWidth - margin * 2);
+        linhasMotivo.forEach((linha) => {
+          if (y > pageHeight - 60) {
+            doc.addPage();
+            cabecalhoRodape({ pageNumber: doc.internal.getNumberOfPages() });
+            y = 90;
+          }
+          doc.text(linha, margin, y);
+          y += 12;
+        });
+        doc.setTextColor(0);
+        y += 8;
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(120);
+        doc.text("N\xE3o processado.", margin, y);
+        doc.setTextColor(0);
+        y += 16;
+      }
+      y += 10;
+    });
+
+    doc.save(`relatorio-lote-${idLote}.pdf`);
+  }
+  async function exportarLoteExcel(rows, config) {
+    if (!window.ExcelJS) {
+      alert("A biblioteca de Excel ainda n\xE3o carregou. Tente novamente em alguns segundos.");
+      return;
+    }
+    const resumo = resumoDoLote(rows);
+    const agora = /* @__PURE__ */ new Date();
+    const idLote = `LOTE-${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}-${String(agora.getHours()).padStart(2, "0")}${String(agora.getMinutes()).padStart(2, "0")}`;
+
+    const COR_DOURADO = "FFD98E04";
+    const COR_ESCURO = "FF0A0A0B";
+    const COR_CINZA_CLARO = "FFF5F3EE";
+    const COR_VERDE = "FFD4EDDA";
+    const COR_VERMELHO = "FFF8D7DA";
+    const COR_TEXTO_VERDE = "FF155724";
+    const COR_TEXTO_VERMELHO = "FF721C24";
+
+    const workbook = new window.ExcelJS.Workbook();
+    workbook.creator = (config && config.titulo) || "Conecta Valor";
+    workbook.created = agora;
+    const ws = workbook.addWorksheet("Avalia\xE7\xE3o de Ativos", {
+      pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: "8:8" }
+    });
+
+    // --- Cabeçalho (logo + título) ---
+    ws.mergeCells("A1:D5");
+    try {
+      const imgId = workbook.addImage({ base64: `data:image/jpeg;base64,${LOGO_FULL_B64}`, extension: "jpeg" });
+      ws.addImage(imgId, { tl: { col: 0, row: 0 }, ext: { width: 220, height: 70 } });
+    } catch (e) {
+      console.warn("N\xE3o foi poss\xEDvel inserir o logo no Excel:", e);
+    }
+
+    ws.mergeCells("E1:M1");
+    const tituloCell = ws.getCell("E1");
+    tituloCell.value = ((config && config.titulo) || "CONECTA VALOR").toUpperCase();
+    tituloCell.font = { bold: true, size: 16, color: { argb: COR_ESCURO } };
+
+    ws.mergeCells("E2:M2");
+    const subtituloCell = ws.getCell("E2");
+    subtituloCell.value = "Relat\xF3rio de Avalia\xE7\xE3o de Ativos";
+    subtituloCell.font = { size: 12, color: { argb: "FF4A5568" } };
+
+    ws.mergeCells("E3:M3");
+    ws.getCell("E3").value = `Gerado em ${agora.toLocaleDateString("pt-BR")} \xE0s ${agora.toLocaleTimeString("pt-BR")}`;
+    ws.getCell("E3").font = { size: 9, color: { argb: "FF808080" } };
+
+    ws.mergeCells("E4:M4");
+    ws.getCell("E4").value = `Identifica\xE7\xE3o do lote: ${idLote}`;
+    ws.getCell("E4").font = { size: 9, color: { argb: "FF808080" } };
+
+    // --- Resumo ---
+    const linhaResumoTitulo = 7;
+    ws.mergeCells(`A${linhaResumoTitulo}:M${linhaResumoTitulo}`);
+    ws.getCell(`A${linhaResumoTitulo}`).value = "RESUMO";
+    ws.getCell(`A${linhaResumoTitulo}`).font = { bold: true, size: 11, color: { argb: "FFFFFFFF" } };
+    ws.getCell(`A${linhaResumoTitulo}`).fill = { type: "pattern", pattern: "solid", fgColor: { argb: COR_ESCURO } };
+
+    const linhaResumoDados = linhaResumoTitulo + 1;
+    const resumoColunas = [
+      ["Total de itens", resumo.total],
+      ["Conclu\xEDdos", resumo.concluidos],
+      ["Erros", resumo.erros],
+      ["Valor m\xEDnimo total", resumo.valorMinTotal],
+      ["Valor m\xE9dio total", resumo.valorMedioTotal],
+      ["Valor m\xE1ximo total", resumo.valorMaxTotal]
+    ];
+    resumoColunas.forEach(([label, valor], i) => {
+      const col = i + 1;
+      const cLabel = ws.getCell(linhaResumoDados, col);
+      cLabel.value = label;
+      cLabel.font = { size: 8, color: { argb: "FF808080" } };
+      const cValor = ws.getCell(linhaResumoDados + 1, col);
+      cValor.value = valor;
+      cValor.font = { bold: true, size: 12 };
+      if (i >= 3) cValor.numFmt = '"R$" #,##0.00';
+    });
+
+    // --- Tabela ---
+    const linhaCabecalho = linhaResumoDados + 3;
+    const colunas = ["N\xBA", "Item", "Categoria", "Marca", "Modelo", "Status", "Faixa m\xEDnima", "Faixa m\xE9dia", "Faixa m\xE1xima", "R$/kg", "R$/CV", "Origem", "Observa\xE7\xE3o/erro"];
+    const headerRow = ws.getRow(linhaCabecalho);
+    colunas.forEach((titulo, i) => {
+      const cell = headerRow.getCell(i + 1);
+      cell.value = titulo;
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COR_DOURADO } };
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+    });
+    headerRow.height = 24;
+
+    rows.forEach((r, idx) => {
+      const linha = linhaCabecalho + 1 + idx;
+      const res = r.result || {};
+      const valores = [
+        idx + 1,
+        nomeDoItem(r.item),
+        r.item.categoria || "",
+        r.item.marca || "",
+        r.item.modelo || "",
+        r.status === "conclu\xEDdo" ? "Conclu\xEDdo" : r.status === "erro" ? "Erro" : r.status,
+        r.status === "conclu\xEDdo" ? res.faixa_min ?? null : null,
+        r.status === "conclu\xEDdo" ? res.faixa_media ?? null : null,
+        r.status === "conclu\xEDdo" ? res.faixa_max ?? null : null,
+        r.status === "conclu\xEDdo" ? res.reais_por_kg ?? null : null,
+        r.status === "conclu\xEDdo" ? res.reais_por_cv ?? null : null,
+        r.status === "conclu\xEDdo" ? (res.origem === "base_propria" ? "Base pr\xF3pria" : "IA + busca") : "",
+        r.status === "erro" ? (r.error || "Erro n\xE3o especificado") : ""
+      ];
+      valores.forEach((val, colIdx) => {
+        const cell = ws.getCell(linha, colIdx + 1);
+        cell.value = val;
+        cell.border = { top: { style: "hair" }, left: { style: "hair" }, bottom: { style: "hair" }, right: { style: "hair" } };
+        cell.alignment = { vertical: "middle", horizontal: colIdx === 0 ? "center" : colIdx >= 6 && colIdx <= 10 ? "right" : "left" };
+        if (colIdx >= 6 && colIdx <= 10) cell.numFmt = '"R$" #,##0.00';
+      });
+      // status visualmente distinguível
+      const statusCell = ws.getCell(linha, 6);
+      if (r.status === "conclu\xEDdo") {
+        statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COR_VERDE } };
+        statusCell.font = { color: { argb: COR_TEXTO_VERDE }, bold: true };
+      } else if (r.status === "erro") {
+        statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COR_VERMELHO } };
+        statusCell.font = { color: { argb: COR_TEXTO_VERMELHO }, bold: true };
+      }
+      if (idx % 2 === 1) {
+        for (let c = 1; c <= colunas.length; c++) {
+          const cell = ws.getCell(linha, c);
+          if (!cell.fill) cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: COR_CINZA_CLARO } };
+        }
+      }
+    });
+
+    // largura automática (aproximada pelo conte\xFAdo)
+    colunas.forEach((titulo, i) => {
+      let maior = titulo.length;
+      rows.forEach((r) => {
+        const valores = ["", nomeDoItem(r.item), r.item.categoria, r.item.marca, r.item.modelo, r.status, r.result && r.result.faixa_min, r.result && r.result.faixa_media, r.result && r.result.faixa_max, r.result && r.result.reais_por_kg, r.result && r.result.reais_por_cv, r.result && r.result.origem, r.error];
+        const v = valores[i];
+        if (v && String(v).length > maior) maior = String(v).length;
+      });
+      ws.getColumn(i + 1).width = Math.min(Math.max(maior + 2, 10), 40);
+    });
+
+    // congelar cabeçalho + filtro
+    ws.views = [{ state: "frozen", ySplit: linhaCabecalho }];
+    ws.autoFilter = { from: { row: linhaCabecalho, column: 1 }, to: { row: linhaCabecalho, column: colunas.length } };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    downloadBlob(`relatorio-lote-${idLote}.xlsx`, blob);
+  }
+  function nomeDoItem(item) {
+    return [item.marca, item.modelo].filter(Boolean).join(" ") || item.categoria || "Item sem categoria";
+  }
+  function resumoDoLote(rows) {
+    const concluidos = rows.filter((r) => r.status === "conclu\xEDdo" && r.result);
+    const erros = rows.filter((r) => r.status === "erro");
+    const somar = (campo) => concluidos.reduce((acc, r) => acc + (Number(r.result[campo]) || 0), 0);
+    return {
+      total: rows.length,
+      concluidos: concluidos.length,
+      erros: erros.length,
+      valorMinTotal: somar("faixa_min"),
+      valorMedioTotal: somar("faixa_media"),
+      valorMaxTotal: somar("faixa_max")
+    };
+  }
   function downloadTemplateCSV() {
     const header = "categoria,marca,modelo,potenciaKw,potenciaCv,pesoKg,anoFabricacao,rpm,estado,obs";
     const exemplo = "Motor el\xE9trico,WEG,W22 100L,3.7,5,34,2018,1745,Usado - funcionando,220/380/440 V";
@@ -5975,6 +6335,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-family: 'IBM Plex Sans', sans-serif;
         }
         .link-btn:hover { color: #1B1D1F; }
+        .export-buttons-row { display: flex; gap: 1.2rem; margin-top: 0.4rem; }
         .batch-table {
           border: 1px solid #C7C2B8;
           border-radius: 4px;
@@ -6402,7 +6763,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         disabled: batchRunning || batchRows.length === 0
       },
       batchRunning ? `Avaliando ${batchProgress.done}/${batchProgress.total}\u2026` : `Avaliar lote (${batchRows.length} ${batchRows.length === 1 ? "item" : "itens"})`
-    ), !batchRunning && batchRows.some((r) => r.status === "conclu\xEDdo") && /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => exportResultsCSV(batchRows) }, "exportar resultado (.csv)")), batchRunning && /* @__PURE__ */ React.createElement("div", { className: "loading-indicator" }, /* @__PURE__ */ React.createElement("span", { className: "spinner", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("span", null, batchProgress.avgSeconds > 0 ? `Tempo m\xE9dio ${Math.round(batchProgress.avgSeconds)}s/item (3 em paralelo) \xB7 restam ~${Math.max(0, Math.round(batchProgress.avgSeconds * (batchProgress.total - batchProgress.done) / 3))}s` : "Avaliando o primeiro item (geralmente 20 a 60 segundos)\u2026"))), batchError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, batchError), batchRows.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table" }, batchRows.map((r, idx) => {
+    ), !batchRunning && batchRows.some((r) => r.status === "conclu\xEDdo" || r.status === "erro") && /* @__PURE__ */ React.createElement("div", { className: "export-buttons-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => exportarLoteExcel(batchRows, config) }, "\u2193 Exportar Excel"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => exportarLotePDF(batchRows, config) }, "\u2193 Exportar PDF"))), batchRunning && /* @__PURE__ */ React.createElement("div", { className: "loading-indicator" }, /* @__PURE__ */ React.createElement("span", { className: "spinner", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("span", null, batchProgress.avgSeconds > 0 ? `Tempo m\xE9dio ${Math.round(batchProgress.avgSeconds)}s/item (3 em paralelo) \xB7 restam ~${Math.max(0, Math.round(batchProgress.avgSeconds * (batchProgress.total - batchProgress.done) / 3))}s` : "Avaliando o primeiro item (geralmente 20 a 60 segundos)\u2026"))), batchError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, batchError), batchRows.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table" }, batchRows.map((r, idx) => {
       const nome = [r.item.marca, r.item.modelo].filter(Boolean).join(" ") || r.item.categoria;
       const isOpen = expandedRow === r.id;
       return /* @__PURE__ */ React.createElement("div", { key: r.id, className: "batch-row status-" + r.status }, /* @__PURE__ */ React.createElement(
