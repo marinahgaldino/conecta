@@ -1307,19 +1307,42 @@
     var resto = texto.slice(fromIndex);
     var aliases = UNIDADE_ALIASES[unidade] || [unidade.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")];
     var padraoNum = "(\\d{1,3}(?:\\.\\d{3})*(?:,\\d+)?|\\d+(?:\\.\\d+)?)";
+    // fração tipo "1/2 CV", "3/4CV" — precisa ser tentado ANTES do número
+    // solto, senão "1/2 CV" vira "2 CV" (pega só o denominador, x4 o valor real)
+    var padraoFracao = "(\\d{1,2})\\s*\\/\\s*(\\d{1,2})";
     var melhor = null;
+    var melhorEhFracao = false;
     for (var i = 0; i < aliases.length; i++) {
       var u = aliases[i];
+      var reFracao = new RegExp(padraoFracao + "\\s*" + u + "(?![a-zA-Z0-9])", "i");
+      var mFracao = resto.match(reFracao);
+      if (mFracao && (melhor === null || mFracao.index < melhor.index)) {
+        melhor = mFracao;
+        melhorEhFracao = true;
+      }
       var re1 = new RegExp(padraoNum + "\\s*" + u + "(?![a-zA-Z0-9])", "i");
       var re2 = new RegExp("(?<![a-zA-Z0-9])" + u + "\\s*[:\\-]?\\s*" + padraoNum, "i");
       var m1 = resto.match(re1);
       var m2 = resto.match(re2);
       var candidato = m1 && (!m2 || m1.index <= m2.index) ? m1 : m2;
-      if (candidato && (melhor === null || candidato.index < melhor.index)) melhor = candidato;
+      // só aceita o número solto se ele não estiver "dentro" de uma fração já achada (ex: o "2" de "1/2 CV")
+      if (candidato && (melhor === null || candidato.index < melhor.index)) {
+        melhor = candidato;
+        melhorEhFracao = false;
+      }
     }
     if (melhor) {
-      var num = parseNumeroBR(melhor[1]);
-      if (!Number.isNaN(num)) return { valor: num, confianca: 0.92, fimMatch: fromIndex + melhor.index + melhor[0].length, original: melhor[0].trim() };
+      if (melhorEhFracao) {
+        var numerador = parseInt(melhor[1], 10);
+        var denominador = parseInt(melhor[2], 10);
+        if (denominador !== 0) {
+          var valorFracao = Math.round((numerador / denominador) * 1000) / 1000;
+          return { valor: valorFracao, confianca: 0.9, fimMatch: fromIndex + melhor.index + melhor[0].length, original: melhor[0].trim() };
+        }
+      } else {
+        var num = parseNumeroBR(melhor[1]);
+        if (!Number.isNaN(num)) return { valor: num, confianca: 0.92, fimMatch: fromIndex + melhor.index + melhor[0].length, original: melhor[0].trim() };
+      }
     }
     // não achou na unidade nativa — tenta converter de uma unidade equivalente
     var conversoes = UNIDADE_CONVERSOES[unidade];
