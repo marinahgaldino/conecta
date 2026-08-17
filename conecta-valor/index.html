@@ -3374,7 +3374,7 @@ Se n\xE3o encontrar nada relevante, responda com um array vazio: []`;
   function buildPrompt(item, hasPhoto, config) {
     const cfg = config || DEFAULT_CONFIG;
     const linhas = [
-      `Categoria: ${item.categoria}`,
+      item.categoria && `Categoria: ${item.categoria}`,
       item.marca && `Marca/fabricante: ${item.marca}`,
       item.modelo && `Modelo: ${item.modelo}`,
       item.potenciaKw && `Pot\xEAncia: ${item.potenciaKw} kW`,
@@ -3385,9 +3385,10 @@ Se n\xE3o encontrar nada relevante, responda com um array vazio: []`;
       item.estado && `Estado de conserva\xE7\xE3o: ${item.estado}`,
       item.obs && `Observa\xE7\xF5es: ${item.obs}`
     ].filter(Boolean).join("\n");
+    const semTextoNenhum = linhas.length === 0 && hasPhoto;
     const fotoInstrucao = hasPhoto ? `
 Uma ou mais fotos do equipamento foram anexadas a esta mensagem (at\xE9 3, podendo incluir uma foto da placa de identifica\xE7\xE3o junto com fotos gerais do equipamento).
-
+${semTextoNenhum ? '\nNenhuma informa\xE7\xE3o em texto foi fornecida pelo usu\xE1rio \u2014 identifique categoria, marca, modelo, pot\xEAncia, ano e demais dados INTEIRAMENTE a partir das fotos (principalmente a placa de identifica\xE7\xE3o, se houver). Se algo n\xE3o for identific\xE1vel com confian\xE7a pelas fotos, deixe null em vez de adivinhar.\n' : ''}
 ORDEM DE PRIORIDADE PARA MARCA, MODELO, POT\xCANCIA E ANO (em caso de conflito entre fontes, siga esta ordem):
 1\xBA) Placa de identifica\xE7\xE3o (nameplate) \u2014 se houver foto leg\xEDvel da placa, ela \xE9 a fonte MAIS CONFI\xC1VEL; leia-a com aten\xE7\xE3o e use os dados dela mesmo que conflitem com o que o usu\xE1rio escreveu ou com outras fotos.
 2\xBA) Texto informado pelo usu\xE1rio (campos do formul\xE1rio/observa\xE7\xF5es) \u2014 usado quando n\xE3o h\xE1 placa leg\xEDvel.
