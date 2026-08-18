@@ -5465,8 +5465,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           return;
         }
         if (!parsed) {
-          const itemComFotos = photos.length > 0 ? { ...form, photos: photos.map((p) => ({ base64: p.base64, mediaType: p.mediaType })) } : form;
-          parsed = await callEdgeAvaliar(itemComFotos, supaUrl, supaKey, session && session.access_token);
+          const baseItem = photos.length > 0 ? { ...form, photos: photos.map((p) => ({ base64: p.base64, mediaType: p.mediaType })) } : { ...form };
+          if (!baseItem.categoria_id) baseItem.categoria_id = resolverCategoriaId(form.categoria);
+          parsed = await callEdgeAvaliar(baseItem, supaUrl, supaKey, session && session.access_token);
         }
         if (!parsed) {
           const prompt = buildPrompt(form, photos.length > 0, config);
@@ -5594,7 +5595,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               if (!parsed && saldoCreditos !== null && saldoCreditos <= 0) {
                 return { tipo: "sem_credito" };
               }
-              if (!parsed) parsed = await callEdgeAvaliar(current[i].item, supaUrl, supaKey, session && session.access_token);
+              if (!parsed) {
+                const itemComCategoriaId = current[i].item.categoria_id ? current[i].item : { ...current[i].item, categoria_id: resolverCategoriaId(current[i].item.categoria) };
+                parsed = await callEdgeAvaliar(itemComCategoriaId, supaUrl, supaKey, session && session.access_token);
+              }
               if (!parsed) parsed = await callClaude(buildPrompt(current[i].item, false, config), null, apiKey);
               if (!parsed) throw new Error(t("N\xE3o foi poss\xEDvel obter um resultado.", "Could not get a result."));
               return { tipo: "ok", parsed };
