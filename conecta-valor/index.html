@@ -6822,9 +6822,36 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .app { max-width: 900px; margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); }
         }
         @media (min-width: 1280px) {
-          .app { max-width: min(1440px, 88vw); margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); }
+          .app { max-width: min(1440px, 88vw); margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); position: relative; }
           .panel, .tag-card, .review-panel { padding-left: 2.25rem; padding-right: 2.25rem; }
           .stats-grid { grid-template-columns: repeat(4, 1fr); }
+          .app { padding-left: 208px; }
+          .tabs-row {
+            position: fixed;
+            top: 0;
+            left: calc((100vw - min(1440px, 88vw)) / 2);
+            width: 208px;
+            height: 100vh;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            background: #070707;
+            padding: 1.3rem 0.9rem;
+            gap: 0.15rem;
+            overflow-y: auto;
+            z-index: 50;
+            border-right: 1px solid rgba(255,255,255,0.08);
+          }
+          .pill-tab {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: 1px solid transparent;
+            color: #B9BCC2;
+            border-radius: 8px;
+            padding: 0.65rem 0.9rem;
+          }
+          .pill-tab:hover:not(.active):not(:disabled) { background: rgba(255,255,255,0.06); color: #EDECE6; }
+          .pill-tab.active { background: #D98E04; color: #1B1D1F; border-color: #D98E04; box-shadow: none; font-weight: 600; }
         }
       `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")), /* @__PURE__ */ React.createElement(
       "button",
