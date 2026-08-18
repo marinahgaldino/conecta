@@ -3119,6 +3119,8 @@
       const linhasUteis = linhas.filter(
         (l) => !/^\d+\s*\/\s*\d+$/.test(l) && !/^\d[\d.,]*\s*km$/i.test(l) && !pareceLocalCurta(l)
       );
+      const idxKm = linhas.findIndex((l) => /^\d[\d.,]*\s*km$/i.test(l));
+      const localizacaoRel = idxKm > 0 && pareceLocalCurta(linhas[idxKm - 1]) ? linhas[idxKm - 1] : null;
       const titulo = linhasUteis.slice(0, 2).join(" ").trim();
       const anoRelMatch = bloco.match(/Ano de fabrico:\s*(\d{4})/i);
       const condRelMatch = bloco.match(/Condi[çc][ãa]o:\s*([^,\n]+)/i);
@@ -3136,7 +3138,7 @@
         capacidade: potenciaRelMatch ? potenciaRelMatch[1].trim() : null,
         detalhes: detalhesRel.length ? detalhesRel.join("; ") : null,
         estado: condRelMatch && /usad/i.test(condRelMatch[1]) ? "Usado" : condRelMatch && /nov[oa]/i.test(condRelMatch[1]) ? "Novo" : null,
-        localizacao: null,
+        localizacao: localizacaoRel,
         preco: parsePrecoBR(precoMatch[1]),
         moeda: "EUR",
         canal: "Revenda/Terceiro",
