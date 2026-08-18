@@ -5688,7 +5688,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             width: 100%;
             padding: 0.65rem 0.8rem;
             border: 1px solid #3A3D42;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 0.95rem;
             background: #26282C;
             color: #EDECE6;
@@ -5722,13 +5722,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             background: #D98E04;
             color: #1B1D1F;
             border: none;
-            border-radius: 4px;
+            border-radius: 6px;
             padding: 0.8rem;
             cursor: pointer;
             margin-top: 0.4rem;
-            transition: background 0.15s ease;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+            transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
           }
-          .login-btn:hover:not(:disabled) { background: #F0A420; }
+          .login-btn:hover:not(:disabled) { background: #F0A420; transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(0,0,0,0.35); }
+          .login-btn:active:not(:disabled) { transform: translateY(0); }
           .login-btn:disabled { opacity: 0.6; cursor: wait; }
           .login-switch {
             text-align: center;
@@ -5849,7 +5851,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-size: 0.75rem;
           font-weight: 700;
           padding: 0.32rem 0.6rem;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
         }
         .lang-toggle:hover { border-color: #D98E04; color: #D98E04; }
@@ -5890,10 +5892,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           padding: 0.55rem 1.15rem;
           border-radius: 999px;
           cursor: pointer;
-          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+          transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
         }
         .pill-tab:hover:not(.active):not(:disabled) { background: #E7E5DF; }
-        .pill-tab.active { background: #1B1D1F; color: #EDECE6; border-color: #1B1D1F; }
+        .pill-tab.active { background: #1B1D1F; color: #EDECE6; border-color: #1B1D1F; box-shadow: 0 2px 6px rgba(27,29,31,0.2); }
         .pill-tab:disabled { opacity: 0.5; cursor: not-allowed; }
         .header h1 {
           font-family: 'Oswald', sans-serif;
@@ -5925,10 +5927,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           background: #F7F6F2;
           margin: 1.1rem 1.5rem 0;
           border: 1px solid #C7C2B8;
-          border-radius: 6px;
+          border-radius: 10px;
           padding: 1.5rem;
           position: relative;
-          box-shadow: 0 2px 10px rgba(27,29,31,0.06);
+          box-shadow: 0 3px 14px rgba(122,78,0,0.07), 0 1px 3px rgba(27,29,31,0.05);
           animation: fadeIn 0.25s ease-out;
         }
         @keyframes fadeIn {
@@ -5960,7 +5962,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           width: 100%;
           padding: 0.6rem 0.7rem;
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           background: #FFFFFF;
           font-family: 'IBM Plex Sans', sans-serif;
           font-size: 0.92rem;
@@ -6001,17 +6003,18 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           background: #D98E04;
           color: #1B1D1F;
           border: none;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.75rem 1.5rem;
           cursor: pointer;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 1px 3px rgba(122,78,0,0.15);
           transition: background 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
         }
         button.primary:hover:not(:disabled) {
           background: #C27E00;
           transform: translateY(-1px);
-          box-shadow: 0 3px 8px rgba(0,0,0,0.15);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.25), 0 4px 12px rgba(122,78,0,0.22);
         }
-        button.primary:active:not(:disabled) { transform: translateY(0); box-shadow: none; }
+        button.primary:active:not(:disabled) { transform: translateY(0); box-shadow: inset 0 1px 2px rgba(0,0,0,0.15); }
         button.primary:disabled { opacity: 0.6; cursor: wait; }
         .error-box {
           margin: 1rem 1.5rem 0;
@@ -6019,10 +6022,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           border: 1px solid #C0392B;
           color: #7A241C;
           padding: 0.85rem 1rem;
-          border-radius: 4px;
+          border-radius: 6px;
           font-size: 0.9rem;
         }
-        .review-panel { margin: 1.2rem 1.5rem 0; border: 1px solid #C7C2B8; border-radius: 6px; padding: 1.1rem; background: #FBFAF7; }
+        .review-panel { margin: 1.2rem 1.5rem 0; border: 1px solid #C7C2B8; border-radius: 10px; padding: 1.1rem; background: #FBFAF7; box-shadow: 0 2px 8px rgba(122,78,0,0.05); }
         .review-header { display: flex; align-items: center; gap: 0.7rem; margin-bottom: 0.9rem; flex-wrap: wrap; }
         .review-category { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 1.05rem; }
         .confidence-badge { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; padding: 0.15rem 0.5rem; border-radius: 999px; }
@@ -6102,7 +6105,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .explicacao-tecnica {
           background: #F7F6F2;
           border-left: 3px solid #D98E04;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.7rem 1rem;
           margin: 0.8rem 0;
         }
@@ -6116,7 +6119,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .leilao-row {
           background: #F7F6F2;
           border: 1px dashed #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.7rem 0.9rem;
           margin-bottom: 1rem;
           display: flex;
@@ -6142,7 +6145,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           background: #FBF3E2;
           margin: 0 -0.6rem;
           padding: 0.6rem;
-          border-radius: 4px;
+          border-radius: 6px;
           border-bottom: none !important;
         }
         .melhor-badge {
@@ -6288,7 +6291,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           margin: 1rem auto 0;
           background: #F7F6F2;
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 1.2rem 1.4rem;
           font-size: 0.82rem;
           line-height: 1.55;
@@ -6346,7 +6349,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           width: 52px;
           height: 52px;
           object-fit: cover;
-          border-radius: 4px;
+          border-radius: 6px;
           border: 1px solid #C7C2B8;
         }
         .photo-size-tag {
@@ -6381,7 +6384,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .cobertura-tabela {
           background: #F7F6F2;
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.8rem 1rem;
           margin: 0.7rem 0;
           display: flex;
@@ -6400,16 +6403,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           background: #FFFFFF;
           color: #1B1D1F;
           border: 1px solid #1B1D1F;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.55rem 1rem;
           cursor: pointer;
+          transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
         }
-        button.secondary:hover { background: #1B1D1F; color: #EDECE6; }
+        button.secondary:hover { background: #1B1D1F; color: #EDECE6; box-shadow: 0 2px 8px rgba(27,29,31,0.18); }
         button.secondary:disabled { opacity: 0.5; cursor: wait; }
         .ignored-note {
           background: #F7F6F2;
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.6rem 0.8rem;
         }
         .ignored-note ul { margin: 0.3rem 0 0; padding-left: 1.1rem; font-size: 0.82rem; color: #6B6E73; }
@@ -6435,7 +6439,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           border: 1px solid #C7C2B8;
           background: #FFFFFF;
           color: #4A5568;
-          border-radius: 4px;
+          border-radius: 6px;
           cursor: pointer;
         }
         .mode-btn.active { background: #4A5568; color: #EDECE6; border-color: #4A5568; }
@@ -6472,7 +6476,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .export-buttons-row { display: flex; gap: 1.2rem; margin-top: 0.4rem; }
         .batch-table {
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           overflow: hidden;
         }
         .batch-row { border-bottom: 1px solid #C7C2B8; background: #FFFFFF; }
@@ -6542,18 +6546,18 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           width: 100%;
           padding: 0.6rem 0.7rem;
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           font-family: 'IBM Plex Sans', sans-serif;
           font-size: 0.9rem;
         }
         .header-bg-preview-wrap { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.6rem; }
-        .header-bg-preview { width: 160px; height: 60px; object-fit: cover; border-radius: 4px; border: 1px solid #C7C2B8; background: #0A0A0B; }
+        .header-bg-preview { width: 160px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #C7C2B8; background: #0A0A0B; }
         .admin-textarea { min-height: 5rem; font-family: 'IBM Plex Mono', monospace; }
         .admin-actions { display: flex; align-items: center; gap: 1rem; }
         .admin-section {
           background: #F7F6F2;
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 1rem 1.2rem;
           display: flex;
           flex-direction: column;
@@ -6571,7 +6575,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .tendencia-wrapper {
           background: #F7F6F2;
           border: 1px solid #C7C2B8;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.8rem 1rem;
           margin: 0.3rem 0 0.8rem;
         }
@@ -6588,7 +6592,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .aviso-ia {
           background: #FBF3E2;
           border: 1px solid #D98E04;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.9rem 1.1rem;
           margin: 1rem 0;
           font-size: 0.85rem;
@@ -6596,7 +6600,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .intro-cliente {
           background: #FBF3E2;
           border: 1px solid #D98E04;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 1.1rem 1.3rem;
           margin: 1rem 0 1.3rem;
           font-size: 0.88rem;
@@ -6608,7 +6612,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           gap: 0.35rem;
           background: #FBF3E2;
           border: 1px solid #D98E04;
-          border-radius: 4px;
+          border-radius: 6px;
           padding: 0.9rem 1.1rem;
           margin-bottom: 1.4rem;
           font-size: 0.82rem;
@@ -6656,21 +6660,23 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           gap: 0.8rem;
           margin: 1.4rem 0;
           padding: 1.1rem 0;
-          border-top: 1px dashed #C7C2B8;
-          border-bottom: 1px dashed #C7C2B8;
+          border-top: 1px solid #E8DCC0;
+          border-bottom: 1px solid #E8DCC0;
         }
         .dashboard-recent { margin-top: 1rem; }
         .stat-cell {
           background: #FFFFFF;
-          border: 1px solid #C7C2B8;
-          border-radius: 4px;
-          padding: 0.7rem;
+          border: 1px solid #E2DFD6;
+          border-radius: 8px;
+          padding: 0.85rem 0.7rem;
           text-align: center;
+          box-shadow: 0 1px 4px rgba(27,29,31,0.05);
+          transition: box-shadow 0.15s ease, transform 0.15s ease;
         }
         .stat-number {
           display: block;
           font-family: 'IBM Plex Mono', monospace;
-          font-size: 1.4rem;
+          font-size: 1.55rem;
           font-weight: 600;
           color: #D98E04;
         }
