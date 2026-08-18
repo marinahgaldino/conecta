@@ -6192,20 +6192,61 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           display: flex;
           align-items: center;
           gap: 0.7rem;
-          background: #F7F6F2;
-          border: 1px solid #C7C2B8;
-          border-radius: 4px;
-          padding: 0.6rem 0.8rem;
-          margin-bottom: 0.4rem;
+          background: #FFFFFF;
+          border: 1px solid #DCD7CC;
+          border-radius: 8px;
+          padding: 0.65rem 0.9rem;
+          margin-bottom: 0.5rem;
           font-size: 0.85rem;
+          transition: border-color 0.15s, box-shadow 0.15s;
         }
-        .history-item:hover { border-color: #D98E04; }
-        .history-checkbox { flex-shrink: 0; cursor: pointer; }
+        .history-item:hover { border-color: #D98E04; box-shadow: 0 2px 8px rgba(217,142,4,0.12); }
+        .history-checkbox { flex-shrink: 0; cursor: pointer; width: 16px; height: 16px; accent-color: #D98E04; }
         .history-item-content {
           display: flex;
           justify-content: space-between;
+          align-items: center;
           flex: 1;
+          gap: 0.8rem;
           cursor: pointer;
+          min-width: 0;
+        }
+        .history-main {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+          min-width: 0;
+        }
+        .history-categoria-tag {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.66rem;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          color: #A67C00;
+          background: #FBF3E1;
+          border-radius: 3px;
+          padding: 0.1rem 0.4rem;
+          width: fit-content;
+        }
+        .history-titulo {
+          font-weight: 600;
+          color: #1B1D1F;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        .history-side {
+          display: flex;
+          flex-direction: column;
+          align-items: flex-end;
+          gap: 0.15rem;
+          flex-shrink: 0;
+        }
+        .history-preco {
+          font-family: 'IBM Plex Mono', monospace;
+          font-weight: 600;
+          color: #1B1D1F;
+          white-space: nowrap;
         }
         .history-header {
           display: flex;
@@ -6216,8 +6257,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           margin-bottom: 0.6rem;
         }
         .history-header h4 { margin: 0; }
-        .history-meta { text-align: right; font-family: 'IBM Plex Mono', monospace; }
-        .history-date { color: #8A8D91; font-size: 0.78rem; }
+        .history-date { color: #8A8D91; font-size: 0.75rem; }
         .app-footer {
           margin-top: 3rem;
           padding: 1.4rem 1.5rem 1.6rem;
@@ -7068,6 +7108,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       "Exportar PDF (",
       Object.values(selecionadosPdf).filter(Boolean).length,
       " selecionados)"
+    ), history.length > 1 && /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        type: "button",
+        className: "link-btn",
+        onClick: () => {
+          const todosSelecionados = history.every((h) => selecionadosPdf[h.id]);
+          const novo = {};
+          history.forEach((h) => { novo[h.id] = !todosSelecionados; });
+          setSelecionadosPdf(novo);
+        }
+      },
+      history.every((h) => selecionadosPdf[h.id]) ? t("desmarcar todos", "deselect all") : t("selecionar todos", "select all")
     )), history.map((h) => /* @__PURE__ */ React.createElement("div", { key: h.id, className: "history-item" }, /* @__PURE__ */ React.createElement(
       "input",
       {
@@ -7087,8 +7140,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           setError(null);
         }
       },
-      /* @__PURE__ */ React.createElement("span", null, [h.item.marca, h.item.modelo].filter(Boolean).join(" ") || h.item.categoria),
-      /* @__PURE__ */ React.createElement("span", { className: "history-meta" }, formatBRL(h.result.faixa_min), " \u2013 ", formatBRL(h.result.faixa_max), h.data && /* @__PURE__ */ React.createElement("span", { className: "history-date" }, " \xB7 ", new Date(h.data).toLocaleDateString("pt-BR")))
+      /* @__PURE__ */ React.createElement("div", { className: "history-main" },
+        h.item.categoria && /* @__PURE__ */ React.createElement("span", { className: "history-categoria-tag" }, h.item.categoria),
+        /* @__PURE__ */ React.createElement("span", { className: "history-titulo" }, [h.item.marca, h.item.modelo].filter(Boolean).join(" ") || t("Sem marca/modelo informado", "No brand/model given"))
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "history-side" },
+        /* @__PURE__ */ React.createElement("span", { className: "history-preco" }, formatBRL(h.result.faixa_min), " \u2013 ", formatBRL(h.result.faixa_max)),
+        h.data && /* @__PURE__ */ React.createElement("span", { className: "history-date" }, new Date(h.data).toLocaleDateString("pt-BR"))
+      )
     )))), /* @__PURE__ */ React.createElement("footer", { className: "app-footer" }, /* @__PURE__ */ React.createElement("p", { className: "footer-brand" }, /* @__PURE__ */ React.createElement(BrandWordmark, { text: config.titulo })), /* @__PURE__ */ React.createElement("button", { type: "button", className: "footer-link", onClick: () => setShowTermos((v) => !v) }, "Termos de Uso"), showTermos && /* @__PURE__ */ React.createElement("div", { className: "termos-box" }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Termos de Uso \u2014 ", config.titulo)), /* @__PURE__ */ React.createElement("p", null, "Esta ferramenta oferece estimativas de valor de mercado para ativos industriais, com apoio de intelig\xEAncia artificial, com finalidade exclusivamente informativa e consultiva."), /* @__PURE__ */ React.createElement("p", null, "As estimativas N\xC3O constituem laudo t\xE9cnico certificado, parecer de valor oficial, nem garantia de venda \u2014 n\xE3o substituem avalia\xE7\xE3o por profissional habilitado quando exigida por lei ou norma t\xE9cnica."), /* @__PURE__ */ React.createElement("p", null, 'As estimativas s\xE3o fornecidas "no estado em que se encontram", sem garantia de precis\xE3o ou atualidade. O usu\xE1rio \xE9 o \xFAnico respons\xE1vel por decis\xF5es comerciais tomadas com base nelas.'), /* @__PURE__ */ React.createElement("p", null, "Os dados usados nas estimativas v\xEAm de observa\xE7\xF5es de mercado p\xFAblicas \u2014 n\xE3o reproduzimos an\xFAncios, descri\xE7\xF5es ou fotos de terceiros, apenas fatos objetivos (categoria, marca, pre\xE7o, localiza\xE7\xE3o)."), /* @__PURE__ */ React.createElement("p", null, "Dados inseridos podem ser armazenados para composi\xE7\xE3o de hist\xF3rico e aprimoramento de estimativas futuras."), /* @__PURE__ */ React.createElement("p", { style: { fontStyle: "italic", color: "#8A8D91" } }, "\xDAltima atualiza\xE7\xE3o: 24/07/2026."))));
   }
 
