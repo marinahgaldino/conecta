@@ -5483,6 +5483,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         if (!parsed) {
           const baseItem = photos.length > 0 ? { ...form, photos: photos.map((p) => ({ base64: p.base64, mediaType: p.mediaType })) } : { ...form };
           if (!baseItem.categoria_id) baseItem.categoria_id = resolverCategoriaId(form.categoria);
+          const schemaCategoria = baseItem.categoria_id && SCHEMA_FUNCAO[baseItem.categoria_id];
+          if (schemaCategoria && schemaCategoria.ranking_importancia) baseItem.ranking_importancia = schemaCategoria.ranking_importancia;
           parsed = await callEdgeAvaliar(baseItem, supaUrl, supaKey, session && session.access_token);
         }
         if (!parsed) {
@@ -5612,7 +5614,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
                 return { tipo: "sem_credito" };
               }
               if (!parsed) {
-                const itemComCategoriaId = current[i].item.categoria_id ? current[i].item : { ...current[i].item, categoria_id: resolverCategoriaId(current[i].item.categoria) };
+                const itemComCategoriaId = current[i].item.categoria_id ? { ...current[i].item } : { ...current[i].item, categoria_id: resolverCategoriaId(current[i].item.categoria) };
+                const schemaCategoriaLote = itemComCategoriaId.categoria_id && SCHEMA_FUNCAO[itemComCategoriaId.categoria_id];
+                if (schemaCategoriaLote && schemaCategoriaLote.ranking_importancia) itemComCategoriaId.ranking_importancia = schemaCategoriaLote.ranking_importancia;
                 parsed = await callEdgeAvaliar(itemComCategoriaId, supaUrl, supaKey, session && session.access_token);
               }
               if (!parsed) parsed = await callClaude(buildPrompt(current[i].item, false, config), null, apiKey);
