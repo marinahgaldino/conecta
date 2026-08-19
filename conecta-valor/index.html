@@ -6839,6 +6839,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           box-shadow: 0 1px 4px rgba(27,29,31,0.05);
           transition: box-shadow 0.15s ease, transform 0.15s ease;
         }
+        .stat-cell::before {
+          display: block;
+          font-size: 1.15rem;
+          margin-bottom: 0.25rem;
+        }
+        .stats-grid .stat-cell:nth-child(1)::before { content: "📦"; }
+        .stats-grid .stat-cell:nth-child(2)::before { content: "🔍"; }
+        .stats-grid .stat-cell:nth-child(3)::before { content: "📊"; }
+        .stats-grid .stat-cell:nth-child(4)::before { content: "🌐"; }
         .stat-number {
           display: block;
           font-family: 'IBM Plex Mono', monospace;
