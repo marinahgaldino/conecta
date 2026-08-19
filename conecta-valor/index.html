@@ -3296,26 +3296,85 @@
     }
     return itens;
   }
+  const ITENS_EXTRAIDOS_TOOL = {
+    name: "reportar_itens_extraidos",
+    description: "Reporta os itens/an\xFAncios extra\xEDdos do texto colado, com dados t\xE9cnicos e comerciais objetivos.",
+    input_schema: {
+      type: "object",
+      properties: {
+        itens: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              categoria: { type: ["string", "null"] },
+              marca: { type: ["string", "null"] },
+              modelo: { type: ["string", "null"] },
+              capacidade: { type: ["string", "null"] },
+              potencia_cv: { type: ["number", "null"] },
+              potencia_kw: { type: ["number", "null"] },
+              polaridade: { type: ["string", "null"] },
+              tensao: { type: ["string", "null"] },
+              carcaca: { type: ["string", "null"] },
+              rpm: { type: ["number", "null"] },
+              ano: { type: ["string", "null"] },
+              localizacao: { type: ["string", "null"] },
+              preco: { type: ["number", "null"] },
+              estado: { type: ["string", "null"] },
+              detalhes: { type: ["string", "null"] },
+              fonte: { type: ["string", "null"], description: "Nome do site/empresa de onde veio o an\xFAncio, se identific\xE1vel no texto colado (cabe\xE7alho, dom\xEDnio vis\xEDvel, nome no rodap\xE9) \u2014 preencher sempre que poss\xEDvel, mesmo aproximado. null s\xF3 se genuinamente n\xE3o identific\xE1vel." },
+              confianca: { type: "string", enum: ["alta", "m\xE9dia", "baixa"], description: "Confian\xE7a geral na extra\xE7\xE3o desse item \u2014 baixa se o texto estava confuso/incompleto" },
+            },
+            required: ["categoria", "confianca"],
+          },
+        },
+      },
+      required: ["itens"],
+    },
+  };
+  async function parseColetorGenericoComTool(promptText, apiKey) {
+    let response;
+    try {
+      const headers = { "Content-Type": "application/json" };
+      if (apiKey) {
+        headers["x-api-key"] = apiKey;
+        headers["anthropic-version"] = "2023-06-01";
+        headers["anthropic-dangerous-direct-browser-access"] = "true";
+      }
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          model: "claude-sonnet-5",
+          max_tokens: 4e3,
+          messages: [{ role: "user", content: promptText }],
+          tools: [ITENS_EXTRAIDOS_TOOL],
+          tool_choice: { type: "tool", name: "reportar_itens_extraidos" },
+        }),
+      });
+    } catch (networkErr) {
+      console.error("Erro de rede ao interpretar dados colados:", networkErr);
+      throw new Error("N\xE3o consegui conectar para interpretar o texto colado.");
+    }
+    if (!response.ok) {
+      let bodyText = "";
+      try {
+        bodyText = await response.text();
+      } catch (e) {
+      }
+      throw new Error("Falha ao interpretar o texto (c\xF3digo " + response.status + ").");
+    }
+    const data = await response.json();
+    const toolCall = (data.content || []).find((b) => b.type === "tool_use" && b.name === "reportar_itens_extraidos");
+    if (!toolCall || !toolCall.input || !Array.isArray(toolCall.input.itens)) {
+      throw new Error("N\xE3o entendi o formato do texto colado. Tente revisar e colar de novo.");
+    }
+    return toolCall.input.itens;
+  }
   function buildManualCollectorPrompt(rawText, fonte, tipoMercado) {
     return `Voc\xEA recebe abaixo um texto colado de uma p\xE1gina de an\xFAncios (copiado manualmente pelo usu\xE1rio de um site). Extraia cada item/an\xFAncio listado e devolva SOMENTE dados t\xE9cnicos e comerciais objetivos \u2014 N\xC3O copie a descri\xE7\xE3o de marketing, t\xEDtulo completo em prosa, nem qualquer texto literal longo. Ignore completamente qualquer men\xE7\xE3o a foto/imagem (ex: "An\xFAncio sem imagem/foto") \u2014 isso n\xE3o \xE9 um dado a extrair.
 
-Para cada item, extraia:
-- categoria (ex: Motor el\xE9trico, Bomba, Tanque)
-- marca
-- modelo (linha/especifica\xE7\xE3o, resumido)
-- capacidade (valor + unidade que melhor representa o porte do item \u2014 ex: "30 CV" para motor, "500 GPH" ou "1000 L" para bomba/tanque, "100 kVA" para gerador. Texto livre, ou null)
-- potencia_cv (n\xFAmero ou null, preencha s\xF3 se capacidade j\xE1 for em CV)
-- potencia_kw (n\xFAmero ou null)
-- polaridade (ex: "4 polos", ou null se n\xE3o for motor/n\xE3o informado)
-- tensao (ex: "220/380/440V", ou null)
-- carcaca (ex: "112M", ou null)
-- rpm (n\xFAmero ou null)
-- ano (texto ou null, se mencionado)
-- localizacao (cidade/estado, ou null)
-- preco (n\xFAmero em reais, sem "R$" nem pontos de milhar, ou null se n\xE3o informado)
-- estado ("Novo", "Seminovo", "Usado" ou "Recondicionado", ou null se n\xE3o mencionado)
-- detalhes (caracter\xEDsticas t\xE9cnicas relevantes que n\xE3o sejam de motor \u2014 ex para tanque: material; para linha de produ\xE7\xE3o: capacidade produtiva. Formato curto tipo "Material: A\xE7o Carbono". Null se n\xE3o aplic\xE1vel ou j\xE1 coberto pelos campos de motor)
-- data_observacao (data de hoje, formato YYYY-MM-DD)
+Para cada item, identifique tamb\xE9m de qual site/empresa ele veio (campo "fonte") \u2014 procure no cabe\xE7alho da p\xE1gina, dom\xEDnio, rodap\xE9 ou nome da empresa mencionado no texto colado.
 
 Texto colado:
 """
@@ -3327,13 +3386,7 @@ REGRAS CR\xCDTICAS DE PRECIS\xC3O \u2014 siga rigorosamente, para n\xE3o inventa
 - "modelo": nunca preencha com cidade/localiza\xE7\xE3o (ex: "Paul\xEDnia/SP", "Curitiba/PR") \u2014 isso vai em "localizacao", n\xE3o em "modelo".
 - "categoria": termo curto e t\xE9cnico. Nunca uma descri\xE7\xE3o longa/absurda \u2014 nesse caso, null.
 - Nunca escreva "N/A", "N\xE3o informado", "EMPTY", "-" em nenhum campo \u2014 use null.
-
-Responda APENAS com um JSON array v\xE1lido, sem markdown, sem texto antes ou depois, no formato:
-[
-  {"categoria": "...", "marca": "...", "modelo": "...", "capacidade": "...", "potencia_cv": 0, "potencia_kw": 0, "polaridade": "...", "tensao": "...", "carcaca": "...", "rpm": 0, "ano": "...", "localizacao": "...", "preco": 0, "estado": "...", "detalhes": "...", "data_observacao": "YYYY-MM-DD"}
-]
-
-Se n\xE3o conseguir identificar nenhum item claramente, responda com array vazio: []`;
+- Depois de extrair, reporte o resultado chamando a ferramenta "reportar_itens_extraidos". Se n\xE3o conseguir identificar nenhum item claramente, chame a ferramenta com "itens": [].`;
   }
   function buildCollectorPrompt(termo, sites, urlsLeilao, urlsVendaDireta) {
     const listaSites = (sites || []).join(", ");
@@ -5204,7 +5257,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             return;
           }
           const prompt = buildManualCollectorPrompt(manualText, null, manualTipoMercado);
-          const parsed = await parseTextOnly(prompt, 4e3, apiKey);
+          const parsed = await parseColetorGenericoComTool(prompt, apiKey);
           items = Array.isArray(parsed) ? parsed : [];
         }
         items = items.map(sanitizeResult);
@@ -5258,6 +5311,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           estado: it.estado || null,
           detalhes: it.detalhes || null,
           finalidade: it.finalidade || null,
+          fonte: it.fonte || null,
           tipo_mercado: manualTipoMercado,
           data_observacao: it.data_observacao || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
         }));
