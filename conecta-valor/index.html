@@ -4447,6 +4447,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [supaKeyDraft, setSupaKeyDraft] = (0, import_react.useState)(DEFAULT_SUPA_KEY);
     const [supaSaved, setSupaSaved] = (0, import_react.useState)(false);
     const [batchRows, setBatchRows] = (0, import_react.useState)([]);
+    const [batchSearch, setBatchSearch] = (0, import_react.useState)("");
     const [batchRunning, setBatchRunning] = (0, import_react.useState)(false);
     const [batchProgress, setBatchProgress] = (0, import_react.useState)({ done: 0, total: 0 });
     const [batchError, setBatchError] = (0, import_react.useState)(null);
@@ -6542,7 +6543,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         .batch-row-main {
           display: grid;
-          grid-template-columns: 2.2rem 1fr 7rem 11rem;
+          grid-template-columns: 2.2rem 1fr 7rem 8rem 11rem;
           align-items: center;
           gap: 0.75rem;
           padding: 0.65rem 1rem;
@@ -6550,6 +6551,39 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-size: 0.88rem;
         }
         .batch-row.status-pendente .batch-row-main { cursor: default; color: #8A8D91; }
+        .batch-search-row { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.7rem; }
+        .batch-search-input {
+          flex: 1;
+          max-width: 320px;
+          padding: 0.5rem 0.8rem;
+          border: 1px solid #C7C2B8;
+          border-radius: 6px;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.85rem;
+        }
+        .batch-progress-track {
+          background: #EDECE6;
+          border-radius: 999px;
+          height: 6px;
+          overflow: hidden;
+        }
+        .batch-progress-fill {
+          height: 100%;
+          background: #1F5C3F;
+          border-radius: 999px;
+          transition: width 0.3s ease;
+        }
+        .batch-row.status-erro .batch-progress-fill { background: #A3352A; }
+        .batch-progress-indeterminate {
+          width: 40% !important;
+          background: #D98E04;
+          animation: batchProgressSlide 1.2s ease-in-out infinite;
+        }
+        @keyframes batchProgressSlide {
+          0% { margin-left: 0%; }
+          50% { margin-left: 60%; }
+          100% { margin-left: 0%; }
+        }
         .batch-nome-col { display: flex; flex-direction: column; gap: 0.2rem; min-width: 0; }
         .batch-nome-col .history-categoria-tag { width: fit-content; }
         .batch-comp-count {
@@ -6811,11 +6845,12 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           input, select, textarea { font-size: 16px; }
           .stats-grid { grid-template-columns: repeat(2, 1fr); }
           .item-form { grid-template-columns: 1fr; }
-          .batch-row-main { grid-template-columns: 1.5rem 1fr; grid-template-areas: "idx nome" "status faixa"; }
+          .batch-row-main { grid-template-columns: 1.5rem 1fr; grid-template-areas: "idx nome" "status faixa" "progress progress"; }
           .batch-row-main .batch-idx { grid-area: idx; }
           .batch-row-main .batch-nome { grid-area: nome; }
           .batch-row-main .batch-status { grid-area: status; text-align: left; }
           .batch-row-main .batch-faixa { grid-area: faixa; text-align: left; }
+          .batch-row-main .batch-progress-track { grid-area: progress; }
           .home-history-row { grid-template-columns: 1fr; grid-template-areas: none; gap: 0.35rem; }
           .home-history-valores { align-items: flex-start; }
           .home-history-open { text-align: left; }
@@ -7085,9 +7120,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         disabled: batchRunning || batchRows.length === 0
       },
       batchRunning ? `Avaliando ${batchProgress.done}/${batchProgress.total}\u2026` : `Avaliar lote (${batchRows.length} ${batchRows.length === 1 ? "item" : "itens"})`
-    ), !batchRunning && batchRows.some((r) => r.status === "conclu\xEDdo" || r.status === "erro") && /* @__PURE__ */ React.createElement("div", { className: "export-buttons-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => exportarLoteExcel(batchRows, config) }, "\u2193 Exportar Excel"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => exportarLotePDF(batchRows, config) }, "\u2193 Exportar PDF"))), batchRunning && /* @__PURE__ */ React.createElement("div", { className: "loading-indicator" }, /* @__PURE__ */ React.createElement("span", { className: "spinner", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("span", null, batchProgress.avgSeconds > 0 ? `Tempo m\xE9dio ${Math.round(batchProgress.avgSeconds)}s/item (3 em paralelo) \xB7 restam ~${Math.max(0, Math.round(batchProgress.avgSeconds * (batchProgress.total - batchProgress.done) / 3))}s` : "Avaliando o primeiro item (geralmente 20 a 60 segundos)\u2026"))), batchError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, batchError), batchRows.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table" }, batchRows.map((r, idx) => {
+    ), !batchRunning && batchRows.some((r) => r.status === "conclu\xEDdo" || r.status === "erro") && /* @__PURE__ */ React.createElement("div", { className: "export-buttons-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => exportarLoteExcel(batchRows, config) }, "\u2193 Exportar Excel"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => exportarLotePDF(batchRows, config) }, "\u2193 Exportar PDF"))), batchRunning && /* @__PURE__ */ React.createElement("div", { className: "loading-indicator" }, /* @__PURE__ */ React.createElement("span", { className: "spinner", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("span", null, batchProgress.avgSeconds > 0 ? `Tempo m\xE9dio ${Math.round(batchProgress.avgSeconds)}s/item (3 em paralelo) \xB7 restam ~${Math.max(0, Math.round(batchProgress.avgSeconds * (batchProgress.total - batchProgress.done) / 3))}s` : "Avaliando o primeiro item (geralmente 20 a 60 segundos)\u2026"))), batchError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, batchError), batchRows.length > 0 && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "batch-search-row" }, /* @__PURE__ */ React.createElement("input", { type: "text", className: "batch-search-input", placeholder: t("Buscar item\u2026", "Search item\u2026"), value: batchSearch, onChange: (e) => setBatchSearch(e.target.value) }), batchSearch && /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setBatchSearch("") }, t("limpar", "clear"))), /* @__PURE__ */ React.createElement("div", { className: "batch-table" }, batchRows.map((r, idx) => {
       const nome = [r.item.marca, r.item.modelo].filter(Boolean).join(" ") || r.item.categoria;
       const isOpen = expandedRow === r.id;
+      if (batchSearch.trim()) {
+        const alvo = `${nome} ${r.item.categoria || ""} ${r.item.marca || ""} ${r.item.modelo || ""}`.toLowerCase();
+        if (!alvo.includes(batchSearch.trim().toLowerCase())) return null;
+      }
+      const progressoPct = r.status === "conclu\xEDdo" ? 100 : r.status === "erro" || r.status === "pendente" ? 0 : null;
       return /* @__PURE__ */ React.createElement("div", { key: r.id, className: "batch-row status-" + r.status }, /* @__PURE__ */ React.createElement(
         "div",
         {
@@ -7097,10 +7137,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, idx + 1),
         /* @__PURE__ */ React.createElement("div", { className: "batch-nome-col" }, r.item.categoria && /* @__PURE__ */ React.createElement("span", { className: "history-categoria-tag" }, r.item.categoria), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, nome)),
         /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, r.status),
+        /* @__PURE__ */ React.createElement("div", { className: "batch-progress-track" }, progressoPct !== null ? /* @__PURE__ */ React.createElement("div", { className: "batch-progress-fill", style: { width: progressoPct + "%" } }) : /* @__PURE__ */ React.createElement("div", { className: "batch-progress-fill batch-progress-indeterminate" })),
         /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, r.result ? `${formatBRL(r.result.faixa_min)} \u2013 ${formatBRL(r.result.faixa_max)}` : "\u2014", r.result && r.result.comparaveis && r.result.comparaveis.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "batch-comp-count" }, r.result.comparaveis.length, " comp.")
         )
       ), isOpen && r.result && /* @__PURE__ */ React.createElement("div", { className: "batch-row-detail" }, /* @__PURE__ */ React.createElement(ResultCard, { item: r.item, result: r.result, lang })), r.status === "erro" && /* @__PURE__ */ React.createElement("div", { className: "batch-row-error" }, /* @__PURE__ */ React.createElement("span", { className: "batch-row-error-icon", "aria-hidden": "true" }, "\u26A0"), /* @__PURE__ */ React.createElement("span", null, t("Falha na consulta \u2014 ", "Query failed \u2014 "), r.error)));
-    }))) : tab === "coletor" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement("div", { className: "coletor-guia" }, /* @__PURE__ */ React.createElement("strong", null, "3 jeitos de alimentar sua base, de acordo com a situa\xE7\xE3o:"), /* @__PURE__ */ React.createElement("span", null, "\u2460 ", /* @__PURE__ */ React.createElement("b", null, "Formul\xE1rio abaixo"), " \u2014 voc\xEA digita os dados, zero custo"), /* @__PURE__ */ React.createElement("span", null, "\u2461 ", /* @__PURE__ */ React.createElement("b", null, "Coleta manual (mais abaixo)"), " \u2014 cola texto de uma p\xE1gina (MF Rural, Superbid), gr\xE1tis nesses dois formatos"), /* @__PURE__ */ React.createElement("span", null, "\u2462 ", /* @__PURE__ */ React.createElement("b", null, "Coletor autom\xE1tico (mais abaixo)"), " \u2014 a IA busca sozinha em sites j\xE1 aprovados, com custo pequeno de uso")), /* @__PURE__ */ React.createElement(PanelTitle, null, "Adicionar observa\xE7\xE3o manualmente (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Voc\xEA digita o que j\xE1 est\xE1 vendo na tela \u2014 vai direto pro banco, sem passar pela IA, sem custo nenhum."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1.1rem" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-categoria" }, "Categoria"), /* @__PURE__ */ React.createElement("input", { id: "entry-categoria", value: entryForm.categoria, onChange: (e) => setEntryForm((f) => ({ ...f, categoria: e.target.value })), placeholder: "Ex: Motor el\xE9trico" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-marca" }, "Marca"), /* @__PURE__ */ React.createElement("input", { id: "entry-marca", value: entryForm.marca, onChange: (e) => setEntryForm((f) => ({ ...f, marca: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-modelo" }, "Modelo"), /* @__PURE__ */ React.createElement("input", { id: "entry-modelo", value: entryForm.modelo, onChange: (e) => setEntryForm((f) => ({ ...f, modelo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-preco" }, "Pre\xE7o (R$)"), /* @__PURE__ */ React.createElement(
+    })))) : tab === "coletor" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement("div", { className: "coletor-guia" }, /* @__PURE__ */ React.createElement("strong", null, "3 jeitos de alimentar sua base, de acordo com a situa\xE7\xE3o:"), /* @__PURE__ */ React.createElement("span", null, "\u2460 ", /* @__PURE__ */ React.createElement("b", null, "Formul\xE1rio abaixo"), " \u2014 voc\xEA digita os dados, zero custo"), /* @__PURE__ */ React.createElement("span", null, "\u2461 ", /* @__PURE__ */ React.createElement("b", null, "Coleta manual (mais abaixo)"), " \u2014 cola texto de uma p\xE1gina (MF Rural, Superbid), gr\xE1tis nesses dois formatos"), /* @__PURE__ */ React.createElement("span", null, "\u2462 ", /* @__PURE__ */ React.createElement("b", null, "Coletor autom\xE1tico (mais abaixo)"), " \u2014 a IA busca sozinha em sites j\xE1 aprovados, com custo pequeno de uso")), /* @__PURE__ */ React.createElement(PanelTitle, null, "Adicionar observa\xE7\xE3o manualmente (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Voc\xEA digita o que j\xE1 est\xE1 vendo na tela \u2014 vai direto pro banco, sem passar pela IA, sem custo nenhum."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1.1rem" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-categoria" }, "Categoria"), /* @__PURE__ */ React.createElement("input", { id: "entry-categoria", value: entryForm.categoria, onChange: (e) => setEntryForm((f) => ({ ...f, categoria: e.target.value })), placeholder: "Ex: Motor el\xE9trico" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-marca" }, "Marca"), /* @__PURE__ */ React.createElement("input", { id: "entry-marca", value: entryForm.marca, onChange: (e) => setEntryForm((f) => ({ ...f, marca: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-modelo" }, "Modelo"), /* @__PURE__ */ React.createElement("input", { id: "entry-modelo", value: entryForm.modelo, onChange: (e) => setEntryForm((f) => ({ ...f, modelo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-preco" }, "Pre\xE7o (R$)"), /* @__PURE__ */ React.createElement(
       "input",
       {
         id: "entry-preco",
