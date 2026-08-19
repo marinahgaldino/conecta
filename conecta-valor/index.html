@@ -3600,11 +3600,21 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     try {
       return JSON.parse(clean);
     } catch (parseErr) {
-      const match = clean.match(/\{[\s\S]*\}/);
-      if (match) {
-        try {
-          return JSON.parse(match[0]);
-        } catch (e) {
+      const inicio = clean.indexOf("{");
+      if (inicio !== -1) {
+        let profundidade = 0;
+        for (let i = inicio; i < clean.length; i++) {
+          if (clean[i] === "{") profundidade++;
+          else if (clean[i] === "}") {
+            profundidade--;
+            if (profundidade === 0) {
+              try {
+                return JSON.parse(clean.slice(inicio, i + 1));
+              } catch (e) {
+              }
+              break;
+            }
+          }
         }
       }
       console.error("Falha ao interpretar JSON de campos colados:", parseErr, clean);
