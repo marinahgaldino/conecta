@@ -3906,6 +3906,18 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     const linha = coords.map((c) => `${c.x},${c.y}`).join(" ");
     return /* @__PURE__ */ React.createElement("div", { className: "tendencia-chart" }, /* @__PURE__ */ React.createElement("svg", { viewBox: `0 0 ${largura} ${altura}`, width: "100%", height: altura, preserveAspectRatio: "xMidYMid meet" }, /* @__PURE__ */ React.createElement("polyline", { points: linha, fill: "none", stroke: "#D98E04", strokeWidth: "2" }), coords.map((c, i) => /* @__PURE__ */ React.createElement("g", { key: i }, /* @__PURE__ */ React.createElement("circle", { cx: c.x, cy: c.y, r: "3.5", fill: "#D98E04" }), /* @__PURE__ */ React.createElement("text", { x: c.x, y: altura - 6, textAnchor: "middle", fontSize: "9", fill: "#6B6E73" }, c.mes.slice(5, 7), "/", c.mes.slice(2, 4))))), /* @__PURE__ */ React.createElement("div", { className: "tendencia-legenda" }, /* @__PURE__ */ React.createElement("span", null, "M\xEDn: ", formatBRL(min)), /* @__PURE__ */ React.createElement("span", null, "M\xE1x: ", formatBRL(max)), /* @__PURE__ */ React.createElement("span", null, pontos.length, " meses com dado")));
   }
+  function NavIcon({ d }) {
+    return /* @__PURE__ */ React.createElement("svg", { className: "nav-icon", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "1.8", strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("path", { d }));
+  }
+  var ICON_HOME = "M4 11.5 12 4l8 7.5M6 10v9h5v-5h2v5h5v-9";
+  var ICON_ITEM = "M7 3h7l4 4v14H7V3Zm7 0v4h4M9 12h6M9 15h6M9 9h3";
+  var ICON_BATCH = "M4 6h16M4 6v13h16V6M4 6l3-3h10l3 3M9 10h6M9 14h6";
+  var ICON_COLETOR = "M12 4v11m0 0 4-4m-4 4-4-4M5 17v3h14v-3";
+  var ICON_CONFIG = "M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM19.4 13.5a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.9 2.9l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.9-2.9l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H4.5a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.9-2.9l.1.1a1.7 1.7 0 0 0 1.9.3H10.6a1.7 1.7 0 0 0 1-1.6V4.5a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.9 2.9l-.1.1a1.7 1.7 0 0 0-.3 1.9V10.6a1.7 1.7 0 0 0 1.6 1H19.5a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1Z";
+  var ICON_BOX = "M3.5 8.5 12 4l8.5 4.5v8L12 21l-8.5-4.5v-8Z M3.5 8.5 12 13l8.5-4.5 M12 13v8";
+  var ICON_SEARCH = "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-4.35-4.35";
+  var ICON_CHART = "M4 20V10m6 10V4m6 16v-7";
+  var ICON_GLOBE = "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3a13 13 0 0 1 3 9 13 13 0 0 1-3 9 13 13 0 0 1-3-9 13 13 0 0 1 3-9Z";
   function Rivet() {
     return /* @__PURE__ */ React.createElement("span", { className: "rivet", "aria-hidden": "true" });
   }
@@ -5818,13 +5830,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           display: flex;
           align-items: center;
           justify-content: flex-start;
-          padding: 0.45rem 0 0.45rem 1.2rem;
+          padding: 0.3rem 0 0.3rem 1.2rem;
           border-right: 1px solid rgba(255,255,255,0.08);
         }
         .header-logo-full {
           display: block;
-          width: 190px;
-          max-width: 30vw;
+          width: 140px;
+          max-width: 26vw;
           -webkit-mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
           mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
         }
@@ -5870,7 +5882,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           white-space: nowrap;
         }
         .credit-badge-zero { color: #E4675B; border-color: rgba(228,103,91,0.5); }
-        .hero { padding: 0.5rem 1.8rem 0.65rem; flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
+        .hero { padding: 0.3rem 1.8rem 0.4rem; flex: 1; display: flex; flex-direction: column; justify-content: center; position: relative; overflow: hidden; }
         .hero-bg-graphic { position: absolute; inset: 0; pointer-events: none; z-index: 0; width: 100%; height: 100%; object-fit: cover; object-position: right center; }
         .hero-bg-fade {
           content: "";
@@ -5905,14 +5917,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-family: 'Manrope', sans-serif;
           font-weight: 700;
           letter-spacing: 0.01em;
-          font-size: clamp(1.15rem, 1.8vw, 1.4rem);
-          margin: 0 0 0.15rem;
+          font-size: clamp(1rem, 1.5vw, 1.2rem);
+          margin: 0 0 0.1rem;
           color: #EDECE6;
         }
         .header p {
           margin: 0;
           color: #B9BCC2;
-          font-size: 0.8rem;
+          font-size: 0.72rem;
         }
         .rivet {
           position: absolute;
@@ -5937,6 +5949,18 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           box-shadow: 0 3px 14px rgba(122,78,0,0.07), 0 1px 3px rgba(27,29,31,0.05);
           animation: fadeIn 0.25s ease-out;
         }
+        .panel-open {
+          background: transparent;
+          border: none;
+          box-shadow: none;
+          padding: 0.4rem 0.2rem;
+        }
+        .panel-open .stats-grid { margin-top: 1.4rem !important; }
+        .panel-open .dashboard-actions {
+          border-top: 1px solid #E2DFD6;
+          border-bottom: 1px solid #E2DFD6;
+        }
+        .panel-open .dashboard-recent { margin-top: 1.6rem; }
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(4px); }
           to { opacity: 1; transform: translateY(0); }
@@ -6839,21 +6863,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           box-shadow: 0 1px 4px rgba(27,29,31,0.05);
           transition: box-shadow 0.15s ease, transform 0.15s ease;
         }
-        .stat-cell::before {
-          display: block;
-          font-size: 1.15rem;
-          margin-bottom: 0.25rem;
-        }
-        .stats-grid .stat-cell:nth-child(1)::before { content: "📦"; }
-        .stats-grid .stat-cell:nth-child(2)::before { content: "🔍"; }
-        .stats-grid .stat-cell:nth-child(3)::before { content: "📊"; }
-        .stats-grid .stat-cell:nth-child(4)::before { content: "🌐"; }
+        .stat-cell .nav-icon { display: block; margin: 0 auto 0.35rem; color: #D98E04; }
         .stat-number {
           display: block;
           font-family: 'IBM Plex Mono', monospace;
-          font-size: 1.55rem;
-          font-weight: 600;
-          color: #D98E04;
+          font-size: 1.7rem;
+          font-weight: 700;
+          color: #1B1D1F;
         }
         .stat-label {
           display: block;
@@ -6934,38 +6950,51 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .app { max-width: min(1440px, 88vw); margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); position: relative; }
           .panel, .tag-card, .review-panel { padding-left: 2.25rem; padding-right: 2.25rem; }
           .stats-grid { grid-template-columns: repeat(4, 1fr); }
-          .app { padding-left: 208px; }
+          .app { padding-left: 184px; }
           .tabs-row {
             position: fixed;
             top: 0;
             left: calc((100vw - min(1440px, 88vw)) / 2);
-            width: 208px;
+            width: 184px;
             height: 100vh;
             flex-direction: column;
             flex-wrap: nowrap;
-            background: #070707;
-            padding: 1.3rem 0.9rem;
-            gap: 0.15rem;
+            background: #0A0A0B;
+            padding: 1.25rem 0.75rem;
+            gap: 0.1rem;
             overflow-y: auto;
             z-index: 50;
-            border-right: 1px solid rgba(255,255,255,0.08);
+            border-right: 1px solid rgba(255,255,255,0.07);
           }
           .pill-tab {
             width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
             text-align: left;
             background: transparent;
             border: 1px solid transparent;
-            color: #B9BCC2;
-            border-radius: 8px;
-            padding: 0.65rem 0.9rem;
+            border-left: 2.5px solid transparent;
+            color: #9296A0;
+            border-radius: 6px;
+            padding: 0.55rem 0.75rem;
+            font-size: 0.82rem;
           }
-          .pill-tab:hover:not(.active):not(:disabled) { background: rgba(255,255,255,0.06); color: #EDECE6; }
-          .pill-tab.active { background: #D98E04; color: #1B1D1F; border-color: #D98E04; box-shadow: none; font-weight: 600; }
+          .pill-tab:hover:not(.active):not(:disabled) { background: rgba(255,255,255,0.04); color: #D8D9DC; }
+          .pill-tab.active {
+            background: rgba(217,142,4,0.1);
+            color: #F0C868;
+            border-color: transparent;
+            border-left-color: #D98E04;
+            box-shadow: none;
+            font-weight: 600;
+          }
+          .nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
           .sidebar-logo {
             display: block;
             width: 100%;
-            max-width: 150px;
-            margin: 0.3rem auto 1.6rem;
+            max-width: 128px;
+            margin: 0.2rem auto 1.5rem;
             -webkit-mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
             mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
           }
@@ -7007,6 +7036,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         className: "pill-tab" + (tab === "dashboard" ? " active" : ""),
         onClick: () => setTab("dashboard")
       },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HOME }),
       t("In\xEDcio", "Home")
     ), /* @__PURE__ */ React.createElement(
       "button",
@@ -7014,6 +7044,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         className: "pill-tab" + (tab === "single" ? " active" : ""),
         onClick: () => setTab("single")
       },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ITEM }),
       t("Item \xFAnico", "Single item")
     ), /* @__PURE__ */ React.createElement(
       "button",
@@ -7021,6 +7052,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         className: "pill-tab" + (tab === "batch" ? " active" : ""),
         onClick: () => setTab("batch")
       },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BATCH }),
       t("Lote", "Batch")
     ), isAdmin && /* @__PURE__ */ React.createElement(
       "button",
@@ -7028,6 +7060,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         className: "pill-tab" + (tab === "coletor" ? " active" : ""),
         onClick: () => setTab("coletor")
       },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_COLETOR }),
       t("Coletor", "Collector")
     ), isAdmin && /* @__PURE__ */ React.createElement(
       "button",
@@ -7035,11 +7068,12 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         className: "pill-tab" + (tab === "config" ? " active" : ""),
         onClick: () => setTab("config")
       },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CONFIG }),
       t("Config", "Config")
-    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
+    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
       "A Conecta Valor usa Intelig\xEAncia Artificial e dados reais de mercado para gerar refer\xEAncias de valor para ativos industriais \u2014 m\xE1quinas, linhas de produ\xE7\xE3o, galp\xF5es e mais.",
       "Conecta Valor uses Artificial Intelligence and real market data to generate value references for industrial assets \u2014 machines, production lines, warehouses and more."
-    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026"), /* @__PURE__ */ React.createElement("div", { className: "dashboard-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setTab("single") }, t("Avaliar item \xFAnico", "Evaluate single item")), /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("batch") }, t("Avaliar lote", "Evaluate batch")), isAdmin && /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("coletor") }, t("Ir pro Coletor", "Go to Collector"))), recentUserEvals.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "dashboard-recent" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Suas avalia\xE7\xF5es recentes", "Your recent evaluations")), /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "0.6rem" } }, recentUserEvals.map((h) => {
+    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026"), /* @__PURE__ */ React.createElement("div", { className: "dashboard-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setTab("single") }, t("Avaliar item \xFAnico", "Evaluate single item")), /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("batch") }, t("Avaliar lote", "Evaluate batch")), isAdmin && /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("coletor") }, t("Ir pro Coletor", "Go to Collector"))), recentUserEvals.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "dashboard-recent" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Suas avalia\xE7\xF5es recentes", "Your recent evaluations")), /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "0.6rem" } }, recentUserEvals.map((h) => {
       const aval = Array.isArray(h.avaliacoes) ? h.avaliacoes[0] : h.avaliacoes;
       const nomeItem = [h.marca, h.modelo].filter(Boolean).join(" ") || h.categoria || t("Item sem nome", "Unnamed item");
       return /* @__PURE__ */ React.createElement("div", { key: h.id, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main home-history-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-nome-col" }, h.categoria && /* @__PURE__ */ React.createElement("span", { className: "history-categoria-tag" }, h.categoria), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, nomeItem)), /* @__PURE__ */ React.createElement("span", { className: "home-history-date" }, h.criado_em && new Date(h.criado_em).toLocaleDateString("pt-BR")), /* @__PURE__ */ React.createElement("div", { className: "home-history-valores" }, /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, aval ? `${formatBRL(aval.faixa_min)} \u2013 ${formatBRL(aval.faixa_max)}` : "\u2014"), aval && aval.faixa_media && /* @__PURE__ */ React.createElement("span", { className: "home-history-media" }, t("m\xE9dia ", "avg "), formatBRL(aval.faixa_media)), aval && aval.comparaveis && aval.comparaveis.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "batch-comp-count" }, aval.comparaveis.length, " ", t("compar\xE1veis", "comparables"))), /* @__PURE__ */ React.createElement(
@@ -7344,7 +7378,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       setSupaKeyDraft("");
       setSupaKey("");
       appStorage.set("config:supabase", "");
-    } }, "desconectar"), supaSaved && /* @__PURE__ */ React.createElement("span", { className: "saved-note" }, "salvo \u2713")), supaUrl && /* @__PURE__ */ React.createElement("div", { className: "stats-box" }, /* @__PURE__ */ React.createElement("div", { className: "admin-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: loadStats, disabled: statsLoading }, statsLoading ? "Carregando\u2026" : "Atualizar estat\xEDsticas"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: exportarBaseCSV, disabled: statsLoading }, "exportar base inteira (.csv)")), stats && /* @__PURE__ */ React.createElement("div", { className: "stats-grid" }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "sites diferentes"))), stats && stats.moedaEstrangeiraCount > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.8rem" } }, stats.moedaEstrangeiraCount, " observa\xE7\xF5es em moeda estrangeira (EUR/USD/GBP) \u2014 convertidas para R$ na cota\xE7\xE3o atual pra entrar nessas m\xE9dias.", stats.moedaSemCotacaoCount > 0 && ` ${stats.moedaSemCotacaoCount} ficaram de fora por falha ao buscar a cota\xE7\xE3o agora \u2014 tenta atualizar de novo em instantes.`), stats && stats.categorias && stats.categorias.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "categoria-stats" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Pre\xE7o m\xE9dio por categoria (base pr\xF3pria, em R$) \u2014 clica pra ver a tend\xEAncia ao longo do tempo"), /* @__PURE__ */ React.createElement("div", { className: "bar-chart" }, (() => {
+    } }, "desconectar"), supaSaved && /* @__PURE__ */ React.createElement("span", { className: "saved-note" }, "salvo \u2713")), supaUrl && /* @__PURE__ */ React.createElement("div", { className: "stats-box" }, /* @__PURE__ */ React.createElement("div", { className: "admin-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: loadStats, disabled: statsLoading }, statsLoading ? "Carregando\u2026" : "Atualizar estat\xEDsticas"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: exportarBaseCSV, disabled: statsLoading }, "exportar base inteira (.csv)")), stats && /* @__PURE__ */ React.createElement("div", { className: "stats-grid" }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "sites diferentes"))), stats && stats.moedaEstrangeiraCount > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.8rem" } }, stats.moedaEstrangeiraCount, " observa\xE7\xF5es em moeda estrangeira (EUR/USD/GBP) \u2014 convertidas para R$ na cota\xE7\xE3o atual pra entrar nessas m\xE9dias.", stats.moedaSemCotacaoCount > 0 && ` ${stats.moedaSemCotacaoCount} ficaram de fora por falha ao buscar a cota\xE7\xE3o agora \u2014 tenta atualizar de novo em instantes.`), stats && stats.categorias && stats.categorias.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "categoria-stats" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Pre\xE7o m\xE9dio por categoria (base pr\xF3pria, em R$) \u2014 clica pra ver a tend\xEAncia ao longo do tempo"), /* @__PURE__ */ React.createElement("div", { className: "bar-chart" }, (() => {
       const maxMedia = Math.max(...stats.categorias.map((c) => c.media));
       return stats.categorias.map((c, i) => /* @__PURE__ */ React.createElement(React.Fragment, { key: i }, /* @__PURE__ */ React.createElement("div", { className: "bar-row", onClick: () => carregarTendencia(c.categoria), style: { cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { className: "bar-row-label" }, /* @__PURE__ */ React.createElement("span", { className: "bar-nome" }, c.categoria), /* @__PURE__ */ React.createElement("span", { className: "bar-qtd" }, c.quantidade, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "bar-track" }, /* @__PURE__ */ React.createElement("div", { className: "bar-fill", style: { width: `${Math.max(4, c.media / maxMedia * 100)}%` } }, /* @__PURE__ */ React.createElement("span", { className: "bar-valor" }, formatBRL(c.media)))), /* @__PURE__ */ React.createElement("span", { className: "bar-range" }, formatBRL(c.min), " \u2013 ", formatBRL(c.max))), tendenciaCategoria === c.categoria && /* @__PURE__ */ React.createElement("div", { className: "tendencia-wrapper" }, tendenciaLoading ? /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Carregando tend\xEAncia\u2026") : /* @__PURE__ */ React.createElement(TendenciaChart, { pontos: tendenciaDados }))));
     })()))))), tab === "single" && error && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, error), tab === "single" && result && /* @__PURE__ */ React.createElement(ResultCard, { item: form, result, lang }), tab === "single" && history.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "history" }, /* @__PURE__ */ React.createElement("div", { className: "history-header" }, /* @__PURE__ */ React.createElement("h4", null, "Hist\xF3rico salvo (refer\xEAncia \u2014 pre\xE7os podem ter mudado desde a data)"), /* @__PURE__ */ React.createElement(
