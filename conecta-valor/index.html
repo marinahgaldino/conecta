@@ -5946,10 +5946,33 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           gap: 1rem;
         }
         .item-layout-desktop { display: flex; flex-direction: column; }
+        .item-card-title {
+          font-family: 'Manrope', sans-serif;
+          font-weight: 700;
+          font-size: 1.05rem;
+          color: #1B1D1F;
+          margin: 0 0 0.3rem;
+        }
         @media (min-width: 1024px) {
-          .item-layout-desktop { flex-direction: row; align-items: flex-start; gap: 2.25rem; }
-          .item-layout-desktop .photo-highlight-block { flex: 0 0 300px; margin-bottom: 0; }
-          .item-layout-desktop .item-form { flex: 1 1 auto; }
+          .item-layout-desktop { flex-direction: row; align-items: stretch; gap: 1.75rem; }
+          .item-layout-desktop .photo-highlight-block {
+            flex: 0 0 320px;
+            margin-bottom: 0;
+            background: #FFFFFF;
+            border: 1px solid #E2DFD6;
+            border-radius: 12px;
+            box-shadow: 0 3px 14px rgba(27,29,31,0.06);
+            padding: 1.3rem;
+          }
+          .item-layout-desktop .item-form {
+            flex: 1 1 auto;
+            background: #FFFFFF;
+            border: 1px solid #E2DFD6;
+            border-radius: 12px;
+            box-shadow: 0 3px 14px rgba(27,29,31,0.06);
+            padding: 1.5rem 1.75rem;
+            align-content: flex-start;
+          }
         }
         .field-full { grid-column: 1 / -1; }
         .field-hint {
@@ -6576,16 +6599,30 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .admin-panel { display: flex; flex-direction: column; gap: 1rem; }
         .config-section-title {
           font-family: 'Manrope', sans-serif;
-          font-size: 0.78rem;
-          text-transform: uppercase;
-          letter-spacing: 0.06em;
-          color: #8A8D91;
-          margin: 1.1rem 0 -0.3rem;
-          padding-top: 1.1rem;
-          border-top: 1px solid #E2DFD6;
+          font-size: 1.05rem;
+          font-weight: 700;
+          text-transform: none;
+          letter-spacing: normal;
+          color: #1B1D1F;
+          margin: 0 0 0.9rem;
+          padding: 1.4rem 0 0 0.9rem;
+          border-top: 2px solid #1B1D1F;
+          position: relative;
+        }
+        .config-section-title::before {
+          content: "";
+          position: absolute;
+          left: 0;
+          top: 1.4rem;
+          bottom: 0.15rem;
+          width: 4px;
+          background: #D98E04;
+          border-radius: 2px;
         }
         .config-section-title:first-of-type { margin-top: 0; padding-top: 0; border-top: none; }
+        .config-section-title:first-of-type::before { top: 0; }
         .config-section-danger { color: #A3352A; }
+        .config-section-danger::before { background: #A3352A; }
         .admin-title {
           font-family: 'Manrope', sans-serif;
           text-transform: uppercase;
@@ -6836,6 +6873,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         @media (min-width: 901px) and (max-width: 1279px) {
           .app { max-width: 900px; margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); }
         }
+        .sidebar-logo { display: none; }
+        .sidebar-credits { display: none; }
         @media (min-width: 1280px) {
           .app { max-width: min(1440px, 88vw); margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); position: relative; }
           .panel, .tag-card, .review-panel { padding-left: 2.25rem; padding-right: 2.25rem; }
@@ -6867,6 +6906,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           }
           .pill-tab:hover:not(.active):not(:disabled) { background: rgba(255,255,255,0.06); color: #EDECE6; }
           .pill-tab.active { background: #D98E04; color: #1B1D1F; border-color: #D98E04; box-shadow: none; font-weight: 600; }
+          .sidebar-logo {
+            display: block;
+            width: 100%;
+            max-width: 150px;
+            margin: 0.3rem auto 1.6rem;
+            -webkit-mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
+            mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
+          }
+          .sidebar-credits { display: block; margin-top: auto; padding-top: 1rem; }
+          .sidebar-credits .credit-badge { display: block; text-align: center; width: 100%; }
+          .header-logo-col, .navbar-right .credit-badge { display: none; }
         }
       `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")), /* @__PURE__ */ React.createElement(
       "button",
@@ -6896,7 +6946,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         title: "Sair"
       },
       "\u23FB"
-    )), /* @__PURE__ */ React.createElement("div", { className: "hero" }, config.headerBgImage && /* @__PURE__ */ React.createElement("img", { className: "hero-bg-graphic", "aria-hidden": "true", alt: "", src: config.headerBgImage }), config.headerBgImage && /* @__PURE__ */ React.createElement("div", { className: "hero-bg-fade" }), /* @__PURE__ */ React.createElement("h1", { className: "page-heading" }, t("Quanto vale este item?", "What is this item worth?")), /* @__PURE__ */ React.createElement("p", null, t("Descreva o equipamento e busque compar\xE1veis reais no mercado", "Describe the equipment and search for real market comparables")))))), /* @__PURE__ */ React.createElement("div", { className: "tabs-row" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "hero" }, config.headerBgImage && /* @__PURE__ */ React.createElement("img", { className: "hero-bg-graphic", "aria-hidden": "true", alt: "", src: config.headerBgImage }), config.headerBgImage && /* @__PURE__ */ React.createElement("div", { className: "hero-bg-fade" }), /* @__PURE__ */ React.createElement("h1", { className: "page-heading" }, t("Quanto vale este item?", "What is this item worth?")), /* @__PURE__ */ React.createElement("p", null, t("Descreva o equipamento e busque compar\xE1veis reais no mercado", "Describe the equipment and search for real market comparables")))))), /* @__PURE__ */ React.createElement("div", { className: "tabs-row" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "sidebar-logo" }), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "pill-tab" + (tab === "dashboard" ? " active" : ""),
@@ -6931,7 +6981,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onClick: () => setTab("config")
       },
       t("Config", "Config")
-    )), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
+    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
       "A Conecta Valor usa Intelig\xEAncia Artificial e dados reais de mercado para gerar refer\xEAncias de valor para ativos industriais \u2014 m\xE1quinas, linhas de produ\xE7\xE3o, galp\xF5es e mais.",
       "Conecta Valor uses Artificial Intelligence and real market data to generate value references for industrial assets \u2014 machines, production lines, warehouses and more."
     )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026"), /* @__PURE__ */ React.createElement("div", { className: "dashboard-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setTab("single") }, t("Avaliar item \xFAnico", "Evaluate single item")), /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("batch") }, t("Avaliar lote", "Evaluate batch")), isAdmin && /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("coletor") }, t("Ir pro Coletor", "Go to Collector"))), recentUserEvals.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "dashboard-recent" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Suas avalia\xE7\xF5es recentes", "Your recent evaluations")), /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "0.6rem" } }, recentUserEvals.map((h) => {
@@ -6974,7 +7024,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         value: pasteText,
         onChange: (e) => setPasteText(e.target.value)
       }
-    ), /* @__PURE__ */ React.createElement("label", { className: "checkbox-row" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: ignoreInternal, onChange: (e) => setIgnoreInternal(e.target.checked) }), "H\xE1 infos internas s\xF3 para controle de identifica\xE7\xE3o (lote, c\xF3digo de etiqueta, n\xBA do item) que devem ser ignoradas?"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: handleParsePaste, disabled: parsing || !pasteText.trim() }, parsing ? "Interpretando\u2026" : "Preencher formul\xE1rio com esses dados"), parseError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, parseError), ignoredFields.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ignored-note" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Ignorado (identifica\xE7\xE3o interna)"), /* @__PURE__ */ React.createElement("ul", null, ignoredFields.map((f, i) => /* @__PURE__ */ React.createElement("li", { key: i }, f)))), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Depois de colar e interpretar, os campos abaixo j\xE1 v\xEAm preenchidos \u2014 revise e ajuste se precisar.")), /* @__PURE__ */ React.createElement("div", { className: "item-layout-desktop" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-block" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-header" }, /* @__PURE__ */ React.createElement("span", { className: "photo-highlight-icon", "aria-hidden": "true" }, "\u{1F4F7}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, t("Tem foto da placa de identifica\xE7\xE3o?", "Do you have a photo of the nameplate?")), /* @__PURE__ */ React.createElement("p", null, t("\xC9 o jeito mais r\xE1pido \u2014 a IA l\xEA os dados sozinha, at\xE9 sem voc\xEA digitar nada abaixo.", "It's the fastest way \u2014 the AI reads the data on its own, even without typing anything below.")))), /* @__PURE__ */ React.createElement("div", { className: "photo-row" }, photos.length < 3 && /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", multiple: true, onChange: handlePhotoChange }), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "photo-grid" }, photos.map((p, i) => /* @__PURE__ */ React.createElement("div", { className: "photo-preview", key: i }, /* @__PURE__ */ React.createElement("img", { src: p.preview, alt: p.name }), /* @__PURE__ */ React.createElement("span", { className: "photo-size-tag" }, tamanhoAproximadoKB(p.base64), " KB"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => removerFoto(i) }, "remover"))))), photos.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("At\xE9 3 fotos \u2014 inclua a da placa de identifica\xE7\xE3o com prioridade, se tiver.", "Up to 3 photos \u2014 include the nameplate photo first, if you have one."))), /* @__PURE__ */ React.createElement("div", { className: "item-form" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "categoria" }, t("Categoria", "Category")), /* @__PURE__ */ React.createElement(
+    ), /* @__PURE__ */ React.createElement("label", { className: "checkbox-row" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: ignoreInternal, onChange: (e) => setIgnoreInternal(e.target.checked) }), "H\xE1 infos internas s\xF3 para controle de identifica\xE7\xE3o (lote, c\xF3digo de etiqueta, n\xBA do item) que devem ser ignoradas?"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: handleParsePaste, disabled: parsing || !pasteText.trim() }, parsing ? "Interpretando\u2026" : "Preencher formul\xE1rio com esses dados"), parseError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, parseError), ignoredFields.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ignored-note" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Ignorado (identifica\xE7\xE3o interna)"), /* @__PURE__ */ React.createElement("ul", null, ignoredFields.map((f, i) => /* @__PURE__ */ React.createElement("li", { key: i }, f)))), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Depois de colar e interpretar, os campos abaixo j\xE1 v\xEAm preenchidos \u2014 revise e ajuste se precisar.")), /* @__PURE__ */ React.createElement("div", { className: "item-layout-desktop" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-block" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-header" }, /* @__PURE__ */ React.createElement("span", { className: "photo-highlight-icon", "aria-hidden": "true" }, "\u{1F4F7}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, t("Tem foto da placa de identifica\xE7\xE3o?", "Do you have a photo of the nameplate?")), /* @__PURE__ */ React.createElement("p", null, t("\xC9 o jeito mais r\xE1pido \u2014 a IA l\xEA os dados sozinha, at\xE9 sem voc\xEA digitar nada abaixo.", "It's the fastest way \u2014 the AI reads the data on its own, even without typing anything below.")))), /* @__PURE__ */ React.createElement("div", { className: "photo-row" }, photos.length < 3 && /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", multiple: true, onChange: handlePhotoChange }), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "photo-grid" }, photos.map((p, i) => /* @__PURE__ */ React.createElement("div", { className: "photo-preview", key: i }, /* @__PURE__ */ React.createElement("img", { src: p.preview, alt: p.name }), /* @__PURE__ */ React.createElement("span", { className: "photo-size-tag" }, tamanhoAproximadoKB(p.base64), " KB"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => removerFoto(i) }, "remover"))))), photos.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("At\xE9 3 fotos \u2014 inclua a da placa de identifica\xE7\xE3o com prioridade, se tiver.", "Up to 3 photos \u2014 include the nameplate photo first, if you have one."))), /* @__PURE__ */ React.createElement("div", { className: "item-form" }, /* @__PURE__ */ React.createElement("h3", { className: "item-card-title field-full" }, t("Identifica\xE7\xE3o do equipamento", "Equipment identification")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "categoria" }, t("Categoria", "Category")), /* @__PURE__ */ React.createElement(
       "input",
       {
         id: "categoria",
