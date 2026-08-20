@@ -198,7 +198,7 @@
     { id: "motorredutor", nome: "Motorredutor", grupo: "mecanica", synonyms: ["gearmotor", "motoredutor"], re: /motor\s*redutor/i, comum: true, ativo: true },
     { id: "redutor", nome: "Redutor", grupo: "mecanica", synonyms: ["redutor de velocidade", "caixa redutora", "gearbox"], re: /\bredutor(es)?\b/i, comum: false, ativo: true },
     { id: "unidade_hidraulica", nome: "Unidade Hidráulica", grupo: "mecanica", synonyms: ["central hidráulica", "power unit"], re: /unidade hidr[áa]ulica/i, comum: true, ativo: true },
-    { id: "motor_eletrico", nome: "Motor Elétrico", grupo: "mecanica", synonyms: ["motor elétrico trifásico", "motor de indução"], re: /\bmotor\b/i, comum: true, ativo: true },
+    { id: "motor_eletrico", nome: "Motor Elétrico", grupo: "mecanica", synonyms: ["motor elétrico trifásico", "motor de indução"], re: /\bmotor\b|\bW22\b/i, comum: true, ativo: true },
     { id: "vaso_pressao", nome: "Vaso de Pressão", grupo: "tanques_processo", synonyms: ["vaso de pressão vertical", "pressure vessel"], re: /vaso de press[ãa]o/i, comum: false, ativo: true },
     { id: "silo", nome: "Silo", grupo: "tanques_processo", synonyms: ["silo metálico", "silo de grãos"], re: /\bsilo\b/i, comum: false, ativo: true },
     { id: "tanque_misturador", nome: "Tanque Misturador", grupo: "tanques_processo", synonyms: ["tanque com agitador", "tanque de mistura"], re: /tanque.{0,20}(misturador|agitador)|misturador.{0,20}tanque/i, comum: false, ativo: true },
