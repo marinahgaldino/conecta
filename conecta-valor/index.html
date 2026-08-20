@@ -4923,6 +4923,31 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     (0, import_react.useEffect)(() => {
       if (session && session.user) carregarSaldoCreditos();
     }, [session]);
+    (0, import_react.useEffect)(() => {
+      if (session && supaUrl && supaKey) {
+        carregarMarcaAliasesDoBanco();
+      }
+    }, [session, supaUrl, supaKey]);
+    async function carregarMarcaAliasesDoBanco() {
+      // Enriquece o objeto MARCA_ALIASES já existente com o que estiver no
+      // banco - normalizarMarca() continua 100% síncrona e inalterada, só lê
+      // desse mesmo objeto (que passa a ter mais entradas depois desta
+      // chamada). Se a tabela ainda não existir ou a consulta falhar por
+      // qualquer motivo, o objeto simplesmente fica só com os aliases fixos
+      // que já tinha - fallback automático, sem precisar de try/catch
+      // especial em quem usa normalizarMarca().
+      const client = getSupaClient();
+      if (!client) return;
+      try {
+        const { data, error } = await client.from("marca_aliases").select("alias, marca_canonica");
+        if (error || !data) return;
+        data.forEach((row) => {
+          if (row.alias && row.marca_canonica) MARCA_ALIASES[row.alias] = row.marca_canonica;
+        });
+      } catch (e) {
+        console.warn("N\xE3o foi poss\xEDvel carregar aliases de marca do banco (usando s\xF3 os fixos do c\xF3digo):", e);
+      }
+    }
     async function carregarSaldoCreditos() {
       const client = getSupaClient();
       if (!client) return;
