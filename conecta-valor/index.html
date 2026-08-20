@@ -5562,20 +5562,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const TIMEOUT_MS = 90e3; // mesma proteção que o Lote já tem - nunca fica "buscando" pra sempre
         let parsed = await Promise.race([
           (async () => {
-            let p = null;
-            if (photos.length === 0) {
-              p = await buscarNaBasePropria(form, supaUrl, supaKey);
-            }
-            if (!p && saldoCreditos !== null && saldoCreditos <= 0) {
-              return { tipo: "sem_credito" };
-            }
-            if (!p) {
-              const baseItem = photos.length > 0 ? { ...form, photos: photos.map((ph) => ({ base64: ph.base64, mediaType: ph.mediaType })) } : { ...form };
-              if (!baseItem.categoria_id) baseItem.categoria_id = resolverCategoriaId(form.categoria);
-              const schemaCategoria = baseItem.categoria_id && SCHEMA_FUNCAO[baseItem.categoria_id];
-              if (schemaCategoria && schemaCategoria.ranking_importancia) baseItem.ranking_importancia = schemaCategoria.ranking_importancia;
-              p = await callEdgeAvaliar(baseItem, supaUrl, supaKey, session && session.access_token);
-            }
+            // A Edge Function agora e a UNICA responsavel por decidir base
+            // propria vs IA (score de compatibilidade, remocao de outlier,
+            // dedup, cache) - o frontend so chama ela direto, sem checar
+            // observacoes_mercado por conta propria antes.
+            const baseItem = photos.length > 0 ? { ...form, photos: photos.map((ph) => ({ base64: ph.base64, mediaType: ph.mediaType })) } : { ...form };
+            if (!baseItem.categoria_id) baseItem.categoria_id = resolverCategoriaId(form.categoria);
+            const schemaCategoria = baseItem.categoria_id && SCHEMA_FUNCAO[baseItem.categoria_id];
+            if (schemaCategoria && schemaCategoria.ranking_importancia) baseItem.ranking_importancia = schemaCategoria.ranking_importancia;
+            let p = await callEdgeAvaliar(baseItem, supaUrl, supaKey, session && session.access_token);
             if (!p) {
               const prompt = buildPrompt(form, photos.length > 0, config);
               p = await callClaude(prompt, photos, apiKey);
@@ -5584,14 +5579,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           })(),
           new Promise((_, reject) => setTimeout(() => reject(new Error(t("Tempo esgotado (mais de 90s sem resposta). Tente novamente.", "Timed out (over 90s with no response). Try again."))), TIMEOUT_MS))
         ]);
-        if (parsed.tipo === "sem_credito") {
-          setError(t(
-            "Seus cr\xE9ditos acabaram. Entre em contato pra adquirir mais consultas.",
-            "You're out of credits. Get in touch to purchase more searches."
-          ));
-          setLoading(false);
-          return;
-        }
         parsed = parsed.parsed;
         setResult(parsed);
         const entry = { item: { ...form }, result: parsed, id: Date.now(), data: (/* @__PURE__ */ new Date()).toISOString() };
@@ -5601,7 +5588,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         loadRecentEvaluations();
         if (parsed.origem === "ia") carregarSaldoCreditos();
       } catch (err) {
-        setError("N\xE3o foi poss\xEDvel concluir a avalia\xE7\xE3o. Tente novamente \u2014 " + err.message);
+        if (err && err.message && /cr\xE9ditos/i.test(err.message)) {
+          setError(err.message);
+        } else {
+          setError("N\xE3o foi poss\xEDvel concluir a avalia\xE7\xE3o. Tente novamente \u2014 " + err.message);
+        }
       } finally {
         setLoading(false);
       }
