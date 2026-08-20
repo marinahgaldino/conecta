@@ -1615,6 +1615,7 @@
   DEFAULT_CONFIG.categoriasComuns = CATEGORIA_CANONICA.filter((c) => c.comum).map((c) => c.nome);
   var MARCAS_CONHECIDAS = [
     "WEG",
+    "WEG MOTORES",
     "SEW-EURODRIVE",
     "SEW",
     "SIEMENS",
@@ -1622,6 +1623,14 @@
     "VOGES",
     "EBERLE",
     "KOHLBACH",
+    "Menegotti",
+    "Nuovo Pignone",
+    "Mavi",
+    "Vipart",
+    "Branco",
+    "CSM",
+    "Toyama",
+    "Buffalo",
     "BOSCH",
     "DEMAG",
     "ROMI",
@@ -1784,17 +1793,21 @@
     "FUJI ELECTRIC",
     "TECO-WESTINGHOUSE"
   ];
+  function removerAcentos(s) {
+    return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
   function extrairFatosDeTexto(texto) {
     const t = texto || "";
-    const tUpper = t.toUpperCase();
+    const tUpper = removerAcentos(t.toUpperCase());
     const nova = processarTextoParaAtributos(t);
     let categoria = nova.category_name;
     if (!categoria && /chapa/i.test(t)) categoria = "Chapa (mat\xE9ria-prima)";
     let marca = nova.atributos.fabricante || null;
     if (!marca) {
       for (const m of MARCAS_CONHECIDAS) {
-        if (new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(tUpper)) {
-          marca = m === "SEW" ? "SEW-EURODRIVE" : m;
+        const mSemAcento = removerAcentos(m);
+        if (new RegExp(`\\b${mSemAcento.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(tUpper)) {
+          marca = m === "SEW" ? "SEW-EURODRIVE" : m === "WEG MOTORES" ? "WEG" : m;
           break;
         }
       }
