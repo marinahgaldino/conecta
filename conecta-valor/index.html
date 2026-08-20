@@ -4135,12 +4135,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       r.status === "conclu\xEDdo" ? "Conclu\xEDdo" : r.status === "erro" ? "Erro" : r.status,
       r.status === "conclu\xEDdo" && r.result ? formatBRL(r.result.faixa_min) : "\u2014",
       r.status === "conclu\xEDdo" && r.result ? formatBRL(r.result.faixa_media) : "\u2014",
-      r.status === "conclu\xEDdo" && r.result ? formatBRL(r.result.faixa_max) : "\u2014"
+      r.status === "conclu\xEDdo" && r.result ? formatBRL(r.result.faixa_max) : "\u2014",
+      r.status === "conclu\xEDdo" && r.result && r.result.confianca_avaliacao ? r.result.confianca_avaliacao : "\u2014"
     ]);
     doc.autoTable({
       startY: y,
       margin: { left: margin, right: margin, bottom: 50 },
-      head: [["N\xBA", "Item", "Categoria", "Status", "Faixa m\xEDnima", "Faixa m\xE9dia", "Faixa m\xE1xima"]],
+      head: [["N\xBA", "Item", "Categoria", "Status", "Faixa m\xEDnima", "Faixa m\xE9dia", "Faixa m\xE1xima", "Confian\xE7a"]],
       body: corpoTabela,
       styles: { fontSize: 8, cellPadding: 5 },
       headStyles: { fillColor: COR_DOURADO, textColor: 255, fontStyle: "bold" },
@@ -4307,7 +4308,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
     // --- Tabela ---
     const linhaCabecalho = linhaResumoDados + 3;
-    const colunas = ["N\xBA", "Item", "Categoria", "Marca", "Modelo", "Status", "Faixa m\xEDnima", "Faixa m\xE9dia", "Faixa m\xE1xima", "R$/kg", "R$/CV", "Origem", "Observa\xE7\xE3o/erro"];
+    const colunas = ["N\xBA", "Item", "Categoria", "Marca", "Modelo", "Status", "Faixa m\xEDnima", "Faixa m\xE9dia", "Faixa m\xE1xima", "R$/kg", "R$/CV", "Origem", "Confian\xE7a", "Observa\xE7\xE3o/erro"];
     const headerRow = ws.getRow(linhaCabecalho);
     colunas.forEach((titulo, i) => {
       const cell = headerRow.getCell(i + 1);
@@ -4335,6 +4336,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         r.status === "conclu\xEDdo" ? res.reais_por_kg ?? null : null,
         r.status === "conclu\xEDdo" ? res.reais_por_cv ?? null : null,
         r.status === "conclu\xEDdo" ? (res.origem === "base_propria" ? "Base pr\xF3pria" : "IA + busca") : "",
+        r.status === "conclu\xEDdo" ? (res.confianca_avaliacao || "") : "",
         r.status === "erro" ? (r.error || "Erro n\xE3o especificado") : ""
       ];
       valores.forEach((val, colIdx) => {
@@ -5557,11 +5559,32 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       setError(null);
       setResult(null);
       try {
-        let parsed = null;
-        if (photos.length === 0) {
-          parsed = await buscarNaBasePropria(form, supaUrl, supaKey);
-        }
-        if (!parsed && saldoCreditos !== null && saldoCreditos <= 0) {
+        const TIMEOUT_MS = 90e3; // mesma proteção que o Lote já tem - nunca fica "buscando" pra sempre
+        let parsed = await Promise.race([
+          (async () => {
+            let p = null;
+            if (photos.length === 0) {
+              p = await buscarNaBasePropria(form, supaUrl, supaKey);
+            }
+            if (!p && saldoCreditos !== null && saldoCreditos <= 0) {
+              return { tipo: "sem_credito" };
+            }
+            if (!p) {
+              const baseItem = photos.length > 0 ? { ...form, photos: photos.map((ph) => ({ base64: ph.base64, mediaType: ph.mediaType })) } : { ...form };
+              if (!baseItem.categoria_id) baseItem.categoria_id = resolverCategoriaId(form.categoria);
+              const schemaCategoria = baseItem.categoria_id && SCHEMA_FUNCAO[baseItem.categoria_id];
+              if (schemaCategoria && schemaCategoria.ranking_importancia) baseItem.ranking_importancia = schemaCategoria.ranking_importancia;
+              p = await callEdgeAvaliar(baseItem, supaUrl, supaKey, session && session.access_token);
+            }
+            if (!p) {
+              const prompt = buildPrompt(form, photos.length > 0, config);
+              p = await callClaude(prompt, photos, apiKey);
+            }
+            return { tipo: "ok", parsed: p };
+          })(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error(t("Tempo esgotado (mais de 90s sem resposta). Tente novamente.", "Timed out (over 90s with no response). Try again."))), TIMEOUT_MS))
+        ]);
+        if (parsed.tipo === "sem_credito") {
           setError(t(
             "Seus cr\xE9ditos acabaram. Entre em contato pra adquirir mais consultas.",
             "You're out of credits. Get in touch to purchase more searches."
@@ -5569,17 +5592,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           setLoading(false);
           return;
         }
-        if (!parsed) {
-          const baseItem = photos.length > 0 ? { ...form, photos: photos.map((p) => ({ base64: p.base64, mediaType: p.mediaType })) } : { ...form };
-          if (!baseItem.categoria_id) baseItem.categoria_id = resolverCategoriaId(form.categoria);
-          const schemaCategoria = baseItem.categoria_id && SCHEMA_FUNCAO[baseItem.categoria_id];
-          if (schemaCategoria && schemaCategoria.ranking_importancia) baseItem.ranking_importancia = schemaCategoria.ranking_importancia;
-          parsed = await callEdgeAvaliar(baseItem, supaUrl, supaKey, session && session.access_token);
-        }
-        if (!parsed) {
-          const prompt = buildPrompt(form, photos.length > 0, config);
-          parsed = await callClaude(prompt, photos, apiKey);
-        }
+        parsed = parsed.parsed;
         setResult(parsed);
         const entry = { item: { ...form }, result: parsed, id: Date.now(), data: (/* @__PURE__ */ new Date()).toISOString() };
         setHistory((h) => [entry, ...h].slice(0, 20));
