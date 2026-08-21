@@ -5927,15 +5927,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         html, body { background: #E7E5DF; margin: 0; }
         .app {
           font-family: 'Inter', sans-serif;
-          background: #FDFCFA;
+          background: #F4F3EF;
           color: #1B1D1F;
           min-height: 100vh;
           padding-bottom: 3rem;
         }
         .header {
-          background: #070707;
+          background: #080808;
           color: #EDECE6;
-          border-bottom: 2px solid #D98E04;
+          border-bottom: 2px solid #D89A00;
         }
         .header-inner {
           display: flex;
@@ -6034,14 +6034,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-family: 'Manrope', sans-serif;
           font-weight: 700;
           letter-spacing: 0.01em;
-          font-size: clamp(1rem, 1.5vw, 1.2rem);
-          margin: 0 0 0.1rem;
+          font-size: clamp(1.15rem, 1.8vw, 1.55rem);
+          margin: 0 0 0.15rem;
           color: #EDECE6;
         }
         .header p {
           margin: 0;
           color: #B9BCC2;
-          font-size: 0.72rem;
+          font-size: 0.7rem;
         }
         .rivet {
           position: absolute;
@@ -6057,13 +6057,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .rivet-inline { position: static; flex-shrink: 0; }
         .paste-label { margin: 0; }
         .panel {
-          background: #F7F6F2;
+          background: #FFFFFF;
           margin: 1.1rem 1.5rem 0;
-          border: 1px solid #C7C2B8;
-          border-radius: 10px;
+          border: 1px solid #E4E2DC;
+          border-radius: 16px;
           padding: 1.5rem;
           position: relative;
-          box-shadow: 0 3px 14px rgba(122,78,0,0.07), 0 1px 3px rgba(27,29,31,0.05);
+          box-shadow: 0 2px 10px rgba(20,20,20,0.05), 0 1px 3px rgba(20,20,20,0.04);
           animation: fadeIn 0.25s ease-out;
         }
         .panel-open {
@@ -6125,26 +6125,28 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         label {
           display: block;
-          font-family: 'IBM Plex Mono', monospace;
-          font-size: 0.72rem;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.74rem;
+          font-weight: 600;
           text-transform: uppercase;
-          letter-spacing: 0.06em;
-          color: #4A5568;
-          margin-bottom: 0.3rem;
+          letter-spacing: 0.05em;
+          color: #6B7280;
+          margin-bottom: 0.35rem;
         }
         input, select, textarea {
           width: 100%;
-          padding: 0.6rem 0.7rem;
-          border: 1px solid #C7C2B8;
-          border-radius: 6px;
-          background: #FFFFFF;
+          padding: 0.65rem 0.75rem;
+          border: 1px solid #E4E2DC;
+          border-radius: 8px;
+          background: #FAFAF8;
           font-family: 'Inter', sans-serif;
           font-size: 0.92rem;
           color: #1B1D1F;
         }
         input:focus, select:focus, textarea:focus {
-          outline: 2px solid #D98E04;
+          outline: 2px solid rgba(216,154,0,0.45);
           outline-offset: 1px;
+          border-color: #D89A00;
         }
         textarea { resize: vertical; min-height: 3rem; }
         .submit-row { grid-column: 1 / -1; margin-top: 0.4rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.6rem; }
@@ -7087,17 +7089,18 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .app { max-width: min(1440px, 88vw); margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); position: relative; }
           .panel, .tag-card, .review-panel { padding-left: 2.25rem; padding-right: 2.25rem; }
           .stats-grid { grid-template-columns: repeat(4, 1fr); }
-          .app { padding-left: 184px; }
+          .app { padding-left: 235px; }
+          .hero { min-height: 170px; padding: 1.4rem 2.4rem; }
           .tabs-row {
             position: fixed;
             top: 0;
             left: calc((100vw - min(1440px, 88vw)) / 2);
-            width: 184px;
+            width: 235px;
             height: 100vh;
             flex-direction: column;
             flex-wrap: nowrap;
-            background: #0A0A0B;
-            padding: 1.25rem 0.75rem;
+            background: #080808;
+            padding: 1.5rem 1rem;
             gap: 0.1rem;
             overflow-y: auto;
             z-index: 50;
@@ -7107,31 +7110,31 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             width: 100%;
             display: flex;
             align-items: center;
-            gap: 0.65rem;
+            gap: 0.7rem;
             text-align: left;
             background: transparent;
             border: 1px solid transparent;
             border-left: 2.5px solid transparent;
             color: #9296A0;
-            border-radius: 6px;
-            padding: 0.55rem 0.75rem;
-            font-size: 0.82rem;
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+            font-size: 0.9rem;
           }
-          .pill-tab:hover:not(.active):not(:disabled) { background: rgba(255,255,255,0.04); color: #D8D9DC; }
+          .pill-tab:hover:not(.active):not(:disabled) { background: rgba(255,255,255,0.05); color: #D8D9DC; }
           .pill-tab.active {
-            background: rgba(217,142,4,0.1);
+            background: rgba(216,154,0,0.12);
             color: #F0C868;
             border-color: transparent;
-            border-left-color: #D98E04;
+            border-left-color: #D89A00;
             box-shadow: none;
             font-weight: 600;
           }
-          .nav-icon { width: 17px; height: 17px; flex-shrink: 0; }
+          .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
           .sidebar-logo {
             display: block;
             width: 100%;
-            max-width: 128px;
-            margin: 0.2rem auto 1.5rem;
+            max-width: 180px;
+            margin: 0.5rem auto 2.25rem;
             -webkit-mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
             mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
           }
