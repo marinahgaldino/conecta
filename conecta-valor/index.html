@@ -3994,6 +3994,48 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var ICON_SEARCH = "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-4.35-4.35";
   var ICON_CHART = "M4 20V10m6 10V4m6 16v-7";
   var ICON_GLOBE = "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3a13 13 0 0 1 3 9 13 13 0 0 1-3 9 13 13 0 0 1-3-9 13 13 0 0 1 3-9Z";
+  // Detecta campos importantes faltando pro aviso inteligente (Se\xE7\xE3o 5),
+  // reaproveitando ranking_importancia (mesmo dado j\xE1 usado no Compatibility
+  // Score) - n\xE3o \xE9 uma lista nova, \xE9 leitura do que j\xE1 existe por categoria.
+  // S\xF3 verifica campos que o formul\xE1rio simples realmente coleta - n\xE3o
+  // inventa checagem pra atributo que n\xE3o tem campo correspondente (ex:
+  // tens\xE3o/carca\xE7a n\xE3o s\xE3o coletados hoje, ent\xE3o n\xE3o entram na checagem).
+  var MAPA_CAMPO_IMPORTANTE_FORM = {
+    modelo: "modelo",
+    potencia_cv: "potenciaCv",
+    potencia_kw: "potenciaKw",
+    rpm: "rpm",
+    ano: "anoFabricacao",
+    estado: "estado",
+  };
+  var LABEL_CAMPO_IMPORTANTE = {
+    modelo: "Modelo",
+    potenciaCv: "Pot\xEAncia",
+    potenciaKw: "Pot\xEAncia",
+    rpm: "RPM",
+    anoFabricacao: "Ano",
+    estado: "Estado",
+  };
+  function getCamposImportantesFaltando(form) {
+    const categoriaId = form.categoria_id || resolverCategoriaId(form.categoria);
+    const schema = categoriaId && SCHEMA_FUNCAO[categoriaId];
+    if (!schema || !schema.ranking_importancia) return [];
+    const faltando = [];
+    const jaAdicionado = new Set();
+    schema.ranking_importancia.forEach((attr) => {
+      const chaveForm = MAPA_CAMPO_IMPORTANTE_FORM[attr];
+      if (!chaveForm) return; // sem campo correspondente no form simples - não checa
+      const label = LABEL_CAMPO_IMPORTANTE[chaveForm];
+      if (jaAdicionado.has(label)) return; // potenciaCv/potenciaKw contam como o mesmo "Potência"
+      const valor = form[chaveForm];
+      if (!valor || String(valor).trim() === "") {
+        faltando.push(label);
+        jaAdicionado.add(label);
+      }
+    });
+    return faltando;
+  }
+
   function LoadingPremium({ elapsed, t }) {
     const ETAPAS = [
       { label: t("Identificando equipamento", "Identifying equipment"), ate: 5 },
@@ -4674,6 +4716,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [inputMode, setInputMode] = (0, import_react.useState)("form");
     const [mostrarMaisDetalhes, setMostrarMaisDetalhes] = (0, import_react.useState)(false);
     const [mostrarMaisDetalhesEntry, setMostrarMaisDetalhesEntry] = (0, import_react.useState)(false);
+    const [avisoCompletudeAberto, setAvisoCompletudeAberto] = (0, import_react.useState)(false);
+    const [camposFaltandoAviso, setCamposFaltandoAviso] = (0, import_react.useState)([]);
     const [testeExtracaoTexto, setTesteExtracaoTexto] = (0, import_react.useState)("");
     const [testeExtracaoResultado, setTesteExtracaoResultado] = (0, import_react.useState)(null);
     const [testeExtracaoValores, setTesteExtracaoValores] = (0, import_react.useState)({});
@@ -5739,6 +5783,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     function removerFoto(idx) {
       setPhotos((prev) => prev.filter((_, i) => i !== idx));
     }
+    function handleSubmitClick() {
+      const faltando = getCamposImportantesFaltando(form);
+      if (faltando.length > 0) {
+        setCamposFaltandoAviso(faltando);
+        setAvisoCompletudeAberto(true);
+        return;
+      }
+      handleSubmit();
+    }
     async function handleSubmit() {
       setLoading(true);
       setError(null);
@@ -6647,6 +6700,49 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
 
         /* ===== v15.1: Como chegamos nesta estimativa ===== */
+        /* ===== v15.1: Modal de aviso inteligente ===== */
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(8,8,8,0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 200;
+          padding: 1rem;
+          animation: fadeIn 0.2s ease-out;
+        }
+        .modal-aviso {
+          background: #FFFFFF;
+          border-radius: 16px;
+          padding: 1.75rem;
+          max-width: 420px;
+          width: 100%;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .modal-aviso h4 { margin: 0 0 0.6rem; font-family: 'Manrope', sans-serif; font-size: 1.15rem; color: #1B1D1F; }
+        .modal-aviso p { margin: 0 0 1rem; font-size: 0.88rem; color: #4A5568; line-height: 1.5; }
+        .modal-aviso-lista {
+          list-style: none;
+          margin: 0 0 1.25rem;
+          padding: 0;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0.5rem;
+        }
+        .modal-aviso-lista li {
+          background: #F7F6F2;
+          border: 1px solid #E4E2DC;
+          border-radius: 999px;
+          padding: 0.3rem 0.75rem;
+          font-size: 0.8rem;
+          color: #4A5568;
+          font-weight: 600;
+        }
+        .modal-aviso-botoes { display: flex; flex-direction: column; gap: 0.6rem; }
+        .modal-aviso-botoes .primary { width: 100%; }
+        .modal-aviso-botoes .link-btn { text-align: center; }
+
         .como-chegamos-card {
           background: #F7F6F2;
           border: 1px solid #E4E2DC;
@@ -7626,7 +7722,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => updateField("categoria", e.target.value),
         placeholder: t("Ex: Motor el\xE9trico, linha de envase, terreno industrial\u2026", "E.g.: Electric motor, filling line, industrial land\u2026")
       }
-    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmit, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }))))) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmitClick, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t })), avisoCompletudeAberto && /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: () => setAvisoCompletudeAberto(false) }, /* @__PURE__ */ React.createElement("div", { className: "modal-aviso", onClick: (e) => e.stopPropagation() },
+      /* @__PURE__ */ React.createElement("h4", null, t("Voc\xEA pode melhorar esta avalia\xE7\xE3o.", "You can improve this evaluation.")),
+      /* @__PURE__ */ React.createElement("p", null, t("Quanto mais informa\xE7\xF5es forem preenchidas, mais precisa tende a ser a estimativa de mercado.", "The more information you fill in, the more accurate the market estimate tends to be.")),
+      /* @__PURE__ */ React.createElement("ul", { className: "modal-aviso-lista" }, camposFaltandoAviso.map((campo, i) => /* @__PURE__ */ React.createElement("li", { key: i }, campo))),
+      /* @__PURE__ */ React.createElement("div", { className: "modal-aviso-botoes" },
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setAvisoCompletudeAberto(false); setMostrarMaisDetalhes(true); } }, t("Completar informa\xE7\xF5es", "Complete information")),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => { setAvisoCompletudeAberto(false); handleSubmit(); } }, t("Avaliar assim mesmo", "Evaluate anyway"))
+      )
+    ))))) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
