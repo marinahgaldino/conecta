@@ -6151,7 +6151,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         html, body { background: #E7E5DF; margin: 0; }
         .app {
           font-family: 'Inter', sans-serif;
-          background: #F4F3EF;
+          background: linear-gradient(180deg, #F6F5F2 0%, #F2F0EB 100%);
           color: #1B1D1F;
           min-height: 100vh;
           padding-bottom: 3rem;
@@ -6160,6 +6160,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           background: #080808;
           color: #EDECE6;
           border-bottom: 2px solid #D89A00;
+          border-radius: 0 0 24px 24px;
+          box-shadow: 0 8px 24px rgba(8,8,8,0.18);
         }
         .header-inner {
           display: flex;
@@ -7299,6 +7301,21 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         .panel-title-row { display: flex; align-items: center; gap: 0.55rem; }
         .panel-title-row .rivet-inline { position: static; flex-shrink: 0; }
+        .panel-open .panel-title-row { align-items: center; margin-bottom: 0.2rem; }
+        .panel-open .panel-title-row .admin-title { font-size: 1.5rem; letter-spacing: 0.01em; }
+        .panel-open .panel-title-row::after {
+          content: "PRO";
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.65rem;
+          font-weight: 700;
+          letter-spacing: 0.06em;
+          color: #96650B;
+          background: #FBF0DC;
+          border: 1px solid #E8DCC0;
+          border-radius: 999px;
+          padding: 0.2rem 0.6rem;
+          margin-left: 0.4rem;
+        }
         .admin-field label {
           font-family: 'IBM Plex Mono', monospace;
           font-size: 0.7rem;
@@ -7432,6 +7449,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           border-top: 1px solid #E8DCC0;
           border-bottom: 1px solid #E8DCC0;
         }
+        .dashboard-actions button.primary {
+          background: linear-gradient(135deg, #D89A00, #B87F00);
+          border: none;
+          box-shadow: 0 3px 10px rgba(184,127,0,0.28);
+        }
+        .dashboard-actions button.primary::before { content: "\\2192"; margin-right: 0.5rem; font-weight: 700; }
+        .dashboard-actions button.secondary:nth-of-type(2) {
+          background: #FFFFFF;
+          border: 1.5px solid #1B1D1F;
+          color: #1B1D1F;
+        }
+        .dashboard-actions button.secondary:nth-of-type(2):hover { background: #F4F3EF; }
+        .dashboard-actions button.secondary:nth-of-type(3) {
+          background: transparent;
+          border: 1px solid transparent;
+          color: #6B7280;
+        }
+        .dashboard-actions button.secondary:nth-of-type(3):hover { border-color: #E4E2DC; color: #1B1D1F; }
         .dashboard-recent { margin-top: 1rem; }
         .home-history-row {
           grid-template-columns: 1fr 6rem 10rem 4.5rem;
@@ -7454,19 +7489,28 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           white-space: nowrap;
         }
         .stat-cell {
+          position: relative;
           background: #FFFFFF;
           border: 1px solid #E2DFD6;
-          border-radius: 8px;
-          padding: 0.85rem 0.7rem;
+          border-radius: 10px;
+          padding: 1.1rem 0.8rem 0.95rem;
           text-align: center;
-          box-shadow: 0 1px 4px rgba(27,29,31,0.05);
+          box-shadow: 0 4px 16px rgba(20,20,20,0.06), 0 1px 3px rgba(20,20,20,0.04);
           transition: box-shadow 0.15s ease, transform 0.15s ease;
+          overflow: hidden;
         }
-        .stat-cell .nav-icon { display: block; margin: 0 auto 0.35rem; color: #D98E04; }
+        .stat-cell::before {
+          content: "";
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 3px;
+          background: linear-gradient(90deg, #D89A00, #F0C868);
+        }
+        .stat-cell .nav-icon { display: block; width: 22px; height: 22px; margin: 0 auto 0.45rem; color: #D89A00; }
         .stat-number {
           display: block;
           font-family: 'IBM Plex Mono', monospace;
-          font-size: 1.7rem;
+          font-size: 2rem;
           font-weight: 700;
           color: #1B1D1F;
         }
@@ -7474,7 +7518,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           display: block;
           font-size: 0.72rem;
           color: #4A5568;
-          margin-top: 0.2rem;
+          margin-top: 0.25rem;
         }
         @media (max-width: 640px) {
           input, select, textarea { font-size: 16px; }
@@ -7595,12 +7639,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             display: block;
             width: 100%;
             max-width: 180px;
-            margin: 0.5rem auto 2.25rem;
+            margin: 0.5rem auto 1.4rem;
+            padding-bottom: 0.9rem;
+            border-bottom: 2px solid #D89A00;
             -webkit-mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
             mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
           }
           .sidebar-credits { display: block; margin-top: auto; padding-top: 1rem; }
           .sidebar-credits .credit-badge { display: block; text-align: center; width: 100%; }
+          .sidebar-credits::after {
+            content: "v15.2 Premium";
+            display: block;
+            text-align: center;
+            margin-top: 0.9rem;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.62rem;
+            letter-spacing: 0.04em;
+            color: #5A5D63;
+          }
           .header-logo-col, .navbar-right .credit-badge { display: none; }
         }
       `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")), /* @__PURE__ */ React.createElement(
