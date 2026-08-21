@@ -3994,6 +3994,25 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var ICON_SEARCH = "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-4.35-4.35";
   var ICON_CHART = "M4 20V10m6 10V4m6 16v-7";
   var ICON_GLOBE = "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3a13 13 0 0 1 3 9 13 13 0 0 1-3 9 13 13 0 0 1-3-9 13 13 0 0 1 3-9Z";
+  function LoadingPremium({ elapsed, t }) {
+    const ETAPAS = [
+      { label: t("Identificando equipamento", "Identifying equipment"), ate: 5 },
+      { label: t("Buscando compar\xE1veis", "Searching for comparables"), ate: 15 },
+      { label: t("Calculando compatibilidade", "Calculating compatibility"), ate: 25 },
+      { label: t("Gerando estimativa", "Generating estimate"), ate: Infinity },
+    ];
+    let etapaAtual = ETAPAS.findIndex((e) => elapsed < e.ate);
+    if (etapaAtual === -1) etapaAtual = ETAPAS.length - 1;
+    return /* @__PURE__ */ React.createElement("div", { className: "loading-premium" },
+      /* @__PURE__ */ React.createElement("div", { className: "loading-premium-etapas" }, ETAPAS.map((e, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "loading-etapa" + (i < etapaAtual ? " concluida" : i === etapaAtual ? " ativa" : "") },
+        /* @__PURE__ */ React.createElement("span", { className: "loading-etapa-marcador" }, i < etapaAtual ? "\u2713" : i === etapaAtual ? /* @__PURE__ */ React.createElement("span", { className: "spinner spinner-sm", "aria-hidden": "true" }) : ""),
+        /* @__PURE__ */ React.createElement("span", { className: "loading-etapa-label" }, e.label)
+      ))),
+      /* @__PURE__ */ React.createElement("div", { className: "loading-premium-track" }, /* @__PURE__ */ React.createElement("div", { className: "loading-premium-fill", style: { width: Math.min(96, (etapaAtual + 1) / ETAPAS.length * 100) + "%" } })),
+      /* @__PURE__ */ React.createElement("span", { className: "loading-premium-tempo" }, t(`${elapsed}s \u2014 instant\xE2neo se j\xE1 tiver dado parecido na sua base, sen\xE3o 20-60s`, `${elapsed}s \u2014 instant if you already have similar data, otherwise 20-60s`))
+    );
+  }
+
   function Rivet() {
     return /* @__PURE__ */ React.createElement("span", { className: "rivet", "aria-hidden": "true" });
   }
@@ -6322,6 +6341,57 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         @keyframes spin {
           to { transform: rotate(360deg); }
         }
+        .spinner-sm { width: 13px; height: 13px; border-width: 2px; }
+        .loading-premium {
+          width: 100%;
+          margin-top: 1rem;
+          padding: 1.1rem 1.25rem;
+          background: #F7F6F2;
+          border: 1px solid #E4E2DC;
+          border-radius: 12px;
+        }
+        .loading-premium-etapas {
+          display: flex;
+          flex-direction: column;
+          gap: 0.55rem;
+        }
+        .loading-etapa {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          font-size: 0.85rem;
+          color: #A8ACB3;
+        }
+        .loading-etapa.concluida { color: #1F5C3F; }
+        .loading-etapa.ativa { color: #1B1D1F; font-weight: 600; }
+        .loading-etapa-marcador {
+          width: 16px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          font-size: 0.8rem;
+        }
+        .loading-premium-track {
+          width: 100%;
+          height: 3px;
+          background: #E4E2DC;
+          border-radius: 999px;
+          margin-top: 0.9rem;
+          overflow: hidden;
+        }
+        .loading-premium-fill {
+          height: 100%;
+          background: #D89A00;
+          border-radius: 999px;
+          transition: width 0.6s ease;
+        }
+        .loading-premium-tempo {
+          display: block;
+          margin-top: 0.5rem;
+          font-size: 0.72rem;
+          color: #7A7E85;
+        }
         button.primary {
           font-family: 'Manrope', sans-serif;
           text-transform: uppercase;
@@ -7556,7 +7626,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => updateField("categoria", e.target.value),
         placeholder: t("Ex: Motor el\xE9trico, linha de envase, terreno industrial\u2026", "E.g.: Electric motor, filling line, industrial land\u2026")
       }
-    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmit, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement("div", { className: "loading-indicator" }, /* @__PURE__ */ React.createElement("span", { className: "spinner", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("span", null, t(`Pesquisando\u2026 ${elapsed}s (instant\xE2neo se j\xE1 tiver dado parecido na sua base, sen\xE3o 20-60s)`, `Searching\u2026 ${elapsed}s (instant if you already have similar data in your database, otherwise 20-60s)`))))))) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmit, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }))))) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
