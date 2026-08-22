@@ -4515,30 +4515,42 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // inventar descrição genérica/possivelmente errada pras outras 74. O
   // card some quando a categoria não tem entrada, em vez de mostrar algo
   // vago ou impreciso.
-  var DESCRICAO_EQUIPAMENTO = {
+  var EQUIPMENT_INFO = {
     motor_eletrico: {
-      descricao: "Motores el\xE9tricos convertem energia el\xE9trica em mec\xE2nica e s\xE3o usados em bombas, compressores, esteiras, ventiladores e m\xE1quinas industriais em geral.",
-      chips: ["Uso Industrial", "Motor de Indu\xE7\xE3o"]
-    },
-    bomba: {
-      descricao: "Bombas transportam ou pressurizam l\xEDquidos, usadas em irriga\xE7\xE3o, abastecimento, processos industriais e sistemas de recalque.",
-      chips: ["Uso Industrial", "Transporte de Fluidos"]
-    },
-    compressor: {
-      descricao: "Compressores elevam a press\xE3o de ar ou g\xE1s, usados em linhas pneum\xE1ticas, refrigera\xE7\xE3o e processos industriais que dependem de ar comprimido.",
-      chips: ["Uso Industrial", "Ar Comprimido"]
-    },
-    gerador: {
-      descricao: "Geradores convertem energia mec\xE2nica em el\xE9trica, usados como fonte de energia de backup ou principal em locais sem rede el\xE9trica est\xE1vel.",
-      chips: ["Uso Industrial", "Gera\xE7\xE3o de Energia"]
-    },
-    redutor: {
-      descricao: "Redutores de velocidade reduzem a rota\xE7\xE3o e aumentam o torque de um sistema motriz, usados em transportadores, misturadores e linhas de produ\xE7\xE3o.",
-      chips: ["Uso Industrial", "Transmiss\xE3o Mec\xE2nica"]
+      oQueE: "Motores el\xE9tricos convertem energia el\xE9trica em mec\xE2nica atrav\xE9s de rota\xE7\xE3o de eixo.",
+      aplicacoes: ["Bombas e compressores", "Esteiras e transportadores", "Ventiladores industriais"],
+      ondeUtilizado: "Praticamente qualquer linha de produ\xE7\xE3o ou processo industrial que precise de movimento rotativo.",
+      liquidez: "alta"
     },
     motorredutor: {
-      descricao: "Motorredutores combinam motor e redutor de velocidade num único conjunto compacto, usados em transportadores, esteiras e equipamentos que precisam de torque controlado.",
-      chips: ["Uso Industrial", "Transmiss\xE3o Mec\xE2nica"]
+      oQueE: "Combina motor e redutor de velocidade num \xFAnico conjunto compacto, entregando rota\xE7\xE3o mais baixa e torque mais alto.",
+      aplicacoes: ["Transportadores e esteiras", "Misturadores", "Equipamentos com movimento controlado"],
+      ondeUtilizado: "Linhas de produ\xE7\xE3o que precisam de torque elevado em espa\xE7o reduzido.",
+      liquidez: "média"
+    },
+    redutor: {
+      oQueE: "Reduz a rota\xE7\xE3o e aumenta o torque de um sistema motriz, geralmente acoplado a um motor separado.",
+      aplicacoes: ["Transportadores", "Misturadores industriais", "Linhas de produ\xE7\xE3o"],
+      ondeUtilizado: "Sistemas mec\xE2nicos que precisam de controle fino de velocidade/torque.",
+      liquidez: "média"
+    },
+    bomba: {
+      oQueE: "Transporta ou pressuriza l\xEDquidos de um ponto a outro.",
+      aplicacoes: ["Irriga\xE7\xE3o", "Abastecimento de \xE1gua", "Processos industriais com fluidos"],
+      ondeUtilizado: "Agroind\xFAstria, saneamento e qualquer processo que movimente l\xEDquido.",
+      liquidez: "alta"
+    },
+    compressor: {
+      oQueE: "Eleva a press\xE3o de ar ou g\xE1s pra uso em sistemas pneum\xE1ticos ou de refrigera\xE7\xE3o.",
+      aplicacoes: ["Linhas pneum\xE1ticas", "Refrigera\xE7\xE3o industrial", "Ferramentas a ar comprimido"],
+      ondeUtilizado: "F\xE1bricas e oficinas que dependem de ar comprimido no processo.",
+      liquidez: "média"
+    },
+    gerador: {
+      oQueE: "Converte energia mec\xE2nica em el\xE9trica, geralmente atrav\xE9s de um motor a combust\xE3o.",
+      aplicacoes: ["Energia de backup", "Fonte principal em locais sem rede est\xE1vel", "Obras e eventos"],
+      ondeUtilizado: "Locais sem acesso confi\xE1vel \xE0 rede el\xE9trica, ou como redund\xE2ncia.",
+      liquidez: "média"
     }
   };
 
@@ -4571,12 +4583,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const titulo = [normalizarMarca(item.marca), item.modelo].filter(Boolean).join(" ") || item.categoria;
     const qtdComparaveisExibida = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : (result.comparaveis || []).length;
     const notaQualidade = calcularNotaQualidade(result);
-    const descEquip = item.categoria_id && DESCRICAO_EQUIPAMENTO[item.categoria_id];
+    const equipInfo = item.categoria_id && EQUIPMENT_INFO[item.categoria_id];
     const fatoresInfluencia = getFatoresInfluencia(item, t);
     const ORDEM_COMPAT = { alta: 3, "m\xE9dia": 2, baixa: 1 };
     const comparaveisOrdenados = (result.comparaveis || []).slice().sort((a, b) => (ORDEM_COMPAT[b.compatibilidade] || 0) - (ORDEM_COMPAT[a.compatibilidade] || 0));
     const comparaveisExibidos = mostrarTodosComparaveis ? comparaveisOrdenados : comparaveisOrdenados.slice(0, 5);
     const BARRA_COMPAT = { alta: 90, "m\xE9dia": 55, baixa: 25 };
+    const compatibilidadeMedia = comparaveisOrdenados.length > 0
+      ? Math.round(comparaveisOrdenados.reduce((soma, c) => soma + (BARRA_COMPAT[c.compatibilidade] || 0), 0) / comparaveisOrdenados.length)
+      : null;
 
     return /* @__PURE__ */ React.createElement("div", { className: "tag-card" },
       /* @__PURE__ */ React.createElement(Rivet, null),
@@ -4591,7 +4606,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-meta" },
           result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, t("confian\xE7a ", "confidence "), result.confianca_avaliacao),
           /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, qtdComparaveisExibida, " ", t(qtdComparaveisExibida === 1 ? "compar\xE1vel" : "compar\xE1veis", qtdComparaveisExibida === 1 ? "comparable" : "comparables")),
-          /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("IA + busca", "AI + search"))
+          /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("IA + mercado", "AI + market"))
         )
       ),
 
@@ -4603,9 +4618,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           /* @__PURE__ */ React.createElement("span", { className: "qualidade-nota-max" }, "/100"),
           result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, t("confian\xE7a ", "confidence "), result.confianca_avaliacao)
         ),
-        result.funil_comparaveis && /* @__PURE__ */ React.createElement("div", { className: "qualidade-detalhe" },
-          /* @__PURE__ */ React.createElement("span", null, t("Encontrados: ", "Found: "), result.funil_comparaveis.encontrados),
-          /* @__PURE__ */ React.createElement("span", null, t("Usados: ", "Used: "), result.funil_comparaveis.usados_no_calculo)
+        /* @__PURE__ */ React.createElement("div", { className: "qualidade-detalhe" },
+          result.funil_comparaveis && /* @__PURE__ */ React.createElement("span", null, t("Comparáveis usados: ", "Comparables used: "), result.funil_comparaveis.usados_no_calculo),
+          compatibilidadeMedia !== null && /* @__PURE__ */ React.createElement("span", null, t("Compatibilidade m\xE9dia: ", "Average compatibility: "), compatibilidadeMedia, "%"),
+          /* @__PURE__ */ React.createElement("span", null, t("Origem: ", "Source: "), result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("IA + mercado", "AI + market"))
         )
       ),
 
@@ -4613,12 +4629,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("div", { className: "tag-card-main" },
 
           // ===== Card "O que \xE9 este equipamento?" =====
-          descEquip && /* @__PURE__ */ React.createElement("div", { className: "explicacao-tecnica" },
+          equipInfo && /* @__PURE__ */ React.createElement("div", { className: "explicacao-tecnica" },
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("O que \xE9 este equipamento", "What this equipment is")),
-            /* @__PURE__ */ React.createElement("p", null, descEquip.descricao),
-            /* @__PURE__ */ React.createElement("div", { className: "chips-row" }, descEquip.chips.map((chip, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "chip" }, chip)))
+            /* @__PURE__ */ React.createElement("p", null, equipInfo.oQueE),
+            /* @__PURE__ */ React.createElement("p", { className: "equip-info-sub" }, /* @__PURE__ */ React.createElement("strong", null, t("Principais aplica\xE7\xF5es: ", "Main applications: ")), equipInfo.aplicacoes.join(", ")),
+            /* @__PURE__ */ React.createElement("p", { className: "equip-info-sub" }, /* @__PURE__ */ React.createElement("strong", null, t("Onde \xE9 utilizado: ", "Where it's used: ")), equipInfo.ondeUtilizado),
+            /* @__PURE__ */ React.createElement("div", { className: "chips-row" }, /* @__PURE__ */ React.createElement("span", { className: "chip liquidez-" + equipInfo.liquidez }, t("Mercado de liquidez ", "Market liquidity: "), equipInfo.liquidez))
           ),
-          !descEquip && result.explicacao_tecnica && /* @__PURE__ */ React.createElement("div", { className: "explicacao-tecnica" },
+          !equipInfo && result.explicacao_tecnica && /* @__PURE__ */ React.createElement("div", { className: "explicacao-tecnica" },
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("O que \xE9 esse equipamento", "What this equipment is")),
             /* @__PURE__ */ React.createElement("p", null, result.explicacao_tecnica)
           ),
@@ -4653,11 +4671,12 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Comparáveis", "Comparables")),
           /* @__PURE__ */ React.createElement("ul", null, comparaveisExibidos.map((c, i) => /* @__PURE__ */ React.createElement("li", { key: i, className: i === 0 && c.compatibilidade === "alta" ? "melhor-match" : "" },
             /* @__PURE__ */ React.createElement("div", { className: "comp-row" },
-              /* @__PURE__ */ React.createElement("span", { className: "comp-titulo" }, i === 0 && c.compatibilidade === "alta" && /* @__PURE__ */ React.createElement("span", { className: "melhor-badge" }, t("melhor compar\xE1vel", "best comparable")), [normalizarMarca(c.marca), c.modelo].filter(Boolean).join(" ") || t("Equipamento compat\xEDvel", "Compatible equipment")),
+              /* @__PURE__ */ React.createElement("span", { className: "comp-titulo" }, i === 0 && c.compatibilidade === "alta" && /* @__PURE__ */ React.createElement("span", { className: "melhor-badge" }, t("melhor compar\xE1vel", "best comparable")), [normalizarMarca(c.marca), c.modelo].filter(Boolean).join(" ") || `${t("Compar\xE1vel", "Comparable")} ${i + 1}`),
               /* @__PURE__ */ React.createElement("span", { className: "comp-preco" }, formatBRL(c.preco))
             ),
             /* @__PURE__ */ React.createElement("div", { className: "comp-row sub" },
-              /* @__PURE__ */ React.createElement("span", { className: "comp-fonte" }, [c.estado || t("Estado n\xE3o informado", "Condition not informed"), c.ano].filter(Boolean).join(" \xB7 "))
+              /* @__PURE__ */ React.createElement("span", { className: "comp-fonte" }, c.estado || t("Estado n\xE3o informado", "Condition not informed")),
+              c.compatibilidade && /* @__PURE__ */ React.createElement("span", { className: "comp-compat-pct" }, BARRA_COMPAT[c.compatibilidade] || 0, "%")
             ),
             c.compatibilidade && /* @__PURE__ */ React.createElement("div", { className: "compat-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "compat-barra-fill compat-barra-" + c.compatibilidade, style: { width: (BARRA_COMPAT[c.compatibilidade] || 0) + "%" } }))
           ))),
@@ -4716,8 +4735,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [inputMode, setInputMode] = (0, import_react.useState)("form");
     const [mostrarMaisDetalhes, setMostrarMaisDetalhes] = (0, import_react.useState)(false);
     const [mostrarMaisDetalhesEntry, setMostrarMaisDetalhesEntry] = (0, import_react.useState)(false);
-    const [avisoCompletudeAberto, setAvisoCompletudeAberto] = (0, import_react.useState)(false);
-    const [camposFaltandoAviso, setCamposFaltandoAviso] = (0, import_react.useState)([]);
     const [testeExtracaoTexto, setTesteExtracaoTexto] = (0, import_react.useState)("");
     const [testeExtracaoResultado, setTesteExtracaoResultado] = (0, import_react.useState)(null);
     const [testeExtracaoValores, setTesteExtracaoValores] = (0, import_react.useState)({});
@@ -5783,15 +5800,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     function removerFoto(idx) {
       setPhotos((prev) => prev.filter((_, i) => i !== idx));
     }
-    function handleSubmitClick() {
-      const faltando = getCamposImportantesFaltando(form);
-      if (faltando.length > 0) {
-        setCamposFaltandoAviso(faltando);
-        setAvisoCompletudeAberto(true);
-        return;
-      }
-      handleSubmit();
-    }
     async function handleSubmit() {
       setLoading(true);
       setError(null);
@@ -6151,7 +6159,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         html, body { background: #E7E5DF; margin: 0; }
         .app {
           font-family: 'Inter', sans-serif;
-          background: linear-gradient(180deg, #F6F5F2 0%, #F2F0EB 100%);
+          background: linear-gradient(180deg, #F6F5F2 0%, #F4F5F7 100%);
           color: #1B1D1F;
           min-height: 100vh;
           padding-bottom: 3rem;
@@ -6700,50 +6708,23 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           color: #4A5568;
           font-weight: 600;
         }
+        .chip.liquidez-alta { background: #E3EFE8; color: #1F5C3F; border-color: #CFE4D6; }
+        .chip.liquidez-média { background: #FBF0DC; color: #96650B; border-color: #E8DCC0; }
+        .chip.liquidez-baixa { background: #F5E5E3; color: #A3352A; border-color: #E8CFCA; }
+        .equip-info-sub { font-size: 0.82rem; color: #4A5568; margin-top: 0.4rem; }
 
-        /* ===== v15.1: Como chegamos nesta estimativa ===== */
-        /* ===== v15.1: Modal de aviso inteligente ===== */
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          background: rgba(8,8,8,0.55);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 200;
-          padding: 1rem;
-          animation: fadeIn 0.2s ease-out;
-        }
-        .modal-aviso {
-          background: #FFFFFF;
-          border-radius: 16px;
-          padding: 1.75rem;
-          max-width: 420px;
-          width: 100%;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.25);
-        }
-        .modal-aviso h4 { margin: 0 0 0.6rem; font-family: 'Manrope', sans-serif; font-size: 1.15rem; color: #1B1D1F; }
-        .modal-aviso p { margin: 0 0 1rem; font-size: 0.88rem; color: #4A5568; line-height: 1.5; }
-        .modal-aviso-lista {
-          list-style: none;
-          margin: 0 0 1.25rem;
-          padding: 0;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 0.5rem;
-        }
-        .modal-aviso-lista li {
-          background: #F7F6F2;
-          border: 1px solid #E4E2DC;
-          border-radius: 999px;
-          padding: 0.3rem 0.75rem;
+        /* ===== v16: Aviso inteligente inline (discreto, acima do botão) ===== */
+        .aviso-completude-inline {
           font-size: 0.8rem;
-          color: #4A5568;
-          font-weight: 600;
+          color: #96650B;
+          background: #FBF0DC;
+          border: 1px solid #E8DCC0;
+          border-radius: 8px;
+          padding: 0.55rem 0.8rem;
+          margin: 0.6rem 0 0;
+          grid-column: 1 / -1;
         }
-        .modal-aviso-botoes { display: flex; flex-direction: column; gap: 0.6rem; }
-        .modal-aviso-botoes .primary { width: 100%; }
-        .modal-aviso-botoes .link-btn { text-align: center; }
+        .aviso-completude-campos { font-weight: 600; }
 
         .como-chegamos-card {
           background: #F7F6F2;
@@ -6826,6 +6807,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .comparaveis li:last-child { border-bottom: none; }
         .comp-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.88rem; }
         .comp-row.sub { font-size: 0.78rem; color: #6B6E73; margin-top: 0.15rem; }
+        .comp-compat-pct { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #4A5568; }
         .comp-titulo { font-weight: 500; }
         .comp-preco { font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
         .comp-row.sub a { color: #4A5568; }
@@ -7493,9 +7475,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           background: #FFFFFF;
           border: 1px solid #E2DFD6;
           border-radius: 10px;
-          padding: 1.1rem 0.8rem 0.95rem;
+          padding: 1.2rem;
           text-align: center;
-          box-shadow: 0 4px 16px rgba(20,20,20,0.06), 0 1px 3px rgba(20,20,20,0.04);
+          box-shadow: 0 3px 12px rgba(20,20,20,0.05), 0 1px 3px rgba(20,20,20,0.04);
           transition: box-shadow 0.15s ease, transform 0.15s ease;
           overflow: hidden;
         }
@@ -7503,22 +7485,22 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           content: "";
           position: absolute;
           top: 0; left: 0; right: 0;
-          height: 3px;
+          height: 2px;
           background: linear-gradient(90deg, #D89A00, #F0C868);
         }
-        .stat-cell .nav-icon { display: block; width: 22px; height: 22px; margin: 0 auto 0.45rem; color: #D89A00; }
+        .stat-cell .nav-icon { display: block; width: 22px; height: 22px; margin: 0 auto 0.4rem; color: #D89A00; }
         .stat-number {
           display: block;
           font-family: 'IBM Plex Mono', monospace;
-          font-size: 2rem;
+          font-size: 2.2rem;
           font-weight: 700;
           color: #1B1D1F;
         }
         .stat-label {
           display: block;
-          font-size: 0.72rem;
+          font-size: 0.64rem;
           color: #4A5568;
-          margin-top: 0.25rem;
+          margin-top: 0.2rem;
         }
         @media (max-width: 640px) {
           input, select, textarea { font-size: 16px; }
@@ -7594,13 +7576,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .panel, .tag-card, .review-panel { padding: 2rem; }
           .panel, .tag-card { margin-top: 1.5rem; margin-bottom: 1.5rem; }
           .stats-grid { grid-template-columns: repeat(4, 1fr); }
-          .app { padding-left: 235px; }
-          .hero { min-height: 170px; padding: 1.4rem 2.4rem; }
+          .app { padding-left: 210px; }
+          .hero { min-height: 145px; padding: 1.2rem 2.2rem; }
           .tabs-row {
             position: fixed;
             top: 0;
             left: calc((100vw - min(1600px, 92vw)) / 2);
-            width: 235px;
+            width: 210px;
             height: 100vh;
             flex-direction: column;
             flex-wrap: nowrap;
@@ -7638,10 +7620,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .sidebar-logo {
             display: block;
             width: 100%;
-            max-width: 180px;
+            max-width: 145px;
             margin: 0.5rem auto 1.4rem;
             padding-bottom: 0.9rem;
-            border-bottom: 2px solid #D89A00;
+            border-bottom: 2px solid rgba(216,154,0,0.8);
             -webkit-mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
             mask-image: radial-gradient(ellipse 80% 62% at center, #000 46%, transparent 100%);
           }
@@ -7778,15 +7760,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => updateField("categoria", e.target.value),
         placeholder: t("Ex: Motor el\xE9trico, linha de envase, terreno industrial\u2026", "E.g.: Electric motor, filling line, industrial land\u2026")
       }
-    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmitClick, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t })), avisoCompletudeAberto && /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: () => setAvisoCompletudeAberto(false) }, /* @__PURE__ */ React.createElement("div", { className: "modal-aviso", onClick: (e) => e.stopPropagation() },
-      /* @__PURE__ */ React.createElement("h4", null, t("Voc\xEA pode melhorar esta avalia\xE7\xE3o.", "You can improve this evaluation.")),
-      /* @__PURE__ */ React.createElement("p", null, t("Quanto mais informa\xE7\xF5es forem preenchidas, mais precisa tende a ser a estimativa de mercado.", "The more information you fill in, the more accurate the market estimate tends to be.")),
-      /* @__PURE__ */ React.createElement("ul", { className: "modal-aviso-lista" }, camposFaltandoAviso.map((campo, i) => /* @__PURE__ */ React.createElement("li", { key: i }, campo))),
-      /* @__PURE__ */ React.createElement("div", { className: "modal-aviso-botoes" },
-        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setAvisoCompletudeAberto(false); setMostrarMaisDetalhes(true); } }, t("Completar informa\xE7\xF5es", "Complete information")),
-        /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => { setAvisoCompletudeAberto(false); handleSubmit(); } }, t("Avaliar assim mesmo", "Evaluate anyway"))
-      )
-    ))))) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), (() => { const faltando = getCamposImportantesFaltando(form); return faltando.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "aviso-completude-inline" }, t("Quanto mais informa\xE7\xF5es voc\xEA preencher, mais precisa tende a ser a estimativa deste equipamento. ", "The more information you fill in, the more accurate the estimate for this equipment tends to be. "), /* @__PURE__ */ React.createElement("span", { className: "aviso-completude-campos" }, faltando.join(", "))); })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmit, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }))))) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
