@@ -4585,7 +4585,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const notaQualidade = calcularNotaQualidade(result);
     const equipInfo = item.categoria_id && EQUIPMENT_INFO[item.categoria_id];
     const ORDEM_COMPAT = { alta: 3, "m\xE9dia": 2, baixa: 1 };
-    const comparaveisOrdenados = (result.comparaveis || []).slice().sort((a, b) => (ORDEM_COMPAT[b.compatibilidade] || 0) - (ORDEM_COMPAT[a.compatibilidade] || 0));
+    const comparaveisOrdenados = (result.comparaveis || []).slice().sort((a, b) => {
+      const diffCompat = (ORDEM_COMPAT[b.compatibilidade] || 0) - (ORDEM_COMPAT[a.compatibilidade] || 0);
+      if (diffCompat !== 0) return diffCompat;
+      const diffPrecoA = Math.abs((Number(a.preco) || 0) - (result.faixa_media || 0));
+      const diffPrecoB = Math.abs((Number(b.preco) || 0) - (result.faixa_media || 0));
+      return diffPrecoA - diffPrecoB;
+    });
     const comparaveisExibidos = mostrarTodosComparaveis ? comparaveisOrdenados : comparaveisOrdenados.slice(0, 5);
     const BARRA_COMPAT = { alta: 90, "m\xE9dia": 55, baixa: 25 };
     const compatibilidadeMedia = comparaveisOrdenados.length > 0
@@ -4671,19 +4677,31 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
         // ===== Comparáveis Premium =====
         /* @__PURE__ */ React.createElement("div", { className: "tag-card-sidebar" }, comparaveisOrdenados.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "comparaveis" },
-          /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Comparáveis", "Comparables")),
-          /* @__PURE__ */ React.createElement("ul", null, comparaveisExibidos.map((c, i) => /* @__PURE__ */ React.createElement("li", { key: i, className: i === 0 && c.compatibilidade === "alta" ? "melhor-match" : "" },
-            /* @__PURE__ */ React.createElement("div", { className: "comp-row" },
-              /* @__PURE__ */ React.createElement("span", { className: "comp-titulo" }, i === 0 && c.compatibilidade === "alta" && /* @__PURE__ */ React.createElement("span", { className: "melhor-badge" }, t("melhor compar\xE1vel", "best comparable")), [normalizarMarca(c.marca), c.modelo].filter(Boolean).join(" ") || `${t("Compar\xE1vel", "Comparable")} ${i + 1}`),
-              /* @__PURE__ */ React.createElement("span", { className: "comp-preco" }, formatBRL(c.preco))
+          /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Compar\xE1veis utilizados", "Comparables used")),
+          /* @__PURE__ */ React.createElement("p", { className: "comparaveis-resumo" },
+            t(`Encontramos ${comparaveisOrdenados.length} ${comparaveisOrdenados.length === 1 ? "equipamento compat\xEDvel" : "equipamentos compat\xEDveis"} para esta avalia\xE7\xE3o.`, `We found ${comparaveisOrdenados.length} compatible ${comparaveisOrdenados.length === 1 ? "equipment" : "equipments"} for this evaluation.`),
+            comparaveisOrdenados.length > 5 && !mostrarTodosComparaveis && (" " + t("Os cinco abaixo possuem maior compatibilidade t\xE9cnica com o equipamento informado.", "The five below have the highest technical compatibility with the equipment provided."))
+          ),
+          /* @__PURE__ */ React.createElement("div", { className: "comp-card-list" }, comparaveisExibidos.map((c, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "comp-card" + (i === 0 && c.compatibilidade === "alta" ? " melhor-match" : "") },
+            i === 0 && c.compatibilidade === "alta" && /* @__PURE__ */ React.createElement("span", { className: "melhor-badge" }, t("melhor compar\xE1vel", "best comparable")),
+            /* @__PURE__ */ React.createElement("div", { className: "comp-card-head" },
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("div", { className: "comp-card-marca" }, normalizarMarca(c.marca) || `${t("Compar\xE1vel", "Comparable")} ${i + 1}`),
+                c.modelo && /* @__PURE__ */ React.createElement("div", { className: "comp-card-modelo" }, c.modelo)
+              ),
+              /* @__PURE__ */ React.createElement("div", { className: "comp-card-right" },
+                /* @__PURE__ */ React.createElement("div", { className: "comp-card-valor" }, formatBRL(c.preco)),
+                c.compatibilidade && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + c.compatibilidade }, BARRA_COMPAT[c.compatibilidade] || 0, "%")
+              )
             ),
-            /* @__PURE__ */ React.createElement("div", { className: "comp-row sub" },
-              /* @__PURE__ */ React.createElement("span", { className: "comp-fonte" }, c.estado || t("Estado n\xE3o informado", "Condition not informed")),
-              c.compatibilidade && /* @__PURE__ */ React.createElement("span", { className: "comp-compat-pct" }, BARRA_COMPAT[c.compatibilidade] || 0, "%")
-            ),
-            c.compatibilidade && /* @__PURE__ */ React.createElement("div", { className: "compat-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "compat-barra-fill compat-barra-" + c.compatibilidade, style: { width: (BARRA_COMPAT[c.compatibilidade] || 0) + "%" } }))
+            (c.potencia_cv || c.ano || c.estado || c.peso_kg) && /* @__PURE__ */ React.createElement("div", { className: "comp-card-badges" },
+              c.potencia_cv && /* @__PURE__ */ React.createElement("span", { className: "comp-mini-badge" }, c.potencia_cv, " CV"),
+              c.ano && /* @__PURE__ */ React.createElement("span", { className: "comp-mini-badge" }, c.ano),
+              c.estado && /* @__PURE__ */ React.createElement("span", { className: "comp-mini-badge" }, c.estado),
+              c.peso_kg && /* @__PURE__ */ React.createElement("span", { className: "comp-mini-badge" }, c.peso_kg, " kg")
+            )
           ))),
-          comparaveisOrdenados.length > 5 && !mostrarTodosComparaveis && /* @__PURE__ */ React.createElement("button", { type: "button", className: "ver-todos-btn", onClick: () => setMostrarTodosComparaveis(true) }, t(`Ver todos (${comparaveisOrdenados.length})`, `View all (${comparaveisOrdenados.length})`))
+          comparaveisOrdenados.length > 5 && !mostrarTodosComparaveis && /* @__PURE__ */ React.createElement("button", { type: "button", className: "ver-todos-btn", onClick: () => setMostrarTodosComparaveis(true) }, t("Ver todos os compar\xE1veis", "View all comparables"))
         ))
       ),
       /* @__PURE__ */ React.createElement("p", { className: "disclaimer" }, t("Estimativa com base em observa\xE7\xF5es de mercado p\xFAblicas. Use como refer\xEAncia, n\xE3o como laudo de avalia\xE7\xE3o.", "Estimate based on public market observations. Use as a reference, not as a formal appraisal report."))
@@ -6761,19 +6779,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .influencia-média { background: #FBF0DC; color: #96650B; }
         .influencia-baixa { background: #EFEEEA; color: #6B7280; }
 
-        /* ===== v15.1: Comparáveis premium ===== */
-        .compat-barra-track {
-          width: 100%;
-          height: 4px;
-          background: #EFEEEA;
-          border-radius: 999px;
-          margin-top: 0.4rem;
-          overflow: hidden;
-        }
-        .compat-barra-fill { height: 100%; border-radius: 999px; }
-        .compat-barra-alta { background: #1F5C3F; }
-        .compat-barra-média { background: #D89A00; }
-        .compat-barra-baixa { background: #A3352A; }
+        /* ===== v16: Comparáveis premium (cards) — ver .comp-card acima ===== */
         .ver-todos-btn {
           width: 100%;
           margin-top: 0.75rem;
@@ -6809,40 +6815,42 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .tag-value.leilao { font-family: 'IBM Plex Mono', monospace; font-size: 1.05rem; color: #4A5568; }
         .tag-sub { display: block; font-size: 0.78rem; color: #6B6E73; margin-top: 0.15rem; }
         .tag-resumo { font-size: 0.92rem; line-height: 1.5; margin-bottom: 1rem; }
-        .comparaveis ul { list-style: none; padding: 0; margin: 0.5rem 0 0; }
-        .comparaveis li {
-          padding: 0.75rem 0.4rem;
-          border-bottom: 1px solid #F0EEE7;
-          border-radius: 6px;
-          transition: background 0.12s ease;
+        .comparaveis-resumo { font-size: 0.85rem; color: #4A5568; margin: 0.5rem 0 1rem; line-height: 1.5; }
+        .comp-card-list { display: flex; flex-direction: column; gap: 0.7rem; }
+        .comp-card {
+          position: relative;
+          background: #FFFFFF;
+          border: 1px solid rgba(216,154,0,0.25);
+          border-radius: 10px;
+          padding: 0.85rem 1rem;
+          box-shadow: 0 2px 8px rgba(20,20,20,0.04);
         }
-        .comparaveis li:hover { background: #FBFAF7; }
-        .comparaveis li:last-child { border-bottom: none; }
-        .comp-row { display: flex; justify-content: space-between; gap: 0.5rem; font-size: 0.88rem; }
-        .comp-row.sub { font-size: 0.78rem; color: #6B6E73; margin-top: 0.15rem; }
-        .comp-compat-pct { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #4A5568; }
-        .comp-titulo { font-weight: 500; }
-        .comp-preco { font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
-        .comp-row.sub a { color: #4A5568; }
-        li.melhor-match {
-          background: #FBF3E2;
-          margin: 0 -0.6rem;
-          padding: 0.6rem;
-          border-radius: 6px;
-          border-bottom: none !important;
-        }
-        .melhor-badge {
+        .comp-card.melhor-match { border-color: rgba(216,154,0,0.5); background: #FFFDF7; }
+        .comp-card .melhor-badge {
           display: inline-block;
           font-family: 'IBM Plex Mono', monospace;
-          font-size: 0.62rem;
+          font-size: 0.6rem;
           text-transform: uppercase;
           letter-spacing: 0.05em;
-          background: #D98E04;
+          background: #D89A00;
           color: #1B1D1F;
           border-radius: 3px;
           padding: 0.1rem 0.4rem;
-          margin-right: 0.4rem;
-          vertical-align: middle;
+          margin-bottom: 0.5rem;
+        }
+        .comp-card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.6rem; }
+        .comp-card-marca { font-size: 0.95rem; font-weight: 700; color: #1B1D1F; }
+        .comp-card-modelo { font-size: 0.8rem; color: #6B6E73; margin-top: 0.1rem; }
+        .comp-card-right { text-align: right; flex-shrink: 0; }
+        .comp-card-valor { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: #1F5C3F; font-size: 0.98rem; }
+        .comp-card-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.6rem; }
+        .comp-mini-badge {
+          background: #F4F3EF;
+          border: 1px solid #E4E2DC;
+          border-radius: 999px;
+          padding: 0.15rem 0.6rem;
+          font-size: 0.72rem;
+          color: #4A5568;
         }
         .compat-tag {
           display: inline-block;
