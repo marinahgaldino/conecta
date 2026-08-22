@@ -4517,40 +4517,40 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // vago ou impreciso.
   var EQUIPMENT_INFO = {
     motor_eletrico: {
-      oQueE: "Motores el\xE9tricos convertem energia el\xE9trica em mec\xE2nica atrav\xE9s de rota\xE7\xE3o de eixo.",
-      aplicacoes: ["Bombas e compressores", "Esteiras e transportadores", "Ventiladores industriais"],
-      ondeUtilizado: "Praticamente qualquer linha de produ\xE7\xE3o ou processo industrial que precise de movimento rotativo.",
-      liquidez: "alta"
+      titulo: "Motor El\xE9trico",
+      descricao_curta: "Motor el\xE9trico de indu\xE7\xE3o utilizado para acionamento de m\xE1quinas industriais.",
+      aplicacoes: ["Bombas", "Ventiladores", "Esteiras", "Misturadores"],
+      liquidez: "Alta"
     },
     motorredutor: {
-      oQueE: "Combina motor e redutor de velocidade num \xFAnico conjunto compacto, entregando rota\xE7\xE3o mais baixa e torque mais alto.",
-      aplicacoes: ["Transportadores e esteiras", "Misturadores", "Equipamentos com movimento controlado"],
-      ondeUtilizado: "Linhas de produ\xE7\xE3o que precisam de torque elevado em espa\xE7o reduzido.",
-      liquidez: "média"
+      titulo: "Motorredutor",
+      descricao_curta: "Combina motor e redutor de velocidade num \xFAnico conjunto compacto, entregando rota\xE7\xE3o mais baixa e torque mais alto.",
+      aplicacoes: ["Transportadores", "Esteiras", "Misturadores", "Equipamentos de torque controlado"],
+      liquidez: "M\xE9dia"
     },
     redutor: {
-      oQueE: "Reduz a rota\xE7\xE3o e aumenta o torque de um sistema motriz, geralmente acoplado a um motor separado.",
+      titulo: "Redutor",
+      descricao_curta: "Reduz a rota\xE7\xE3o e aumenta o torque de um sistema motriz, geralmente acoplado a um motor separado.",
       aplicacoes: ["Transportadores", "Misturadores industriais", "Linhas de produ\xE7\xE3o"],
-      ondeUtilizado: "Sistemas mec\xE2nicos que precisam de controle fino de velocidade/torque.",
-      liquidez: "média"
+      liquidez: "M\xE9dia"
     },
     bomba: {
-      oQueE: "Transporta ou pressuriza l\xEDquidos de um ponto a outro.",
+      titulo: "Bomba",
+      descricao_curta: "Equipamento que transporta ou pressuriza l\xEDquidos de um ponto a outro.",
       aplicacoes: ["Irriga\xE7\xE3o", "Abastecimento de \xE1gua", "Processos industriais com fluidos"],
-      ondeUtilizado: "Agroind\xFAstria, saneamento e qualquer processo que movimente l\xEDquido.",
-      liquidez: "alta"
+      liquidez: "Alta"
     },
     compressor: {
-      oQueE: "Eleva a press\xE3o de ar ou g\xE1s pra uso em sistemas pneum\xE1ticos ou de refrigera\xE7\xE3o.",
+      titulo: "Compressor",
+      descricao_curta: "Eleva a press\xE3o de ar ou g\xE1s pra uso em sistemas pneum\xE1ticos ou de refrigera\xE7\xE3o.",
       aplicacoes: ["Linhas pneum\xE1ticas", "Refrigera\xE7\xE3o industrial", "Ferramentas a ar comprimido"],
-      ondeUtilizado: "F\xE1bricas e oficinas que dependem de ar comprimido no processo.",
-      liquidez: "média"
+      liquidez: "M\xE9dia"
     },
     gerador: {
-      oQueE: "Converte energia mec\xE2nica em el\xE9trica, geralmente atrav\xE9s de um motor a combust\xE3o.",
-      aplicacoes: ["Energia de backup", "Fonte principal em locais sem rede est\xE1vel", "Obras e eventos"],
-      ondeUtilizado: "Locais sem acesso confi\xE1vel \xE0 rede el\xE9trica, ou como redund\xE2ncia.",
-      liquidez: "média"
+      titulo: "Gerador",
+      descricao_curta: "Converte energia mec\xE2nica em el\xE9trica, geralmente atrav\xE9s de um motor a combust\xE3o.",
+      aplicacoes: ["Energia de backup", "Fonte principal sem rede est\xE1vel", "Obras e eventos"],
+      liquidez: "M\xE9dia"
     }
   };
 
@@ -4584,7 +4584,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const qtdComparaveisExibida = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : (result.comparaveis || []).length;
     const notaQualidade = calcularNotaQualidade(result);
     const equipInfo = item.categoria_id && EQUIPMENT_INFO[item.categoria_id];
-    const fatoresInfluencia = getFatoresInfluencia(item, t);
     const ORDEM_COMPAT = { alta: 3, "m\xE9dia": 2, baixa: 1 };
     const comparaveisOrdenados = (result.comparaveis || []).slice().sort((a, b) => (ORDEM_COMPAT[b.compatibilidade] || 0) - (ORDEM_COMPAT[a.compatibilidade] || 0));
     const comparaveisExibidos = mostrarTodosComparaveis ? comparaveisOrdenados : comparaveisOrdenados.slice(0, 5);
@@ -4629,12 +4628,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("div", { className: "tag-card-main" },
 
           // ===== Card "O que \xE9 este equipamento?" =====
-          equipInfo && /* @__PURE__ */ React.createElement("div", { className: "explicacao-tecnica" },
-            /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("O que \xE9 este equipamento", "What this equipment is")),
-            /* @__PURE__ */ React.createElement("p", null, equipInfo.oQueE),
-            /* @__PURE__ */ React.createElement("p", { className: "equip-info-sub" }, /* @__PURE__ */ React.createElement("strong", null, t("Principais aplica\xE7\xF5es: ", "Main applications: ")), equipInfo.aplicacoes.join(", ")),
-            /* @__PURE__ */ React.createElement("p", { className: "equip-info-sub" }, /* @__PURE__ */ React.createElement("strong", null, t("Onde \xE9 utilizado: ", "Where it's used: ")), equipInfo.ondeUtilizado),
-            /* @__PURE__ */ React.createElement("div", { className: "chips-row" }, /* @__PURE__ */ React.createElement("span", { className: "chip liquidez-" + equipInfo.liquidez }, t("Mercado de liquidez ", "Market liquidity: "), equipInfo.liquidez))
+          equipInfo && /* @__PURE__ */ React.createElement("div", { className: "equipment-info-card" },
+            /* @__PURE__ */ React.createElement("div", { className: "equipment-info-head" },
+              /* @__PURE__ */ React.createElement("span", { className: "equipment-info-icon", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "#D89A00", strokeWidth: "1.6" }, /* @__PURE__ */ React.createElement("path", { d: "M4 21V9l8-6 8 6v12" }), /* @__PURE__ */ React.createElement("path", { d: "M9 21v-6h6v6" }))),
+              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("O que \xE9 este equipamento", "What this equipment is"))
+            ),
+            /* @__PURE__ */ React.createElement("p", { className: "equipment-info-desc" }, equipInfo.descricao_curta),
+            /* @__PURE__ */ React.createElement("p", { className: "equip-info-sub" }, /* @__PURE__ */ React.createElement("strong", null, t("Aplica\xE7\xF5es: ", "Applications: ")), equipInfo.aplicacoes.join(", ")),
+            /* @__PURE__ */ React.createElement("div", { className: "chips-row" }, /* @__PURE__ */ React.createElement("span", { className: "chip liquidez-" + equipInfo.liquidez.toLowerCase() }, t("Liquidez: ", "Liquidity: "), equipInfo.liquidez))
           ),
           !equipInfo && result.explicacao_tecnica && /* @__PURE__ */ React.createElement("div", { className: "explicacao-tecnica" },
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("O que \xE9 esse equipamento", "What this equipment is")),
@@ -4647,12 +4648,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           ),
 
           // ===== Card "Como chegamos nesta estimativa?" =====
-          fatoresInfluencia.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "como-chegamos-card" },
+          result.funil_comparaveis && /* @__PURE__ */ React.createElement("div", { className: "como-chegamos-card" },
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Como chegamos nesta estimativa", "How we got to this estimate")),
-            /* @__PURE__ */ React.createElement("ul", { className: "fatores-lista" }, fatoresInfluencia.map((f, i) => /* @__PURE__ */ React.createElement("li", { key: i, className: "fator-item" },
-              /* @__PURE__ */ React.createElement("span", { className: "fator-label" }, f.label, ": ", /* @__PURE__ */ React.createElement("strong", null, f.valor)),
-              /* @__PURE__ */ React.createElement("span", { className: "influencia-tag influencia-" + f.influencia }, t(f.influencia === "alta" ? "alta influ\xEAncia" : f.influencia === "m\xE9dia" ? "m\xE9dia influ\xEAncia" : "baixa influ\xEAncia", f.influencia === "alta" ? "high influence" : f.influencia === "m\xE9dia" ? "medium influence" : "low influence"))
-            )))
+            /* @__PURE__ */ React.createElement("ul", { className: "fatores-lista" },
+              /* @__PURE__ */ React.createElement("li", { className: "fator-item" }, /* @__PURE__ */ React.createElement("span", { className: "fator-label" }, t("Compar\xE1veis encontrados: ", "Comparables found: "), /* @__PURE__ */ React.createElement("strong", null, result.funil_comparaveis.encontrados))),
+              /* @__PURE__ */ React.createElement("li", { className: "fator-item" }, /* @__PURE__ */ React.createElement("span", { className: "fator-label" }, t("Compatibilidade analisada em: ", "Compatibility analyzed for: "), /* @__PURE__ */ React.createElement("strong", null, result.funil_comparaveis.usados_no_calculo, " ", t("compar\xE1veis", "comparables")))),
+              (result.faixa_min || result.faixa_max) && /* @__PURE__ */ React.createElement("li", { className: "fator-item" }, /* @__PURE__ */ React.createElement("span", { className: "fator-label" }, t("Faixa de pre\xE7os considerada: ", "Price range considered: "), /* @__PURE__ */ React.createElement("strong", null, formatBRL(result.faixa_min), " \u2013 ", formatBRL(result.faixa_max)))),
+              result.funil_comparaveis.outliers_removidos > 0 && /* @__PURE__ */ React.createElement("li", { className: "fator-item" }, /* @__PURE__ */ React.createElement("span", { className: "fator-label" }, t("Valores incompat\xEDveis removidos automaticamente: ", "Incompatible values automatically removed: "), /* @__PURE__ */ React.createElement("strong", null, result.funil_comparaveis.outliers_removidos)))
+            )
           ),
 
           /* @__PURE__ */ React.createElement("div", { className: "tag-value-row" },
@@ -6711,6 +6714,16 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .chip.liquidez-alta { background: #E3EFE8; color: #1F5C3F; border-color: #CFE4D6; }
         .chip.liquidez-média { background: #FBF0DC; color: #96650B; border-color: #E8DCC0; }
         .chip.liquidez-baixa { background: #F5E5E3; color: #A3352A; border-color: #E8CFCA; }
+        .equipment-info-card {
+          background: #FFFFFF;
+          border: 1px solid #D89A00;
+          border-radius: 10px;
+          padding: 0.85rem 1.1rem;
+          margin: 0.9rem 0;
+        }
+        .equipment-info-head { display: flex; align-items: center; gap: 0.5rem; }
+        .equipment-info-icon { display: inline-flex; }
+        .equipment-info-desc { margin: 0.5rem 0 0; font-size: 0.88rem; color: #3A3D42; line-height: 1.5; }
         .equip-info-sub { font-size: 0.82rem; color: #4A5568; margin-top: 0.4rem; }
 
         /* ===== v16: Aviso inteligente inline (discreto, acima do botão) ===== */
