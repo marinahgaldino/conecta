@@ -4311,12 +4311,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     azul: { headerBg: [13, 37, 63], headerText: [255, 255, 255], accent: [70, 122, 178], faixa: [31, 92, 63], linha: [210, 220, 232] }
   };
 
+
   function gerarPdfExecutivoWhiteLabel(item, result, pdfCfg) {
     if (!window.jspdf || !window.jspdf.jsPDF) {
       alert("A biblioteca de PDF ainda n\xE3o carregou. Tente novamente em alguns segundos.");
       return;
     }
     const tema = TEMAS_PDF[pdfCfg.tema] || TEMAS_PDF.branco;
+    const paginas = pdfCfg.paginas || {};
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const margin = 48;
@@ -4325,279 +4327,293 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const agora = /* @__PURE__ */ new Date();
     const numeroAvaliacao = `AVL-${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}-${String(agora.getHours()).padStart(2, "0")}${String(agora.getMinutes()).padStart(2, "0")}`;
     const nomeEquipamento = [item.marca, item.modelo].filter(Boolean).join(" ") || item.categoria || "Equipamento";
+    const BARRA_COMPAT_PDF = { alta: 90, "m\xE9dia": 55, baixa: 25 };
+    const DISCLAIMER = "Este documento apresenta uma estimativa de valor de mercado com base em observa\xE7\xF5es dispon\xEDveis publicamente. N\xE3o constitui laudo t\xE9cnico-pericial nem parecer jur\xEDdico, devendo ser utilizado apenas como refer\xEAncia.";
 
-    // Cabeçalho de faixa colorida no topo de cada página (identidade do tema, sem menção a Conecta Valor)
-    function faixaTopo() {
+    let paginaAtual = 0;
+    let algumaPaginaAberta = false;
+    function iniciarPagina() {
+      if (algumaPaginaAberta) doc.addPage();
+      algumaPaginaAberta = true;
+      paginaAtual += 1;
       doc.setFillColor(...tema.headerBg);
       doc.rect(0, 0, pageWidth, 8, "F");
     }
-    function rodape(numeroPagina) {
+    function rodape() {
       doc.setDrawColor(...tema.linha);
       doc.setLineWidth(0.5);
-      doc.line(margin, pageHeight - 34, pageWidth - margin, pageHeight - 34);
+      doc.line(margin, pageHeight - 46, pageWidth - margin, pageHeight - 46);
       doc.setTextColor(140);
-      doc.setFontSize(8);
+      doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      doc.text(`P\xE1gina ${numeroPagina}`, pageWidth - margin, pageHeight - 20, { align: "right" });
-      doc.text(numeroAvaliacao, margin, pageHeight - 20);
+      const linhasRodape = doc.splitTextToSize(DISCLAIMER, pageWidth - margin * 2);
+      let yr = pageHeight - 36;
+      linhasRodape.forEach((linha) => {
+        doc.text(linha, margin, yr);
+        yr += 9;
+      });
+      doc.setFontSize(8);
+      doc.text(`P\xE1gina ${paginaAtual}`, pageWidth - margin, pageHeight - 12, { align: "right" });
       doc.setTextColor(0);
     }
     function inserirLogo(x, y, larguraMax, alturaMax) {
-      if (pdfCfg.logoMode === "empresa" && pdfCfg.logoDataUrl) {
-        try {
-          const fmt = pdfCfg.logoDataUrl.includes("image/png") ? "PNG" : pdfCfg.logoDataUrl.includes("image/svg") ? "PNG" : "JPEG";
-          doc.addImage(pdfCfg.logoDataUrl, fmt, x, y, larguraMax, alturaMax);
-        } catch (e) {
-          console.warn("N\xE3o foi poss\xEDvel inserir o logotipo no PDF:", e.message);
-        }
-      } else if (pdfCfg.logoMode === "conecta") {
-        try {
-          doc.addImage(`data:image/jpeg;base64,${LOGO_FULL_B64}`, "JPEG", x, y, larguraMax, alturaMax * 0.7);
-        } catch (e) {
-          console.warn("N\xE3o foi poss\xEDvel inserir o logo:", e.message);
-        }
+      if (!pdfCfg.logoDataUrl) return;
+      try {
+        const fmt = pdfCfg.logoDataUrl.includes("image/png") ? "PNG" : pdfCfg.logoDataUrl.includes("image/svg") ? "PNG" : "JPEG";
+        doc.addImage(pdfCfg.logoDataUrl, fmt, x, y, larguraMax, alturaMax);
+      } catch (e) {
+        console.warn("N\xE3o foi poss\xEDvel inserir o logotipo no PDF:", e.message);
       }
-      // logoMode === "sem": nenhum logo, nenhuma marca — comportamento padrão (white-label)
     }
 
-    // ===== Página 1 — Capa =====
-    faixaTopo();
-    let y = 100;
-    inserirLogo(margin, 50, 140, 50);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(20);
-    doc.text("Laudo de Avalia\xE7\xE3o de Mercado", margin, y);
-    y += 40;
-    doc.setDrawColor(...tema.accent);
-    doc.setLineWidth(2);
-    doc.line(margin, y, margin + 90, y);
-    y += 35;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(15);
-    doc.setTextColor(30);
-    doc.text(nomeEquipamento, margin, y);
-    y += 26;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.5);
-    doc.setTextColor(80);
-    const linhasCapa = [
-      item.categoria && `Categoria: ${item.categoria}`,
-      item.marca && `Marca: ${normalizarMarca(item.marca)}`,
-      pdfCfg.cliente.nome && `Cliente: ${pdfCfg.cliente.nome}`,
-      pdfCfg.cliente.empresa && `Empresa do cliente: ${pdfCfg.cliente.empresa}`,
-      pdfCfg.cliente.projeto && `Projeto/refer\xEAncia: ${pdfCfg.cliente.projeto}`,
-      pdfCfg.cliente.cidade && `Local: ${pdfCfg.cliente.cidade}`,
-      `Data da avalia\xE7\xE3o: ${agora.toLocaleDateString("pt-BR")}`,
-      `N\xFAmero da avalia\xE7\xE3o: ${numeroAvaliacao}`
-    ].filter(Boolean);
-    linhasCapa.forEach((linha) => {
-      doc.text(linha, margin, y);
-      y += 17;
-    });
-    if (!pdfCfg.ocultarAssinatura && (pdfCfg.mostrarResponsavel || pdfCfg.mostrarApenasEmpresa)) {
-      y = pageHeight - 130;
-      doc.setDrawColor(...tema.linha);
-      doc.setLineWidth(0.5);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 20;
+    // ===== Página — Capa =====
+    if (paginas.capa) {
+      iniciarPagina();
+      let y = 100;
+      inserirLogo(margin, 50, 140, 50);
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      doc.setFontSize(22);
+      doc.setTextColor(20);
+      doc.text("Laudo de Avalia\xE7\xE3o de Mercado", margin, y);
+      y += 40;
+      doc.setDrawColor(...tema.accent);
+      doc.setLineWidth(2);
+      doc.line(margin, y, margin + 90, y);
+      y += 35;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(15);
       doc.setTextColor(30);
-      if (pdfCfg.mostrarApenasEmpresa) {
-        if (pdfCfg.responsavel.empresa) doc.text(pdfCfg.responsavel.empresa, margin, y);
-      } else {
-        const respLinhas = [
-          pdfCfg.responsavel.nome,
-          [pdfCfg.responsavel.cargo, pdfCfg.responsavel.empresa].filter(Boolean).join(" \u2014 "),
-          [pdfCfg.responsavel.email, pdfCfg.responsavel.telefone].filter(Boolean).join("  \xB7  ")
-        ].filter(Boolean);
+      doc.text(nomeEquipamento, margin, y);
+      y += 26;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      doc.setTextColor(80);
+      const linhasCapa = [
+        item.categoria && `Categoria: ${item.categoria}`,
+        item.marca && `Marca: ${normalizarMarca(item.marca)}`,
+        pdfCfg.nomeEmpresa && `Empresa: ${pdfCfg.nomeEmpresa}`,
+        pdfCfg.cliente && `Cliente: ${pdfCfg.cliente}`,
+        pdfCfg.projeto && `Projeto/refer\xEAncia: ${pdfCfg.projeto}`,
+        pdfCfg.cidadeEstado && `Local: ${pdfCfg.cidadeEstado}`,
+        `Data da avalia\xE7\xE3o: ${agora.toLocaleDateString("pt-BR")}`,
+        `N\xFAmero da avalia\xE7\xE3o: ${numeroAvaliacao}`
+      ].filter(Boolean);
+      linhasCapa.forEach((linha) => {
+        doc.text(linha, margin, y);
+        y += 17;
+      });
+      if (pdfCfg.avaliadorNome || pdfCfg.avaliadorCargo) {
+        y = pageHeight - 150;
+        doc.setDrawColor(...tema.linha);
+        doc.setLineWidth(0.5);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 20;
         doc.setFont("helvetica", "bold");
-        if (respLinhas[0]) doc.text(respLinhas[0], margin, y);
+        doc.setFontSize(10);
+        doc.setTextColor(30);
+        if (pdfCfg.avaliadorNome) doc.text(pdfCfg.avaliadorNome, margin, y);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
         doc.setTextColor(90);
-        if (respLinhas[1]) { y += 14; doc.text(respLinhas[1], margin, y); }
-        if (respLinhas[2]) { y += 14; doc.text(respLinhas[2], margin, y); }
+        if (pdfCfg.avaliadorCargo) { y += 14; doc.text(pdfCfg.avaliadorCargo, margin, y); }
       }
+      rodape();
     }
-    rodape(1);
 
-    // ===== Página 2 — Resumo Executivo =====
-    doc.addPage();
-    faixaTopo();
-    y = 90;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(20);
-    doc.text("Resumo Executivo", margin, y);
-    y += 35;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9.5);
-    doc.setTextColor(90);
-    doc.text("Valor estimado", margin, y);
-    y += 20;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(...tema.faixa);
-    doc.text(formatBRL(result.faixa_media), margin, y);
-    y += 28;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.setTextColor(60);
-    doc.text(`Faixa de mercado: ${formatBRL(result.faixa_min)} \u2013 ${formatBRL(result.faixa_max)}`, margin, y);
-    y += 30;
-    const equipInfoPdf = item.categoria_id && EQUIPMENT_INFO[item.categoria_id];
-    const linhasResumoExec = [
-      result.confianca_avaliacao && `Confian\xE7a: ${result.confianca_avaliacao.charAt(0).toUpperCase() + result.confianca_avaliacao.slice(1)}`,
-      equipInfoPdf && `Liquidez: ${equipInfoPdf.liquidez}`,
-      typeof result.qtd_comparaveis_usados === "number" ? `Compar\xE1veis utilizados: ${result.qtd_comparaveis_usados}` : result.comparaveis && `Compar\xE1veis utilizados: ${result.comparaveis.length}`
-    ].filter(Boolean);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.5);
-    doc.setTextColor(40);
-    linhasResumoExec.forEach((linha) => {
-      doc.text(linha, margin, y);
-      y += 18;
-    });
-    rodape(2);
-
-    // ===== Página 3 — Especificações Técnicas =====
-    doc.addPage();
-    faixaTopo();
-    y = 90;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(20);
-    doc.text("Especifica\xE7\xF5es T\xE9cnicas", margin, y);
-    y += 20;
-    const specsLinhas = [
-      item.categoria && ["Categoria", item.categoria],
-      item.marca && ["Marca", normalizarMarca(item.marca)],
-      item.modelo && ["Modelo", item.modelo],
-      item.potenciaCv && ["Pot\xEAncia", `${item.potenciaCv} CV`],
-      item.potenciaKw && ["Pot\xEAncia", `${item.potenciaKw} kW`],
-      item.rpm && ["Rota\xE7\xE3o", `${item.rpm} RPM`],
-      item.pesoKg && ["Peso", `${item.pesoKg} kg`],
-      item.anoFabricacao && ["Ano de fabrica\xE7\xE3o", item.anoFabricacao],
-      item.estado && ["Estado de conserva\xE7\xE3o", item.estado]
-    ].filter(Boolean);
-    if (specsLinhas.length > 0) {
-      doc.autoTable({
-        startY: y,
-        margin: { left: margin, right: margin },
-        theme: "grid",
-        head: [["Atributo", "Valor"]],
-        body: specsLinhas,
-        styles: { fontSize: 10, cellPadding: 7 },
-        headStyles: { fillColor: tema.headerBg, textColor: tema.headerText }
-      });
-    } else {
+    // ===== Página — Resumo Executivo =====
+    if (paginas.resumo) {
+      iniciarPagina();
+      let y = 90;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(20);
+      doc.text("Resumo Executivo", margin, y);
+      y += 35;
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text("Nenhuma especifica\xE7\xE3o t\xE9cnica adicional informada.", margin, y);
+      doc.setFontSize(9.5);
+      doc.setTextColor(90);
+      doc.text("Valor estimado", margin, y);
+      y += 20;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.setTextColor(...tema.faixa);
+      doc.text(formatBRL(result.faixa_media), margin, y);
+      y += 28;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      doc.setTextColor(60);
+      doc.text(`Faixa de mercado: ${formatBRL(result.faixa_min)} \u2013 ${formatBRL(result.faixa_max)}`, margin, y);
+      rodape();
     }
-    rodape(3);
 
-    // ===== Página 4 — Metodologia (sem mencionar IA/Claude/Conecta Valor) =====
-    doc.addPage();
-    faixaTopo();
-    y = 90;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(20);
-    doc.text("Metodologia", margin, y);
-    y += 30;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.5);
-    doc.setTextColor(50);
-    const paragrafosMetodologia = [
-      "A estimativa de valor foi constru\xEDda a partir da compara\xE7\xE3o com equipamentos de perfil semelhante dispon\xEDveis no mercado.",
-      "Cada equipamento comparado foi avaliado quanto \xE0 compatibilidade t\xE9cnica com o item analisado, considerando categoria, marca, modelo, pot\xEAncia e estado de conserva\xE7\xE3o, entre outros atributos relevantes.",
-      "Valores estatisticamente discrepantes em rela\xE7\xE3o ao conjunto de compar\xE1veis foram identificados e removidos automaticamente, evitando que casos at\xEDpicos distorçam a refer\xEAncia final.",
-      "A faixa de mercado apresentada neste laudo foi consolidada a partir dos valores remanescentes ap\xF3s esse processo de filtragem."
-    ];
-    paragrafosMetodologia.forEach((paragrafo) => {
-      const linhas = doc.splitTextToSize(paragrafo, pageWidth - margin * 2);
-      linhas.forEach((linha) => {
+    // ===== Página — Especificações Técnicas =====
+    if (paginas.especificacoes) {
+      iniciarPagina();
+      let y = 90;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(20);
+      doc.text("Especifica\xE7\xF5es T\xE9cnicas", margin, y);
+      y += 20;
+      const specsLinhas = [
+        item.categoria && ["Categoria", item.categoria],
+        item.marca && ["Marca", normalizarMarca(item.marca)],
+        item.modelo && ["Modelo", item.modelo],
+        item.potenciaCv && ["Pot\xEAncia", `${item.potenciaCv} CV`],
+        item.potenciaKw && ["Pot\xEAncia", `${item.potenciaKw} kW`],
+        item.rpm && ["Rota\xE7\xE3o", `${item.rpm} RPM`],
+        item.pesoKg && ["Peso", `${item.pesoKg} kg`],
+        item.anoFabricacao && ["Ano de fabrica\xE7\xE3o", item.anoFabricacao],
+        item.estado && ["Estado de conserva\xE7\xE3o", item.estado]
+      ].filter(Boolean);
+      if (specsLinhas.length > 0) {
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: "grid",
+          head: [["Atributo", "Valor"]],
+          body: specsLinhas,
+          styles: { fontSize: 10, cellPadding: 7 },
+          headStyles: { fillColor: tema.headerBg, textColor: tema.headerText }
+        });
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text("Nenhuma especifica\xE7\xE3o t\xE9cnica adicional informada.", margin, y);
+      }
+      rodape();
+    }
+
+    // ===== Página — Qualidade da Avaliação =====
+    if (paginas.qualidade) {
+      iniciarPagina();
+      let y = 90;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(20);
+      doc.text("Qualidade da Avalia\xE7\xE3o", margin, y);
+      y += 35;
+      const notaQualidadePdf = calcularNotaQualidade(result);
+      const comparaveisPdfQual = result.comparaveis || [];
+      const compatMediaPdf = comparaveisPdfQual.length > 0
+        ? Math.round(comparaveisPdfQual.reduce((soma, c) => soma + (BARRA_COMPAT_PDF[c.compatibilidade] || 0), 0) / comparaveisPdfQual.length)
+        : null;
+      const qtdUsados = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : comparaveisPdfQual.length;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      doc.setTextColor(40);
+      const linhasQualidade = [
+        result.confianca_avaliacao && `Confian\xE7a: ${result.confianca_avaliacao.charAt(0).toUpperCase() + result.confianca_avaliacao.slice(1)}`,
+        notaQualidadePdf !== null && `Nota de qualidade: ${notaQualidadePdf}/100`,
+        `Compar\xE1veis utilizados: ${qtdUsados}`,
+        compatMediaPdf !== null && `Compatibilidade m\xE9dia: ${compatMediaPdf}%`,
+        `Origem: ${result.origem === "base_propria" ? "Base pr\xF3pria" : "An\xE1lise de mercado"}`
+      ].filter(Boolean);
+      linhasQualidade.forEach((linha) => {
         doc.text(linha, margin, y);
-        y += 15;
+        y += 20;
       });
-      y += 10;
-    });
-    rodape(4);
-
-    // ===== Página 5 — Comparáveis (nunca fonte/URL/site) =====
-    doc.addPage();
-    faixaTopo();
-    y = 90;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(20);
-    doc.text("Compar\xE1veis Utilizados", margin, y);
-    y += 20;
-    const comparaveisPdf = (result.comparaveis || []).slice();
-    if (comparaveisPdf.length > 0) {
-      doc.autoTable({
-        startY: y,
-        margin: { left: margin, right: margin },
-        theme: "striped",
-        head: [["Marca", "Modelo", "Valor", "Estado", "Compatibilidade"]],
-        body: comparaveisPdf.map((c) => [
-          normalizarMarca(c.marca) || "\u2014",
-          c.modelo || "\u2014",
-          formatBRL(c.preco),
-          c.estado || "\u2014",
-          c.compatibilidade ? c.compatibilidade.charAt(0).toUpperCase() + c.compatibilidade.slice(1) : "\u2014"
-        ]),
-        styles: { fontSize: 9.5, cellPadding: 6 },
-        headStyles: { fillColor: tema.headerBg, textColor: tema.headerText }
-      });
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.text("Nenhum compar\xE1vel individual dispon\xEDvel para exibi\xE7\xE3o \u2014 avalia\xE7\xE3o baseada em base pr\xF3pria consolidada.", margin, y);
+      rodape();
     }
-    rodape(5);
 
-    // ===== Página 6 — Observações =====
-    doc.addPage();
-    faixaTopo();
-    y = 90;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.setTextColor(20);
-    doc.text("Observa\xE7\xF5es", margin, y);
-    y += 30;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10.5);
-    doc.setTextColor(50);
-    const observacoesPdf = [item.obs, result.resumo].filter(Boolean);
-    if (observacoesPdf.length > 0) {
-      observacoesPdf.forEach((texto) => {
-        const linhas = doc.splitTextToSize(texto, pageWidth - margin * 2);
+    // ===== Página — Metodologia (sem mencionar IA/Claude/Anthropic/Conecta Valor) =====
+    if (paginas.metodologia) {
+      iniciarPagina();
+      let y = 90;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(20);
+      doc.text("Metodologia", margin, y);
+      y += 30;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      doc.setTextColor(50);
+      const paragrafosMetodologia = [
+        "A estimativa de valor foi constru\xEDda a partir da compara\xE7\xE3o com equipamentos de perfil semelhante dispon\xEDveis no mercado.",
+        "Cada equipamento comparado foi avaliado quanto \xE0 compatibilidade t\xE9cnica com o item analisado, considerando categoria, marca, modelo, pot\xEAncia e estado de conserva\xE7\xE3o, entre outros atributos relevantes.",
+        "Valores estatisticamente discrepantes em rela\xE7\xE3o ao conjunto de compar\xE1veis foram identificados e removidos automaticamente, evitando que casos at\xEDpicos distorçam a refer\xEAncia final.",
+        "A faixa de mercado apresentada neste laudo foi consolidada a partir dos valores remanescentes ap\xF3s esse processo de filtragem."
+      ];
+      paragrafosMetodologia.forEach((paragrafo) => {
+        const linhas = doc.splitTextToSize(paragrafo, pageWidth - margin * 2);
         linhas.forEach((linha) => {
           doc.text(linha, margin, y);
           y += 15;
         });
-        y += 12;
+        y += 10;
       });
-    } else {
-      doc.setTextColor(100);
-      doc.text("Nenhuma observa\xE7\xE3o adicional registrada para esta avalia\xE7\xE3o.", margin, y);
+      rodape();
     }
-    y += 10;
-    doc.setFontSize(8.5);
-    doc.setTextColor(130);
-    const linhasDisclaimer = doc.splitTextToSize("Estimativa com base em observa\xE7\xF5es de mercado p\xFAblicas. Use como refer\xEAncia, n\xE3o como laudo t\xE9cnico-pericial.", pageWidth - margin * 2);
-    linhasDisclaimer.forEach((linha) => {
-      doc.text(linha, margin, y);
-      y += 12;
-    });
-    rodape(6);
 
+    // ===== Página — Comparáveis (nunca fonte/URL/site) =====
+    if (paginas.comparaveis) {
+      iniciarPagina();
+      let y = 90;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(20);
+      doc.text("Compar\xE1veis Utilizados", margin, y);
+      y += 20;
+      const comparaveisPdf = (result.comparaveis || []).slice();
+      if (comparaveisPdf.length > 0) {
+        doc.autoTable({
+          startY: y,
+          margin: { left: margin, right: margin },
+          theme: "striped",
+          head: [["Marca", "Modelo", "Valor", "Estado", "Compatibilidade"]],
+          body: comparaveisPdf.map((c) => [
+            normalizarMarca(c.marca) || "\u2014",
+            c.modelo || "\u2014",
+            formatBRL(c.preco),
+            c.estado || "\u2014",
+            c.compatibilidade ? c.compatibilidade.charAt(0).toUpperCase() + c.compatibilidade.slice(1) : "\u2014"
+          ]),
+          styles: { fontSize: 9.5, cellPadding: 6 },
+          headStyles: { fillColor: tema.headerBg, textColor: tema.headerText }
+        });
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text("Nenhum compar\xE1vel individual dispon\xEDvel para exibi\xE7\xE3o \u2014 avalia\xE7\xE3o baseada em base pr\xF3pria consolidada.", margin, y);
+      }
+      rodape();
+    }
+
+    // ===== Página — Observações =====
+    if (paginas.observacoes) {
+      iniciarPagina();
+      let y = 90;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(20);
+      doc.text("Observa\xE7\xF5es", margin, y);
+      y += 30;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10.5);
+      doc.setTextColor(50);
+      const observacoesPdf = [item.obs, result.resumo].filter(Boolean);
+      if (observacoesPdf.length > 0) {
+        observacoesPdf.forEach((texto) => {
+          const linhas = doc.splitTextToSize(texto, pageWidth - margin * 2);
+          linhas.forEach((linha) => {
+            doc.text(linha, margin, y);
+            y += 15;
+          });
+          y += 12;
+        });
+      } else {
+        doc.setTextColor(100);
+        doc.text("Nenhuma observa\xE7\xE3o adicional registrada para esta avalia\xE7\xE3o.", margin, y);
+      }
+      rodape();
+    }
+
+    if (!algumaPaginaAberta) {
+      alert("Selecione pelo menos uma p\xE1gina para gerar o PDF.");
+      return;
+    }
     doc.save(`laudo-avaliacao-${numeroAvaliacao}.pdf`);
   }
 
@@ -4880,15 +4896,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     function upd(campo, valor) {
       setPdfConfig((c) => ({ ...c, [campo]: valor }));
     }
-    function updAninhado(grupo, campo, valor) {
-      setPdfConfig((c) => ({ ...c, [grupo]: { ...c[grupo], [campo]: valor } }));
+    function updPagina(pagina, valor) {
+      setPdfConfig((c) => ({ ...c, paginas: { ...c.paginas, [pagina]: valor } }));
     }
     function handleLogoUpload(e) {
       const file = (e.target.files || [])[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (ev) => {
-        setPdfConfig((c) => ({ ...c, logoDataUrl: ev.target.result, logoMode: "empresa" }));
+        setPdfConfig((c) => ({ ...c, logoDataUrl: ev.target.result }));
       };
       reader.readAsDataURL(file);
       e.target.value = "";
@@ -4898,51 +4914,47 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       { id: "preto_dourado", label: t("Premium Preto + Dourado", "Premium Black + Gold"), cor: "#080808" },
       { id: "azul", label: t("Corporativo Azul", "Corporate Blue"), cor: "#0D253F" }
     ];
+    const PAGINA_OPCOES = [
+      { id: "capa", label: t("Capa", "Cover") },
+      { id: "resumo", label: t("Resumo Executivo", "Executive Summary") },
+      { id: "especificacoes", label: t("Especifica\xE7\xF5es T\xE9cnicas", "Technical Specifications") },
+      { id: "qualidade", label: t("Qualidade da Avalia\xE7\xE3o", "Evaluation Quality") },
+      { id: "comparaveis", label: t("Compar\xE1veis", "Comparables") },
+      { id: "metodologia", label: t("Metodologia", "Methodology") },
+      { id: "observacoes", label: t("Observa\xE7\xF5es", "Notes") }
+    ];
     return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: onFechar }, /* @__PURE__ */ React.createElement("div", { className: "modal-pdf", onClick: (e) => e.stopPropagation() },
       /* @__PURE__ */ React.createElement("h4", null, t("Personalizar PDF", "Customize PDF")),
-      /* @__PURE__ */ React.createElement("p", { className: "modal-pdf-sub" }, t("O laudo \xE9 white-label por padr\xE3o \u2014 n\xE3o exibe a marca Conecta Valor a menos que voc\xEA escolha mostrar.", "The report is white-label by default \u2014 it doesn't show the Conecta Valor brand unless you choose to show it.")),
+      /* @__PURE__ */ React.createElement("p", { className: "modal-pdf-sub" }, t("O laudo \xE9 totalmente white-label \u2014 n\xE3o exibe a marca Conecta Valor em nenhuma hip\xF3tese.", "The report is fully white-label \u2014 it never shows the Conecta Valor brand.")),
 
       /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
-        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Identidade visual", "Visual identity")),
-        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-radio" }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "logoMode", checked: pdfConfig.logoMode === "empresa", onChange: () => upd("logoMode", "empresa") }), t("Usar logotipo da minha empresa", "Use my company's logo")),
-        pdfConfig.logoMode === "empresa" && /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/png,image/svg+xml,image/jpeg", onChange: handleLogoUpload, className: "modal-pdf-file" }),
-        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-radio" }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "logoMode", checked: pdfConfig.logoMode === "sem", onChange: () => upd("logoMode", "sem") }), t("Gerar PDF sem logotipo", "Generate PDF without logo")),
-        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-radio" }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "logoMode", checked: pdfConfig.logoMode === "conecta", onChange: () => upd("logoMode", "conecta") }), t("Mostrar identidade do Conecta Valor", "Show Conecta Valor identity"))
-      ),
-
-      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
-        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Respons\xE1vel pelo laudo (opcional)", "Report responsible (optional)")),
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Identidade", "Identity")),
+        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-radio" }, t("Logo (opcional)", "Logo (optional)")),
+        /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/png,image/svg+xml,image/jpeg", onChange: handleLogoUpload, className: "modal-pdf-file" }),
         /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-grid" },
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome do respons\xE1vel", "Responsible's name"), value: pdfConfig.responsavel.nome, onChange: (e) => updAninhado("responsavel", "nome", e.target.value) }),
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cargo", "Role"), value: pdfConfig.responsavel.cargo, onChange: (e) => updAninhado("responsavel", "cargo", e.target.value) }),
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Empresa", "Company"), value: pdfConfig.responsavel.empresa, onChange: (e) => updAninhado("responsavel", "empresa", e.target.value) }),
-          /* @__PURE__ */ React.createElement("input", { type: "email", placeholder: t("E-mail", "Email"), value: pdfConfig.responsavel.email, onChange: (e) => updAninhado("responsavel", "email", e.target.value) }),
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Telefone", "Phone"), value: pdfConfig.responsavel.telefone, onChange: (e) => updAninhado("responsavel", "telefone", e.target.value) })
-        ),
-        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.mostrarResponsavel, onChange: (e) => upd("mostrarResponsavel", e.target.checked) }), t("Mostrar respons\xE1vel", "Show responsible")),
-        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.mostrarApenasEmpresa, onChange: (e) => upd("mostrarApenasEmpresa", e.target.checked) }), t("Mostrar apenas empresa", "Show company only")),
-        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.ocultarAssinatura, onChange: (e) => upd("ocultarAssinatura", e.target.checked) }), t("Ocultar assinatura", "Hide signature"))
-      ),
-
-      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
-        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Dados do cliente (opcional)", "Client data (optional)")),
-        /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-grid" },
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome do cliente", "Client name"), value: pdfConfig.cliente.nome, onChange: (e) => updAninhado("cliente", "nome", e.target.value) }),
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Empresa do cliente", "Client company"), value: pdfConfig.cliente.empresa, onChange: (e) => updAninhado("cliente", "empresa", e.target.value) }),
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Projeto ou refer\xEAncia", "Project or reference"), value: pdfConfig.cliente.projeto, onChange: (e) => updAninhado("cliente", "projeto", e.target.value) }),
-          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cidade/Estado", "City/State"), value: pdfConfig.cliente.cidade, onChange: (e) => updAninhado("cliente", "cidade", e.target.value) })
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome da empresa", "Company name"), value: pdfConfig.nomeEmpresa, onChange: (e) => upd("nomeEmpresa", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome do avaliador (opcional)", "Evaluator's name (optional)"), value: pdfConfig.avaliadorNome, onChange: (e) => upd("avaliadorNome", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cargo (opcional)", "Role (optional)"), value: pdfConfig.avaliadorCargo, onChange: (e) => upd("avaliadorCargo", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cliente (opcional)", "Client (optional)"), value: pdfConfig.cliente, onChange: (e) => upd("cliente", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Projeto/Refer\xEAncia (opcional)", "Project/Reference (optional)"), value: pdfConfig.projeto, onChange: (e) => upd("projeto", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cidade/Estado (opcional)", "City/State (optional)"), value: pdfConfig.cidadeEstado, onChange: (e) => upd("cidadeEstado", e.target.value) })
         )
       ),
 
       /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
-        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Tema visual", "Visual theme")),
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Tema", "Theme")),
         /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-temas" }, TEMA_OPCOES.map((op) => /* @__PURE__ */ React.createElement("button", { key: op.id, type: "button", className: "modal-pdf-tema-btn" + (pdfConfig.tema === op.id ? " ativo" : ""), onClick: () => upd("tema", op.id) },
           /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-tema-swatch", style: { background: op.cor } }),
           op.label
         )))
       ),
 
-      /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check modal-pdf-padrao" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.salvarComoPadrao, onChange: (e) => upd("salvarComoPadrao", e.target.checked) }), t("Salvar este template como padr\xE3o (usar automaticamente nos pr\xF3ximos laudos)", "Save this template as default (use automatically for next reports)")),
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Sele\xE7\xE3o de p\xE1ginas", "Page selection")),
+        /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-paginas" }, PAGINA_OPCOES.map((op) => /* @__PURE__ */ React.createElement("label", { key: op.id, className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.paginas[op.id], onChange: (e) => updPagina(op.id, e.target.checked) }), op.label)))
+      ),
+
+      /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check modal-pdf-padrao" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.salvarComoPadrao, onChange: (e) => upd("salvarComoPadrao", e.target.checked) }), t("Salvar essas prefer\xEAncias localmente pra reutilizar nas pr\xF3ximas exporta\xE7\xF5es", "Save these preferences locally to reuse on next exports")),
 
       /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-botoes" },
         /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: onFechar }, t("Cancelar", "Cancel")),
@@ -5095,15 +5107,23 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [pdfModalAberto, setPdfModalAberto] = (0, import_react.useState)(false);
     const PDF_CONFIG_PADRAO = {
       logoDataUrl: null,
-      logoMode: "sem",
-      // "empresa" | "sem" | "conecta"
-      responsavel: { nome: "", cargo: "", empresa: "", email: "", telefone: "" },
-      mostrarResponsavel: true,
-      mostrarApenasEmpresa: false,
-      ocultarAssinatura: false,
-      cliente: { nome: "", empresa: "", projeto: "", cidade: "" },
+      nomeEmpresa: "",
+      avaliadorNome: "",
+      avaliadorCargo: "",
+      cliente: "",
+      projeto: "",
+      cidadeEstado: "",
       tema: "branco",
       // "branco" | "preto_dourado" | "azul"
+      paginas: {
+        capa: true,
+        resumo: true,
+        especificacoes: true,
+        qualidade: true,
+        comparaveis: true,
+        metodologia: true,
+        observacoes: true
+      },
       salvarComoPadrao: false
     };
     const [pdfConfig, setPdfConfig] = (0, import_react.useState)(PDF_CONFIG_PADRAO);
@@ -7384,6 +7404,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .modal-pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
         .modal-pdf-grid input { margin: 0; }
         .modal-pdf-temas { display: flex; flex-direction: column; gap: 0.5rem; }
+        .modal-pdf-paginas { display: grid; grid-template-columns: 1fr 1fr; gap: 0.3rem 0.8rem; }
         .modal-pdf-tema-btn {
           display: flex;
           align-items: center;
