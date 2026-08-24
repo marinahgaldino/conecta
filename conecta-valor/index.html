@@ -4303,6 +4303,304 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
     doc.save(`relatorio-lote-${idLote}.pdf`);
   }
+
+  // ===== v18.0: PDF Executivo White Label =====
+  var TEMAS_PDF = {
+    branco: { headerBg: [255, 255, 255], headerText: [20, 20, 20], accent: [184, 127, 0], faixa: [31, 92, 63], linha: [225, 222, 216] },
+    preto_dourado: { headerBg: [8, 8, 8], headerText: [237, 236, 230], accent: [216, 154, 0], faixa: [31, 92, 63], linha: [60, 60, 60] },
+    azul: { headerBg: [13, 37, 63], headerText: [255, 255, 255], accent: [70, 122, 178], faixa: [31, 92, 63], linha: [210, 220, 232] }
+  };
+
+  function gerarPdfExecutivoWhiteLabel(item, result, pdfCfg) {
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+      alert("A biblioteca de PDF ainda n\xE3o carregou. Tente novamente em alguns segundos.");
+      return;
+    }
+    const tema = TEMAS_PDF[pdfCfg.tema] || TEMAS_PDF.branco;
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const margin = 48;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const agora = /* @__PURE__ */ new Date();
+    const numeroAvaliacao = `AVL-${agora.getFullYear()}${String(agora.getMonth() + 1).padStart(2, "0")}${String(agora.getDate()).padStart(2, "0")}-${String(agora.getHours()).padStart(2, "0")}${String(agora.getMinutes()).padStart(2, "0")}`;
+    const nomeEquipamento = [item.marca, item.modelo].filter(Boolean).join(" ") || item.categoria || "Equipamento";
+
+    // Cabeçalho de faixa colorida no topo de cada página (identidade do tema, sem menção a Conecta Valor)
+    function faixaTopo() {
+      doc.setFillColor(...tema.headerBg);
+      doc.rect(0, 0, pageWidth, 8, "F");
+    }
+    function rodape(numeroPagina) {
+      doc.setDrawColor(...tema.linha);
+      doc.setLineWidth(0.5);
+      doc.line(margin, pageHeight - 34, pageWidth - margin, pageHeight - 34);
+      doc.setTextColor(140);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(`P\xE1gina ${numeroPagina}`, pageWidth - margin, pageHeight - 20, { align: "right" });
+      doc.text(numeroAvaliacao, margin, pageHeight - 20);
+      doc.setTextColor(0);
+    }
+    function inserirLogo(x, y, larguraMax, alturaMax) {
+      if (pdfCfg.logoMode === "empresa" && pdfCfg.logoDataUrl) {
+        try {
+          const fmt = pdfCfg.logoDataUrl.includes("image/png") ? "PNG" : pdfCfg.logoDataUrl.includes("image/svg") ? "PNG" : "JPEG";
+          doc.addImage(pdfCfg.logoDataUrl, fmt, x, y, larguraMax, alturaMax);
+        } catch (e) {
+          console.warn("N\xE3o foi poss\xEDvel inserir o logotipo no PDF:", e.message);
+        }
+      } else if (pdfCfg.logoMode === "conecta") {
+        try {
+          doc.addImage(`data:image/jpeg;base64,${LOGO_FULL_B64}`, "JPEG", x, y, larguraMax, alturaMax * 0.7);
+        } catch (e) {
+          console.warn("N\xE3o foi poss\xEDvel inserir o logo:", e.message);
+        }
+      }
+      // logoMode === "sem": nenhum logo, nenhuma marca — comportamento padrão (white-label)
+    }
+
+    // ===== Página 1 — Capa =====
+    faixaTopo();
+    let y = 100;
+    inserirLogo(margin, 50, 140, 50);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.setTextColor(20);
+    doc.text("Laudo de Avalia\xE7\xE3o de Mercado", margin, y);
+    y += 40;
+    doc.setDrawColor(...tema.accent);
+    doc.setLineWidth(2);
+    doc.line(margin, y, margin + 90, y);
+    y += 35;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(30);
+    doc.text(nomeEquipamento, margin, y);
+    y += 26;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10.5);
+    doc.setTextColor(80);
+    const linhasCapa = [
+      item.categoria && `Categoria: ${item.categoria}`,
+      item.marca && `Marca: ${normalizarMarca(item.marca)}`,
+      pdfCfg.cliente.nome && `Cliente: ${pdfCfg.cliente.nome}`,
+      pdfCfg.cliente.empresa && `Empresa do cliente: ${pdfCfg.cliente.empresa}`,
+      pdfCfg.cliente.projeto && `Projeto/refer\xEAncia: ${pdfCfg.cliente.projeto}`,
+      pdfCfg.cliente.cidade && `Local: ${pdfCfg.cliente.cidade}`,
+      `Data da avalia\xE7\xE3o: ${agora.toLocaleDateString("pt-BR")}`,
+      `N\xFAmero da avalia\xE7\xE3o: ${numeroAvaliacao}`
+    ].filter(Boolean);
+    linhasCapa.forEach((linha) => {
+      doc.text(linha, margin, y);
+      y += 17;
+    });
+    if (!pdfCfg.ocultarAssinatura && (pdfCfg.mostrarResponsavel || pdfCfg.mostrarApenasEmpresa)) {
+      y = pageHeight - 130;
+      doc.setDrawColor(...tema.linha);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 20;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(30);
+      if (pdfCfg.mostrarApenasEmpresa) {
+        if (pdfCfg.responsavel.empresa) doc.text(pdfCfg.responsavel.empresa, margin, y);
+      } else {
+        const respLinhas = [
+          pdfCfg.responsavel.nome,
+          [pdfCfg.responsavel.cargo, pdfCfg.responsavel.empresa].filter(Boolean).join(" \u2014 "),
+          [pdfCfg.responsavel.email, pdfCfg.responsavel.telefone].filter(Boolean).join("  \xB7  ")
+        ].filter(Boolean);
+        doc.setFont("helvetica", "bold");
+        if (respLinhas[0]) doc.text(respLinhas[0], margin, y);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.setTextColor(90);
+        if (respLinhas[1]) { y += 14; doc.text(respLinhas[1], margin, y); }
+        if (respLinhas[2]) { y += 14; doc.text(respLinhas[2], margin, y); }
+      }
+    }
+    rodape(1);
+
+    // ===== Página 2 — Resumo Executivo =====
+    doc.addPage();
+    faixaTopo();
+    y = 90;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(20);
+    doc.text("Resumo Executivo", margin, y);
+    y += 35;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(90);
+    doc.text("Valor estimado", margin, y);
+    y += 20;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(...tema.faixa);
+    doc.text(formatBRL(result.faixa_media), margin, y);
+    y += 28;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(11);
+    doc.setTextColor(60);
+    doc.text(`Faixa de mercado: ${formatBRL(result.faixa_min)} \u2013 ${formatBRL(result.faixa_max)}`, margin, y);
+    y += 30;
+    const equipInfoPdf = item.categoria_id && EQUIPMENT_INFO[item.categoria_id];
+    const linhasResumoExec = [
+      result.confianca_avaliacao && `Confian\xE7a: ${result.confianca_avaliacao.charAt(0).toUpperCase() + result.confianca_avaliacao.slice(1)}`,
+      equipInfoPdf && `Liquidez: ${equipInfoPdf.liquidez}`,
+      typeof result.qtd_comparaveis_usados === "number" ? `Compar\xE1veis utilizados: ${result.qtd_comparaveis_usados}` : result.comparaveis && `Compar\xE1veis utilizados: ${result.comparaveis.length}`
+    ].filter(Boolean);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10.5);
+    doc.setTextColor(40);
+    linhasResumoExec.forEach((linha) => {
+      doc.text(linha, margin, y);
+      y += 18;
+    });
+    rodape(2);
+
+    // ===== Página 3 — Especificações Técnicas =====
+    doc.addPage();
+    faixaTopo();
+    y = 90;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(20);
+    doc.text("Especifica\xE7\xF5es T\xE9cnicas", margin, y);
+    y += 20;
+    const specsLinhas = [
+      item.categoria && ["Categoria", item.categoria],
+      item.marca && ["Marca", normalizarMarca(item.marca)],
+      item.modelo && ["Modelo", item.modelo],
+      item.potenciaCv && ["Pot\xEAncia", `${item.potenciaCv} CV`],
+      item.potenciaKw && ["Pot\xEAncia", `${item.potenciaKw} kW`],
+      item.rpm && ["Rota\xE7\xE3o", `${item.rpm} RPM`],
+      item.pesoKg && ["Peso", `${item.pesoKg} kg`],
+      item.anoFabricacao && ["Ano de fabrica\xE7\xE3o", item.anoFabricacao],
+      item.estado && ["Estado de conserva\xE7\xE3o", item.estado]
+    ].filter(Boolean);
+    if (specsLinhas.length > 0) {
+      doc.autoTable({
+        startY: y,
+        margin: { left: margin, right: margin },
+        theme: "grid",
+        head: [["Atributo", "Valor"]],
+        body: specsLinhas,
+        styles: { fontSize: 10, cellPadding: 7 },
+        headStyles: { fillColor: tema.headerBg, textColor: tema.headerText }
+      });
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text("Nenhuma especifica\xE7\xE3o t\xE9cnica adicional informada.", margin, y);
+    }
+    rodape(3);
+
+    // ===== Página 4 — Metodologia (sem mencionar IA/Claude/Conecta Valor) =====
+    doc.addPage();
+    faixaTopo();
+    y = 90;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(20);
+    doc.text("Metodologia", margin, y);
+    y += 30;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10.5);
+    doc.setTextColor(50);
+    const paragrafosMetodologia = [
+      "A estimativa de valor foi constru\xEDda a partir da compara\xE7\xE3o com equipamentos de perfil semelhante dispon\xEDveis no mercado.",
+      "Cada equipamento comparado foi avaliado quanto \xE0 compatibilidade t\xE9cnica com o item analisado, considerando categoria, marca, modelo, pot\xEAncia e estado de conserva\xE7\xE3o, entre outros atributos relevantes.",
+      "Valores estatisticamente discrepantes em rela\xE7\xE3o ao conjunto de compar\xE1veis foram identificados e removidos automaticamente, evitando que casos at\xEDpicos distorçam a refer\xEAncia final.",
+      "A faixa de mercado apresentada neste laudo foi consolidada a partir dos valores remanescentes ap\xF3s esse processo de filtragem."
+    ];
+    paragrafosMetodologia.forEach((paragrafo) => {
+      const linhas = doc.splitTextToSize(paragrafo, pageWidth - margin * 2);
+      linhas.forEach((linha) => {
+        doc.text(linha, margin, y);
+        y += 15;
+      });
+      y += 10;
+    });
+    rodape(4);
+
+    // ===== Página 5 — Comparáveis (nunca fonte/URL/site) =====
+    doc.addPage();
+    faixaTopo();
+    y = 90;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(20);
+    doc.text("Compar\xE1veis Utilizados", margin, y);
+    y += 20;
+    const comparaveisPdf = (result.comparaveis || []).slice();
+    if (comparaveisPdf.length > 0) {
+      doc.autoTable({
+        startY: y,
+        margin: { left: margin, right: margin },
+        theme: "striped",
+        head: [["Marca", "Modelo", "Valor", "Estado", "Compatibilidade"]],
+        body: comparaveisPdf.map((c) => [
+          normalizarMarca(c.marca) || "\u2014",
+          c.modelo || "\u2014",
+          formatBRL(c.preco),
+          c.estado || "\u2014",
+          c.compatibilidade ? c.compatibilidade.charAt(0).toUpperCase() + c.compatibilidade.slice(1) : "\u2014"
+        ]),
+        styles: { fontSize: 9.5, cellPadding: 6 },
+        headStyles: { fillColor: tema.headerBg, textColor: tema.headerText }
+      });
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text("Nenhum compar\xE1vel individual dispon\xEDvel para exibi\xE7\xE3o \u2014 avalia\xE7\xE3o baseada em base pr\xF3pria consolidada.", margin, y);
+    }
+    rodape(5);
+
+    // ===== Página 6 — Observações =====
+    doc.addPage();
+    faixaTopo();
+    y = 90;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(20);
+    doc.text("Observa\xE7\xF5es", margin, y);
+    y += 30;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10.5);
+    doc.setTextColor(50);
+    const observacoesPdf = [item.obs, result.resumo].filter(Boolean);
+    if (observacoesPdf.length > 0) {
+      observacoesPdf.forEach((texto) => {
+        const linhas = doc.splitTextToSize(texto, pageWidth - margin * 2);
+        linhas.forEach((linha) => {
+          doc.text(linha, margin, y);
+          y += 15;
+        });
+        y += 12;
+      });
+    } else {
+      doc.setTextColor(100);
+      doc.text("Nenhuma observa\xE7\xE3o adicional registrada para esta avalia\xE7\xE3o.", margin, y);
+    }
+    y += 10;
+    doc.setFontSize(8.5);
+    doc.setTextColor(130);
+    const linhasDisclaimer = doc.splitTextToSize("Estimativa com base em observa\xE7\xF5es de mercado p\xFAblicas. Use como refer\xEAncia, n\xE3o como laudo t\xE9cnico-pericial.", pageWidth - margin * 2);
+    linhasDisclaimer.forEach((linha) => {
+      doc.text(linha, margin, y);
+      y += 12;
+    });
+    rodape(6);
+
+    doc.save(`laudo-avaliacao-${numeroAvaliacao}.pdf`);
+  }
+
   async function exportarLoteExcel(rows, config) {
     if (!window.ExcelJS) {
       alert("A biblioteca de Excel ainda n\xE3o carregou. Tente novamente em alguns segundos.");
@@ -4578,6 +4876,81 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     return fatores;
   }
 
+  function PersonalizarPdfModal({ pdfConfig, setPdfConfig, onFechar, onGerar, t }) {
+    function upd(campo, valor) {
+      setPdfConfig((c) => ({ ...c, [campo]: valor }));
+    }
+    function updAninhado(grupo, campo, valor) {
+      setPdfConfig((c) => ({ ...c, [grupo]: { ...c[grupo], [campo]: valor } }));
+    }
+    function handleLogoUpload(e) {
+      const file = (e.target.files || [])[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setPdfConfig((c) => ({ ...c, logoDataUrl: ev.target.result, logoMode: "empresa" }));
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    }
+    const TEMA_OPCOES = [
+      { id: "branco", label: t("Executivo Branco", "Executive White"), cor: "#B87F00" },
+      { id: "preto_dourado", label: t("Premium Preto + Dourado", "Premium Black + Gold"), cor: "#080808" },
+      { id: "azul", label: t("Corporativo Azul", "Corporate Blue"), cor: "#0D253F" }
+    ];
+    return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: onFechar }, /* @__PURE__ */ React.createElement("div", { className: "modal-pdf", onClick: (e) => e.stopPropagation() },
+      /* @__PURE__ */ React.createElement("h4", null, t("Personalizar PDF", "Customize PDF")),
+      /* @__PURE__ */ React.createElement("p", { className: "modal-pdf-sub" }, t("O laudo \xE9 white-label por padr\xE3o \u2014 n\xE3o exibe a marca Conecta Valor a menos que voc\xEA escolha mostrar.", "The report is white-label by default \u2014 it doesn't show the Conecta Valor brand unless you choose to show it.")),
+
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Identidade visual", "Visual identity")),
+        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-radio" }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "logoMode", checked: pdfConfig.logoMode === "empresa", onChange: () => upd("logoMode", "empresa") }), t("Usar logotipo da minha empresa", "Use my company's logo")),
+        pdfConfig.logoMode === "empresa" && /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/png,image/svg+xml,image/jpeg", onChange: handleLogoUpload, className: "modal-pdf-file" }),
+        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-radio" }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "logoMode", checked: pdfConfig.logoMode === "sem", onChange: () => upd("logoMode", "sem") }), t("Gerar PDF sem logotipo", "Generate PDF without logo")),
+        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-radio" }, /* @__PURE__ */ React.createElement("input", { type: "radio", name: "logoMode", checked: pdfConfig.logoMode === "conecta", onChange: () => upd("logoMode", "conecta") }), t("Mostrar identidade do Conecta Valor", "Show Conecta Valor identity"))
+      ),
+
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Respons\xE1vel pelo laudo (opcional)", "Report responsible (optional)")),
+        /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-grid" },
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome do respons\xE1vel", "Responsible's name"), value: pdfConfig.responsavel.nome, onChange: (e) => updAninhado("responsavel", "nome", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cargo", "Role"), value: pdfConfig.responsavel.cargo, onChange: (e) => updAninhado("responsavel", "cargo", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Empresa", "Company"), value: pdfConfig.responsavel.empresa, onChange: (e) => updAninhado("responsavel", "empresa", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "email", placeholder: t("E-mail", "Email"), value: pdfConfig.responsavel.email, onChange: (e) => updAninhado("responsavel", "email", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Telefone", "Phone"), value: pdfConfig.responsavel.telefone, onChange: (e) => updAninhado("responsavel", "telefone", e.target.value) })
+        ),
+        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.mostrarResponsavel, onChange: (e) => upd("mostrarResponsavel", e.target.checked) }), t("Mostrar respons\xE1vel", "Show responsible")),
+        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.mostrarApenasEmpresa, onChange: (e) => upd("mostrarApenasEmpresa", e.target.checked) }), t("Mostrar apenas empresa", "Show company only")),
+        /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.ocultarAssinatura, onChange: (e) => upd("ocultarAssinatura", e.target.checked) }), t("Ocultar assinatura", "Hide signature"))
+      ),
+
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Dados do cliente (opcional)", "Client data (optional)")),
+        /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-grid" },
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome do cliente", "Client name"), value: pdfConfig.cliente.nome, onChange: (e) => updAninhado("cliente", "nome", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Empresa do cliente", "Client company"), value: pdfConfig.cliente.empresa, onChange: (e) => updAninhado("cliente", "empresa", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Projeto ou refer\xEAncia", "Project or reference"), value: pdfConfig.cliente.projeto, onChange: (e) => updAninhado("cliente", "projeto", e.target.value) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cidade/Estado", "City/State"), value: pdfConfig.cliente.cidade, onChange: (e) => updAninhado("cliente", "cidade", e.target.value) })
+        )
+      ),
+
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Tema visual", "Visual theme")),
+        /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-temas" }, TEMA_OPCOES.map((op) => /* @__PURE__ */ React.createElement("button", { key: op.id, type: "button", className: "modal-pdf-tema-btn" + (pdfConfig.tema === op.id ? " ativo" : ""), onClick: () => upd("tema", op.id) },
+          /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-tema-swatch", style: { background: op.cor } }),
+          op.label
+        )))
+      ),
+
+      /* @__PURE__ */ React.createElement("label", { className: "modal-pdf-check modal-pdf-padrao" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: pdfConfig.salvarComoPadrao, onChange: (e) => upd("salvarComoPadrao", e.target.checked) }), t("Salvar este template como padr\xE3o (usar automaticamente nos pr\xF3ximos laudos)", "Save this template as default (use automatically for next reports)")),
+
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-botoes" },
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: onFechar }, t("Cancelar", "Cancel")),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: onGerar }, t("Gerar PDF", "Generate PDF"))
+      )
+    ));
+  }
+
   function ResultCard({ item, result, lang }) {
     const t = (pt, en) => lang === "en" ? en : pt;
     const [mostrarTodosComparaveis, setMostrarTodosComparaveis] = (0, import_react.useState)(false);
@@ -4719,6 +5092,44 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [result, setResult] = (0, import_react.useState)(null);
     const [history, setHistory] = (0, import_react.useState)([]);
     const [historicoSearch, setHistoricoSearch] = (0, import_react.useState)("");
+    const [pdfModalAberto, setPdfModalAberto] = (0, import_react.useState)(false);
+    const PDF_CONFIG_PADRAO = {
+      logoDataUrl: null,
+      logoMode: "sem",
+      // "empresa" | "sem" | "conecta"
+      responsavel: { nome: "", cargo: "", empresa: "", email: "", telefone: "" },
+      mostrarResponsavel: true,
+      mostrarApenasEmpresa: false,
+      ocultarAssinatura: false,
+      cliente: { nome: "", empresa: "", projeto: "", cidade: "" },
+      tema: "branco",
+      // "branco" | "preto_dourado" | "azul"
+      salvarComoPadrao: false
+    };
+    const [pdfConfig, setPdfConfig] = (0, import_react.useState)(PDF_CONFIG_PADRAO);
+    (0, import_react.useEffect)(() => {
+      if (!storageDisponivel()) return;
+      (async () => {
+        try {
+          const r = await appStorage.get("pdf-template:padrao");
+          if (r && r.value) {
+            const salvo = JSON.parse(r.value);
+            setPdfConfig((c) => ({ ...c, ...salvo, salvarComoPadrao: true }));
+          }
+        } catch (e) {
+          console.warn("N\xE3o foi poss\xEDvel carregar o template de PDF salvo:", e.message);
+        }
+      })();
+    }, []);
+    async function salvarTemplatePdfPadrao(cfg) {
+      if (!storageDisponivel()) return;
+      try {
+        const { salvarComoPadrao, ...semFlag } = cfg;
+        await appStorage.set("pdf-template:padrao", JSON.stringify(semFlag));
+      } catch (e) {
+        console.warn("N\xE3o foi poss\xEDvel salvar o template de PDF como padr\xE3o:", e.message);
+      }
+    }
     const [selecionadosPdf, setSelecionadosPdf] = (0, import_react.useState)({});
     const [stats, setStats] = (0, import_react.useState)(null);
     const [statsLoading, setStatsLoading] = (0, import_react.useState)(false);
@@ -6926,6 +7337,69 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         .historico-empty .nav-icon { width: 40px; height: 40px; margin: 0 auto 1rem; color: #D89A00; }
         .historico-empty p { font-size: 0.95rem; color: #4A5568; margin-bottom: 1.2rem; }
+
+        /* ===== v18.0: Exportar PDF + modal Personalizar PDF ===== */
+        .exportar-pdf-row { margin: 0.8rem 1.5rem 0; }
+        .btn-exportar-pdf {
+          background: #FFFFFF;
+          border: 1.5px solid #1B1D1F;
+          color: #1B1D1F;
+          font-family: 'Manrope', sans-serif;
+          font-weight: 700;
+          font-size: 0.88rem;
+          padding: 0.65rem 1.3rem;
+          border-radius: 9px;
+          cursor: pointer;
+        }
+        .btn-exportar-pdf:hover { background: #F4F3EF; }
+        .modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(8,8,8,0.55);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          z-index: 200;
+          padding: 1rem;
+          animation: fadeIn 0.2s ease-out;
+        }
+        .modal-pdf {
+          background: #FFFFFF;
+          border-radius: 16px;
+          padding: 1.75rem;
+          max-width: 520px;
+          width: 100%;
+          max-height: 88vh;
+          overflow-y: auto;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .modal-pdf h4 { margin: 0 0 0.4rem; font-family: 'Manrope', sans-serif; font-size: 1.2rem; color: #1B1D1F; }
+        .modal-pdf-sub { font-size: 0.82rem; color: #6B7280; margin: 0 0 1.2rem; line-height: 1.45; }
+        .modal-pdf-secao { margin-bottom: 1.3rem; padding-bottom: 1.1rem; border-bottom: 1px solid #EFEDE6; }
+        .modal-pdf-secao-titulo { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; color: #96650B; margin-bottom: 0.7rem; }
+        .modal-pdf-radio { display: flex; align-items: center; gap: 0.5rem; font-size: 0.88rem; color: #1B1D1F; margin-bottom: 0.55rem; cursor: pointer; }
+        .modal-pdf-check { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: #4A5568; margin-bottom: 0.5rem; cursor: pointer; }
+        .modal-pdf-padrao { margin: 0 0 1.2rem; padding: 0.7rem 0.9rem; background: #FBF0DC; border: 1px solid #E8DCC0; border-radius: 8px; color: #7A5B0B; }
+        .modal-pdf-file { margin: 0.3rem 0 0.7rem 1.6rem; font-size: 0.82rem; }
+        .modal-pdf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; }
+        .modal-pdf-grid input { margin: 0; }
+        .modal-pdf-temas { display: flex; flex-direction: column; gap: 0.5rem; }
+        .modal-pdf-tema-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.6rem;
+          background: #FAFAF8;
+          border: 1.5px solid #E4E2DC;
+          border-radius: 8px;
+          padding: 0.55rem 0.8rem;
+          font-size: 0.85rem;
+          color: #1B1D1F;
+          cursor: pointer;
+          text-align: left;
+        }
+        .modal-pdf-tema-btn.ativo { border-color: #D89A00; background: #FBF0DC; }
+        .modal-pdf-tema-swatch { width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0; }
+        .modal-pdf-botoes { display: flex; justify-content: flex-end; gap: 0.8rem; margin-top: 0.5rem; }
         .compat-tag {
           display: inline-block;
           font-family: 'IBM Plex Mono', monospace;
@@ -8166,7 +8640,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     } }, "desconectar"), supaSaved && /* @__PURE__ */ React.createElement("span", { className: "saved-note" }, "salvo \u2713")), supaUrl && /* @__PURE__ */ React.createElement("div", { className: "stats-box" }, /* @__PURE__ */ React.createElement("div", { className: "admin-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: loadStats, disabled: statsLoading }, statsLoading ? "Carregando\u2026" : "Atualizar estat\xEDsticas"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: exportarBaseCSV, disabled: statsLoading }, "exportar base inteira (.csv)")), stats && /* @__PURE__ */ React.createElement("div", { className: "stats-grid" }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "sites diferentes"))), stats && stats.moedaEstrangeiraCount > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.8rem" } }, stats.moedaEstrangeiraCount, " observa\xE7\xF5es em moeda estrangeira (EUR/USD/GBP) \u2014 convertidas para R$ na cota\xE7\xE3o atual pra entrar nessas m\xE9dias.", stats.moedaSemCotacaoCount > 0 && ` ${stats.moedaSemCotacaoCount} ficaram de fora por falha ao buscar a cota\xE7\xE3o agora \u2014 tenta atualizar de novo em instantes.`), stats && stats.categorias && stats.categorias.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "categoria-stats" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Pre\xE7o m\xE9dio por categoria (base pr\xF3pria, em R$) \u2014 clica pra ver a tend\xEAncia ao longo do tempo"), /* @__PURE__ */ React.createElement("div", { className: "bar-chart" }, (() => {
       const maxMedia = Math.max(...stats.categorias.map((c) => c.media));
       return stats.categorias.map((c, i) => /* @__PURE__ */ React.createElement(React.Fragment, { key: i }, /* @__PURE__ */ React.createElement("div", { className: "bar-row", onClick: () => carregarTendencia(c.categoria), style: { cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { className: "bar-row-label" }, /* @__PURE__ */ React.createElement("span", { className: "bar-nome" }, c.categoria), /* @__PURE__ */ React.createElement("span", { className: "bar-qtd" }, c.quantidade, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "bar-track" }, /* @__PURE__ */ React.createElement("div", { className: "bar-fill", style: { width: `${Math.max(4, c.media / maxMedia * 100)}%` } }, /* @__PURE__ */ React.createElement("span", { className: "bar-valor" }, formatBRL(c.media)))), /* @__PURE__ */ React.createElement("span", { className: "bar-range" }, formatBRL(c.min), " \u2013 ", formatBRL(c.max))), tendenciaCategoria === c.categoria && /* @__PURE__ */ React.createElement("div", { className: "tendencia-wrapper" }, tendenciaLoading ? /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Carregando tend\xEAncia\u2026") : /* @__PURE__ */ React.createElement(TendenciaChart, { pontos: tendenciaDados }))));
-    })()))))), tab === "single" && error && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, error), tab === "single" && result && /* @__PURE__ */ React.createElement(ResultCard, { item: form, result, lang }), tab === "single" && history.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "history" }, /* @__PURE__ */ React.createElement("div", { className: "history-header" }, /* @__PURE__ */ React.createElement("h4", null, "Hist\xF3rico salvo (refer\xEAncia \u2014 pre\xE7os podem ter mudado desde a data)"), /* @__PURE__ */ React.createElement(
+    })()))))), tab === "single" && error && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, error), tab === "single" && result && /* @__PURE__ */ React.createElement(ResultCard, { item: form, result, lang }), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "exportar-pdf-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn-exportar-pdf", onClick: () => setPdfModalAberto(true) }, t("\u{1F4C4} Exportar PDF", "\u{1F4C4} Export PDF"))), pdfModalAberto && /* @__PURE__ */ React.createElement(PersonalizarPdfModal, {
+      pdfConfig,
+      setPdfConfig,
+      onFechar: () => setPdfModalAberto(false),
+      onGerar: () => {
+        gerarPdfExecutivoWhiteLabel(form, result, pdfConfig);
+        if (pdfConfig.salvarComoPadrao) salvarTemplatePdfPadrao(pdfConfig);
+        setPdfModalAberto(false);
+      },
+      t
+    }), tab === "single" && history.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "history" }, /* @__PURE__ */ React.createElement("div", { className: "history-header" }, /* @__PURE__ */ React.createElement("h4", null, "Hist\xF3rico salvo (refer\xEAncia \u2014 pre\xE7os podem ter mudado desde a data)"), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
