@@ -7455,6 +7455,93 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .especificacao-label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; color: #8A8D91; }
         .especificacao-valor { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.92rem; font-weight: 700; color: #1B1D1F; margin-top: 0.2rem; }
 
+        /* ===== v19.2: Dashboard Executivo ===== */
+        .exec-dashboard { margin: 0.5rem 1.5rem 1.5rem; }
+        .exec-aviso-amostra { font-size: 0.72rem; color: #9CA0A6; margin-bottom: 0.8rem; }
+        .exec-header {
+          background: #FFFFFF;
+          border-bottom: 1px solid #EFEDE6;
+          padding: 1.2rem 0 1.4rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 1rem;
+        }
+        .exec-saudacao { font-family: 'Manrope', sans-serif; font-size: 1.4rem; font-weight: 700; color: #1B1D1F; margin: 0; }
+        .exec-data { display: block; font-size: 0.85rem; color: #6B7280; margin-top: 0.25rem; text-transform: capitalize; }
+        .exec-header-botoes { display: flex; gap: 0.7rem; }
+        .exec-kpis { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.4rem 0; }
+        .exec-kpi-card { background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 18px; padding: 1.3rem 1.4rem; box-shadow: 0 3px 12px rgba(20,20,20,0.05); }
+        .exec-kpi-card .nav-icon { width: 20px; height: 20px; color: #D89A00; margin-bottom: 0.6rem; }
+        .exec-kpi-num { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 1.6rem; font-weight: 700; color: #1B1D1F; }
+        .exec-kpi-num.verde { color: #1F5C3F; font-size: 1.3rem; }
+        .exec-kpi-label { display: block; font-size: 0.75rem; color: #6B7280; margin-top: 0.35rem; }
+        .exec-kpi-economia { display: flex; flex-direction: column; gap: 0.15rem; font-size: 0.8rem; color: #3A3D42; margin-bottom: 0.3rem; }
+        .exec-atalhos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.6rem; }
+        .exec-atalho-card {
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
+          border-radius: 18px;
+          padding: 1.4rem 1rem;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0.6rem;
+          font-size: 0.85rem;
+          font-weight: 600;
+          color: #1B1D1F;
+          cursor: pointer;
+          box-shadow: 0 3px 12px rgba(20,20,20,0.05);
+          transition: border-color 0.15s ease, transform 0.15s ease;
+        }
+        .exec-atalho-card:hover { border-color: #D89A00; transform: translateY(-2px); }
+        .exec-atalho-card .nav-icon { width: 24px; height: 24px; color: #D89A00; }
+        .exec-duas-colunas { display: grid; grid-template-columns: 1.3fr 1fr; gap: 1.2rem; margin-bottom: 1.6rem; }
+        .exec-bloco { background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 18px; padding: 1.3rem 1.4rem; box-shadow: 0 3px 12px rgba(20,20,20,0.05); }
+        .exec-tabela { width: 100%; border-collapse: collapse; margin-top: 0.8rem; font-size: 0.82rem; }
+        .exec-tabela th { text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.03em; color: #8A8D91; padding: 0.5rem 0.4rem; border-bottom: 2px solid #E4E2DC; }
+        .exec-tabela td { padding: 0.55rem 0.4rem; border-bottom: 1px solid #F0EEE7; color: #1B1D1F; }
+        .exec-tabela-linha { cursor: pointer; }
+        .exec-tabela-linha:hover { background: #FBF0DC; }
+        .exec-qualidade-lista { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.8rem; }
+        .exec-qualidade-item { display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; gap: 0.6rem; }
+        .exec-qualidade-nome { color: #1B1D1F; font-weight: 600; }
+        .exec-qualidade-direita { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .exec-qualidade-nota { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: #96650B; font-size: 0.85rem; }
+        .exec-qualidade-valor { font-family: 'IBM Plex Mono', monospace; color: #1F5C3F; font-weight: 600; font-size: 0.82rem; }
+        .exec-bar-chart { display: flex; flex-direction: column; gap: 0.7rem; margin-top: 0.8rem; }
+        .exec-bar-row { display: grid; grid-template-columns: 110px 1fr 30px; align-items: center; gap: 0.6rem; }
+        .exec-bar-label { font-size: 0.78rem; color: #4A5568; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .exec-bar-track { height: 8px; background: #F0EEE7; border-radius: 999px; overflow: hidden; }
+        .exec-bar-fill { height: 100%; background: linear-gradient(90deg, #D89A00, #F0C868); border-radius: 999px; }
+        .exec-bar-num { font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: #6B7280; text-align: right; }
+        .exec-donut-wrap { display: flex; align-items: center; gap: 1.3rem; margin-top: 0.9rem; }
+        .exec-donut { width: 110px; height: 110px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .exec-donut-centro { width: 74px; height: 74px; background: #FFFFFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 1.1rem; color: #1B1D1F; }
+        .exec-donut-legenda { display: flex; flex-direction: column; gap: 0.5rem; font-size: 0.8rem; color: #3A3D42; }
+        .exec-donut-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 0.4rem; }
+        .exec-donut-dot.dourado { background: #D89A00; }
+        .exec-donut-dot.cinza { background: #E4E2DC; }
+        .exec-timeline { display: flex; flex-direction: column; margin-top: 0.8rem; }
+        .exec-timeline-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0; border-bottom: 1px solid #F7F6F2; font-size: 0.82rem; }
+        .exec-timeline-item:last-child { border-bottom: none; }
+        .exec-timeline-dot { width: 7px; height: 7px; border-radius: 50%; background: #D89A00; flex-shrink: 0; }
+        .exec-timeline-texto { color: #1B1D1F; flex: 1; }
+        .exec-timeline-data { color: #9CA0A6; font-size: 0.75rem; }
+
+        @media (max-width: 1180px) {
+          .exec-kpis, .exec-atalhos { grid-template-columns: repeat(2, 1fr); }
+          .exec-duas-colunas { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 620px) {
+          .exec-kpis, .exec-atalhos { grid-template-columns: 1fr; }
+          .exec-header { flex-direction: column; align-items: flex-start; }
+          .exec-header-botoes { width: 100%; }
+          .exec-header-botoes button { flex: 1; }
+          .exec-donut-wrap { flex-direction: column; align-items: flex-start; }
+        }
+
         /* ===== v18.0: Qualidade da Avaliação 2.0 (painel premium) ===== */
         .qualidade2-painel {
           background: #FFFFFF;
@@ -8767,26 +8854,161 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CONFIG }),
       t("Config", "Config")
-    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
+    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), (() => {
+        if (history.length === 0) return null;
+        const nomeUsuario = session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : "";
+        const historicoOrdenadoDash = history.slice().sort((a, b) => b.id - a.id);
+        const totalAvaliacoes = history.length;
+        const valorTotalAvaliado = history.reduce((soma, h) => soma + (Number(h.result.faixa_media) || 0), 0);
+        const basePropriaCount = history.filter((h) => h.result.origem === "base_propria").length;
+        const mercadoCount = totalAvaliacoes - basePropriaCount;
+        const economiaPct = totalAvaliacoes > 0 ? Math.round(basePropriaCount / totalAvaliacoes * 100) : 0;
+        const notasDash = history.map((h) => calcularNotaQualidadeV2(h.item, h.result)).filter(Boolean).map((n) => n.nota);
+        const notaMediaGeral = notasDash.length > 0 ? Math.round(notasDash.reduce((a, b) => a + b, 0) / notasDash.length) : null;
+        const confiancaMediaBadge = notaMediaGeral === null ? null : notaMediaGeral >= 80 ? "alta" : notaMediaGeral >= 55 ? "m\xE9dia" : "baixa";
+        const ultimas5Dash = historicoOrdenadoDash.slice(0, 5);
+        const contagemCategorias = {};
+        history.forEach((h) => { const cat = h.item.categoria; if (cat) contagemCategorias[cat] = (contagemCategorias[cat] || 0) + 1; });
+        const topCategorias = Object.entries(contagemCategorias).sort((a, b) => b[1] - a[1]).slice(0, 5);
+        const maxCategoriaCount = topCategorias.length > 0 ? topCategorias[0][1] : 1;
+        const donutDeg = totalAvaliacoes > 0 ? basePropriaCount / totalAvaliacoes * 360 : 0;
+
+        return /* @__PURE__ */ React.createElement("div", { className: "exec-dashboard" },
+          /* @__PURE__ */ React.createElement("p", { className: "exec-aviso-amostra" }, t("Painel calculado com base nas avalia\xE7\xF5es recentes salvas neste dispositivo.", "Panel calculated from recent evaluations saved on this device.")),
+
+          // ---- Cabeçalho executivo ----
+          /* @__PURE__ */ React.createElement("div", { className: "exec-header" },
+            /* @__PURE__ */ React.createElement("div", null,
+              /* @__PURE__ */ React.createElement("h2", { className: "exec-saudacao" }, t("Bem-vinda", "Welcome"), nomeUsuario && `, ${nomeUsuario}`),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-data" }, ( /* @__PURE__ */ new Date()).toLocaleDateString(lang === "en" ? "en-US" : "pt-BR", { weekday: "long", day: "numeric", month: "long" }))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "exec-header-botoes" },
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setTab("single") }, t("Nova Avalia\xE7\xE3o", "New Evaluation")),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("batch") }, t("Avaliar Lote", "Evaluate Batch"))
+            )
+          ),
+
+          // ---- 4 KPIs ----
+          /* @__PURE__ */ React.createElement("div", { className: "exec-kpis" },
+            /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num" }, totalAvaliacoes),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, t("Avalia\xE7\xF5es realizadas", "Evaluations performed"))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num verde" }, formatBRL(valorTotalAvaliado)),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, t("Valor total avaliado", "Total value evaluated"))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }),
+              /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-economia" },
+                /* @__PURE__ */ React.createElement("span", null, t("Base pr\xF3pria: ", "Own base: "), basePropriaCount),
+                /* @__PURE__ */ React.createElement("span", null, t("Pesquisa em mercado: ", "Market research: "), mercadoCount)
+              ),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, economiaPct, "% ", t("economia de IA", "AI savings"))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }),
+              notaMediaGeral !== null ? /* @__PURE__ */ React.createElement(React.Fragment, null,
+                /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num" }, notaMediaGeral, "/100"),
+                /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + confiancaMediaBadge }, confiancaMediaBadge === "alta" ? t("Alta", "High") : confiancaMediaBadge === "m\xE9dia" ? t("M\xE9dia", "Medium") : t("Baixa", "Low"))
+              ) : /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num" }, "\u2014"),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, t("Confian\xE7a m\xE9dia", "Average confidence"))
+            )
+          ),
+
+          // ---- Atalhos rápidos ----
+          /* @__PURE__ */ React.createElement("div", { className: "exec-atalhos" },
+            [
+              { icon: ICON_ENGRENAGEM, label: t("Item \xDAnico", "Single Item"), tab: "single" },
+              { icon: ICON_BATCH, label: t("Avalia\xE7\xE3o em Lote", "Batch Evaluation"), tab: "batch" },
+              { icon: ICON_HISTORY, label: t("Hist\xF3rico", "History"), tab: "historico" },
+              { icon: ICON_COLETOR, label: t("Coletor de Mercado", "Market Collector"), tab: "coletor" }
+            ].map((a, i) => /* @__PURE__ */ React.createElement("button", { key: i, type: "button", className: "exec-atalho-card", onClick: () => setTab(a.tab) },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: a.icon }),
+              /* @__PURE__ */ React.createElement("span", null, a.label)
+            ))
+          ),
+
+          // ---- Últimas avaliações + Qualidade das últimas (lado a lado) ----
+          /* @__PURE__ */ React.createElement("div", { className: "exec-duas-colunas" },
+            /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
+              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("\xDAltimas Avalia\xE7\xF5es", "Latest Evaluations")),
+              /* @__PURE__ */ React.createElement("table", { className: "exec-tabela" },
+                /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null,
+                  /* @__PURE__ */ React.createElement("th", null, t("Equipamento", "Equipment")),
+                  /* @__PURE__ */ React.createElement("th", null, t("Marca", "Brand")),
+                  /* @__PURE__ */ React.createElement("th", null, t("Categoria", "Category")),
+                  /* @__PURE__ */ React.createElement("th", null, t("Valor", "Value")),
+                  /* @__PURE__ */ React.createElement("th", null, t("Qualidade", "Quality")),
+                  /* @__PURE__ */ React.createElement("th", null, t("Data", "Date"))
+                )),
+                /* @__PURE__ */ React.createElement("tbody", null, ultimas5Dash.map((h) => {
+                  const notaLinha = calcularNotaQualidadeV2(h.item, h.result);
+                  return /* @__PURE__ */ React.createElement("tr", { key: h.id, className: "exec-tabela-linha", onClick: () => { setForm(h.item); setResult(h.result); setError(null); setTab("single"); } },
+                    /* @__PURE__ */ React.createElement("td", null, h.item.modelo || h.item.categoria || "\u2014"),
+                    /* @__PURE__ */ React.createElement("td", null, normalizarMarca(h.item.marca) || "\u2014"),
+                    /* @__PURE__ */ React.createElement("td", null, h.item.categoria || "\u2014"),
+                    /* @__PURE__ */ React.createElement("td", null, formatBRL(h.result.faixa_media)),
+                    /* @__PURE__ */ React.createElement("td", null, notaLinha ? `${notaLinha.nota}/100` : "\u2014"),
+                    /* @__PURE__ */ React.createElement("td", null, h.data ? ( /* @__PURE__ */ new Date(h.data)).toLocaleDateString("pt-BR") : "\u2014")
+                  );
+                }))
+              )
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
+              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Qualidade das \xDAltimas Avalia\xE7\xF5es", "Quality of Latest Evaluations")),
+              /* @__PURE__ */ React.createElement("div", { className: "exec-qualidade-lista" }, ultimas5Dash.map((h) => {
+                const notaLinha = calcularNotaQualidadeV2(h.item, h.result);
+                return /* @__PURE__ */ React.createElement("div", { key: h.id, className: "exec-qualidade-item" },
+                  /* @__PURE__ */ React.createElement("span", { className: "exec-qualidade-nome" }, h.item.modelo || h.item.categoria || "\u2014"),
+                  /* @__PURE__ */ React.createElement("div", { className: "exec-qualidade-direita" },
+                    notaLinha && /* @__PURE__ */ React.createElement("span", { className: "exec-qualidade-nota" }, notaLinha.nota),
+                    h.result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + h.result.confianca_avaliacao }, h.result.confianca_avaliacao),
+                    /* @__PURE__ */ React.createElement("span", { className: "exec-qualidade-valor" }, formatBRL(h.result.faixa_media))
+                  )
+                );
+              }))
+            )
+          ),
+
+          // ---- Categorias mais avaliadas + Distribuição ----
+          /* @__PURE__ */ React.createElement("div", { className: "exec-duas-colunas" },
+            topCategorias.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
+              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Categorias Mais Avaliadas", "Most Evaluated Categories")),
+              /* @__PURE__ */ React.createElement("div", { className: "exec-bar-chart" }, topCategorias.map(([cat, count], i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "exec-bar-row" },
+                /* @__PURE__ */ React.createElement("span", { className: "exec-bar-label" }, cat),
+                /* @__PURE__ */ React.createElement("div", { className: "exec-bar-track" }, /* @__PURE__ */ React.createElement("div", { className: "exec-bar-fill", style: { width: count / maxCategoriaCount * 100 + "%" } })),
+                /* @__PURE__ */ React.createElement("span", { className: "exec-bar-num" }, count)
+              )))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
+              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Distribui\xE7\xE3o das Avalia\xE7\xF5es", "Evaluation Distribution")),
+              /* @__PURE__ */ React.createElement("div", { className: "exec-donut-wrap" },
+                /* @__PURE__ */ React.createElement("div", { className: "exec-donut", style: { background: `conic-gradient(#D89A00 0deg ${donutDeg}deg, #E4E2DC ${donutDeg}deg 360deg)` } }, /* @__PURE__ */ React.createElement("div", { className: "exec-donut-centro" }, totalAvaliacoes)),
+                /* @__PURE__ */ React.createElement("div", { className: "exec-donut-legenda" },
+                  /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("span", { className: "exec-donut-dot dourado" }), t("Base pr\xF3pria: ", "Own base: "), basePropriaCount),
+                  /* @__PURE__ */ React.createElement("span", null, /* @__PURE__ */ React.createElement("span", { className: "exec-donut-dot cinza" }), t("Pesquisa em mercado: ", "Market research: "), mercadoCount)
+                )
+              )
+            )
+          ),
+
+          // ---- Atividade recente ----
+          /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
+            /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Atividade Recente", "Recent Activity")),
+            /* @__PURE__ */ React.createElement("div", { className: "exec-timeline" }, historicoOrdenadoDash.slice(0, 8).map((h, i) => /* @__PURE__ */ React.createElement("div", { key: h.id, className: "exec-timeline-item" },
+              /* @__PURE__ */ React.createElement("span", { className: "exec-timeline-dot" }),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-timeline-texto" }, t("Avalia\xE7\xE3o criada: ", "Evaluation created: "), h.item.modelo || h.item.categoria || t("equipamento", "equipment")),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-timeline-data" }, h.data ? ( /* @__PURE__ */ new Date(h.data)).toLocaleDateString("pt-BR") : "")
+            )))
+          )
+        );
+      })(), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
       "A Conecta Valor usa Intelig\xEAncia Artificial e dados reais de mercado para gerar refer\xEAncias de valor para ativos industriais \u2014 m\xE1quinas, linhas de produ\xE7\xE3o, galp\xF5es e mais.",
       "Conecta Valor uses Artificial Intelligence and real market data to generate value references for industrial assets \u2014 machines, production lines, warehouses and more."
-    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026"), /* @__PURE__ */ React.createElement("div", { className: "dashboard-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setTab("single") }, t("Avaliar item \xFAnico", "Evaluate single item")), /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("batch") }, t("Avaliar lote", "Evaluate batch")), isAdmin && /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setTab("coletor") }, t("Ir pro Coletor", "Go to Collector"))), recentUserEvals.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "dashboard-recent" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Suas avalia\xE7\xF5es recentes", "Your recent evaluations")), /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "0.6rem" } }, recentUserEvals.map((h) => {
-      const aval = Array.isArray(h.avaliacoes) ? h.avaliacoes[0] : h.avaliacoes;
-      const nomeItem = [h.marca, h.modelo].filter(Boolean).join(" ") || h.categoria || t("Item sem nome", "Unnamed item");
-      return /* @__PURE__ */ React.createElement("div", { key: h.id, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main home-history-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-nome-col" }, h.categoria && /* @__PURE__ */ React.createElement("span", { className: "history-categoria-tag" }, h.categoria), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, nomeItem)), /* @__PURE__ */ React.createElement("span", { className: "home-history-date" }, h.criado_em && new Date(h.criado_em).toLocaleDateString("pt-BR")), /* @__PURE__ */ React.createElement("div", { className: "home-history-valores" }, /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, aval ? `${formatBRL(aval.faixa_min)} \u2013 ${formatBRL(aval.faixa_max)}` : "\u2014"), aval && aval.faixa_media && /* @__PURE__ */ React.createElement("span", { className: "home-history-media" }, t("m\xE9dia ", "avg "), formatBRL(aval.faixa_media)), aval && aval.comparaveis && aval.comparaveis.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "batch-comp-count" }, aval.comparaveis.length, " ", t("compar\xE1veis", "comparables"))), /* @__PURE__ */ React.createElement(
-        "button",
-        {
-          type: "button",
-          className: "link-btn home-history-open",
-          onClick: () => {
-            setForm((f) => ({ ...f, categoria: h.categoria || "", marca: h.marca || "", modelo: h.modelo || "" }));
-            if (aval) setResult(aval);
-            setTab("single");
-          }
-        },
-        t("Abrir \u2192", "Open \u2192")
-      )));
-    })))) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "input-mode-tabs" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "input-mode-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
