@@ -2568,6 +2568,7 @@
     engarrafe: "Engarrafe",
     machineseeker: "Machineseeker",
     linha_completa: "Linha completa (leil\xE3o europeu)",
+    lote_br: "Lote/linha completa \u2014 v\xE1rios equipamentos (gr\xE1tis, sem IA)",
     facebook: "Facebook Marketplace",
     syx: "Central de Materiais / SYX (lista)",
     syx_item: "Central de Materiais / SYX (item \xFAnico)",
@@ -2605,6 +2606,7 @@
     if ((t.match(/Adicionar aos favoritos/gi) || []).length >= 2 && /Slide 1/i.test(t)) return "olx_lista";
     if (/Denunciar an[uú]ncio/i.test(t) && /Esta conta passou por um processo de valida[çc][ãa]o de identidade|Dicas de seguran[çc]a/i.test(t) && /R\$\s*[\d.,]+/.test(t)) return "olx";
     if (/olx\.com\.br|Para Doa[çc][ãa]o(Sim|N[ãa]o)|Aceita trocas(Sim|N[ãa]o)/i.test(t) && /R\$\s*[\d.,]+/.test(t)) return "olx";
+    if ((t.match(/^[\-\u2013]\s+\S/gm) || []).length >= 2 && /R\$\s*[\d][\d.,]*/.test(t)) return "lote_br";
     if (/(?:Valor|Pre[çc]o)(\s+de\s+venda)?:?\s*R?\$?\s*[\d][\d.,]*/i.test(t)) return "estruturado";
     if (/^\s*R?\$?\s*[\d][\d.,]*\s*(mil)?\s*$/im.test(t) && /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s'.]+[\s\/,-]+[A-Z]{2}\s*$/im.test(t)) return "estruturado";
     return null;
@@ -3059,6 +3061,39 @@
       detalhes: descricao || null,
       estado,
       localizacao: localMatch ? localMatch[1].trim() : null,
+      preco: parsePrecoBR(precoMatch[1]),
+      moeda: "BRL",
+      canal: "Revenda/Terceiro",
+      tipo_mercado: "Venda Direta"
+    }];
+  }
+  // Lote/linha completa em formato brasileiro comum: título livre, itens em
+  // bullets ("– equipamento" ou "- equipamento"), preço total solto em R$.
+  // Diferente de parseLinhaCompletaLocal (que só reconhece o formato alemão
+  // de leilão, com € e cabeçalho "EQUIPAMENTOS"). Salva como UMA observação
+  // (o lote inteiro), com a lista de itens inclusos no campo de detalhes -
+  // não tenta ratear o preço entre os itens, porque não há como saber o
+  // peso de cada peça dentro do valor total sem inventar número.
+  function parseLoteBRLocal(rawText) {
+    const texto = rawText || "";
+    const precoMatch = texto.match(/R\$\s*([\d][\d.,]*)/);
+    if (!precoMatch) return [];
+    const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
+    const bulletLinhas = linhas.filter((l) => /^[\-\u2013]\s+\S/.test(l)).map((l) => l.replace(/^[\-\u2013]\s+/, "").trim());
+    if (bulletLinhas.length < 2) return [];
+    const tituloLinha = linhas.find((l) => !/^[\-\u2013]\s+/.test(l) && !/R\$\s*[\d][\d.,]*/.test(l)) || null;
+    // Texto com vários equipamentos misturados (sopradora+enchedora+rotuladora+etc)
+    // confunde o classificador de item único, que pode pegar uma palavra
+    // isolada (ex: "Carbonatador") em vez do conjunto. Prioriza o sinal de
+    // "linha de envase completa" quando ele bate, antes de cair no genérico.
+    const REGEX_LINHA_ENVASE = /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie/i;
+    const categoria = REGEX_LINHA_ENVASE.test(texto) ? "Linha de Envase" : classificarCategoriaGenerica(texto);
+    return [{
+      categoria,
+      marca: null,
+      modelo: tituloLinha,
+      ano: null,
+      detalhes: `Lote com ${bulletLinhas.length} equipamentos inclusos: ${bulletLinhas.join("; ")}`,
       preco: parsePrecoBR(precoMatch[1]),
       moeda: "BRL",
       canal: "Revenda/Terceiro",
@@ -6280,6 +6315,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           items = parseMachineseekerLocal(manualText);
         } else if (formatoPagina === "linha_completa") {
           items = parseLinhaCompletaLocal(manualText);
+        } else if (formatoPagina === "lote_br") {
+          items = parseLoteBRLocal(manualText);
         } else if (formatoPagina === "facebook") {
           items = parseFacebookMarketplaceLocal(manualText);
         } else if (formatoPagina === "syx") {
@@ -9408,7 +9445,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onClick: () => setCollectorResults((prev) => prev.filter((_, idx) => idx !== i))
       },
       "\u2715"
-    ))))), /* @__PURE__ */ React.createElement("div", { className: "paste-block", style: { marginTop: "2rem", borderTop: "1px dashed #C7C2B8", paddingTop: "1.4rem" } }, /* @__PURE__ */ React.createElement("div", { className: "paste-header" }, /* @__PURE__ */ React.createElement("span", { className: "rivet rivet-inline" }), /* @__PURE__ */ React.createElement("span", { className: "tag-label paste-label" }, "Coleta manual \u2014 cole aqui o texto de uma p\xE1gina de an\xFAncios (ex: MF Rural)")), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "0.9rem" } }, /* @__PURE__ */ React.createElement("div", { className: "field-full formato-detectado" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Formato detectado: ", /* @__PURE__ */ React.createElement("strong", null, FORMATO_NOMES[formatoPagina] || formatoPagina)), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarFormatoManual((v) => !v) }, mostrarFormatoManual ? "esconder" : "n\xE3o \xE9 isso? trocar"), mostrarFormatoManual && /* @__PURE__ */ React.createElement("select", { value: formatoPagina, onChange: (e) => setFormatoPagina(e.target.value), style: { marginTop: "0.4rem" } }, /* @__PURE__ */ React.createElement("option", { value: "mfrural" }, "MF Rural \u2014 lista (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "mfrural_item" }, "MF Rural \u2014 item \xFAnico (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "superbid" }, "Superbid (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "imovelweb" }, "ImovelWeb \u2014 im\xF3veis industriais (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "equipnet" }, "EquipNet (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "engarrafe" }, "Engarrafe (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "generico" }, "Outro site (usa IA, gasta cr\xE9dito)"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "manual-tipo" }, "Tipo de mercado"), /* @__PURE__ */ React.createElement("select", { id: "manual-tipo", value: manualTipoMercado, onChange: (e) => setManualTipoMercado(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Venda Direta"), /* @__PURE__ */ React.createElement("option", null, "Leil\xE3o"))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "manual-texto" }, "Texto colado da p\xE1gina"), /* @__PURE__ */ React.createElement(
+    ))))), /* @__PURE__ */ React.createElement("div", { className: "paste-block", style: { marginTop: "2rem", borderTop: "1px dashed #C7C2B8", paddingTop: "1.4rem" } }, /* @__PURE__ */ React.createElement("div", { className: "paste-header" }, /* @__PURE__ */ React.createElement("span", { className: "rivet rivet-inline" }), /* @__PURE__ */ React.createElement("span", { className: "tag-label paste-label" }, "Coleta manual \u2014 cole aqui o texto de uma p\xE1gina de an\xFAncios (ex: MF Rural)")), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "0.9rem" } }, /* @__PURE__ */ React.createElement("div", { className: "field-full formato-detectado" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Formato detectado: ", /* @__PURE__ */ React.createElement("strong", null, FORMATO_NOMES[formatoPagina] || formatoPagina)), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarFormatoManual((v) => !v) }, mostrarFormatoManual ? "esconder" : "n\xE3o \xE9 isso? trocar"), mostrarFormatoManual && /* @__PURE__ */ React.createElement("select", { value: formatoPagina, onChange: (e) => setFormatoPagina(e.target.value), style: { marginTop: "0.4rem" } }, /* @__PURE__ */ React.createElement("option", { value: "mfrural" }, "MF Rural \u2014 lista (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "mfrural_item" }, "MF Rural \u2014 item \xFAnico (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "superbid" }, "Superbid (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "imovelweb" }, "ImovelWeb \u2014 im\xF3veis industriais (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "equipnet" }, "EquipNet (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "engarrafe" }, "Engarrafe (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "lote_br" }, "Lote/linha completa \u2014 v\xE1rios equipamentos (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("option", { value: "generico" }, "Outro site (usa IA, gasta cr\xE9dito)"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "manual-tipo" }, "Tipo de mercado"), /* @__PURE__ */ React.createElement("select", { id: "manual-tipo", value: manualTipoMercado, onChange: (e) => setManualTipoMercado(e.target.value) }, /* @__PURE__ */ React.createElement("option", null, "Venda Direta"), /* @__PURE__ */ React.createElement("option", null, "Leil\xE3o"))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "manual-texto" }, "Texto colado da p\xE1gina"), /* @__PURE__ */ React.createElement(
       "textarea",
       {
         id: "manual-texto",
