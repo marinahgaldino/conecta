@@ -4031,6 +4031,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var ICON_GLOBE = "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3a13 13 0 0 1 3 9 13 13 0 0 1-3 9 13 13 0 0 1-3-9 13 13 0 0 1 3-9Z";
   var ICON_HISTORY = "M3 12a9 9 0 1 0 3-6.7M3 4v4.5h4.5M12 7v5l3.5 2";
   var ICON_ENGRENAGEM = "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1";
+  var ICON_ASSINATURA = "M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7ZM3 10h18M7 15h4";
   // Detecta campos importantes faltando pro aviso inteligente (Se\xE7\xE3o 5),
   // reaproveitando ranking_importancia (mesmo dado j\xE1 usado no Compatibility
   // Score) - n\xE3o \xE9 uma lista nova, \xE9 leitura do que j\xE1 existe por categoria.
@@ -5450,6 +5451,42 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [buscaInteligente, setBuscaInteligente] = (0, import_react.useState)("");
     const [sugestoesAbertas, setSugestoesAbertas] = (0, import_react.useState)(false);
     const [avisoPrecisaoAberto, setAvisoPrecisaoAberto] = (0, import_react.useState)(false);
+    // ===== v20.0: Área do Cliente (Minha Assinatura) =====
+    // IMPORTANTE: tudo nesta seção é estrutura visual/mock, preparada pra
+    // uma futura integração de billing (Asaas/Stripe). NÃO está conectada
+    // ao sistema real de créditos de IA (creditos_usuario/historico_creditos)
+    // - os limites/planos abaixo são placeholders, sem nenhuma consequência
+    // funcional hoje. "Avaliações utilizadas" usa o history real (dado
+    // genuíno); PDFs exportados e lotes usados ficam em 0 porque não há
+    // rastreamento real disso hoje (mesma limitação já documentada na V19.2).
+    const [upgradeModalAberto, setUpgradeModalAberto] = (0, import_react.useState)(false);
+    const [usoHistoricoBusca, setUsoHistoricoBusca] = (0, import_react.useState)("");
+    const [usoHistoricoPeriodo, setUsoHistoricoPeriodo] = (0, import_react.useState)("todos");
+    const [usoHistoricoPagina, setUsoHistoricoPagina] = (0, import_react.useState)(1);
+    const PLANOS_MOCK = [
+      { id: "starter", nome: "Starter", cor: "#6B7280", avaliacoesLimite: 50, lotesLimite: 2, pdfsLimite: 20, recursos: { item_unico: true, lote: true, ocr: false, pdf_white_label: false, historico: true, dashboard: false, equipe: false } },
+      { id: "professional", nome: "Professional", cor: "#D89A00", avaliacoesLimite: 300, lotesLimite: 10, pdfsLimite: 150, recursos: { item_unico: true, lote: true, ocr: true, pdf_white_label: true, historico: true, dashboard: true, equipe: false } },
+      { id: "enterprise", nome: "Enterprise", cor: "#1B1D1F", avaliacoesLimite: null, lotesLimite: null, pdfsLimite: null, recursos: { item_unico: true, lote: true, ocr: true, pdf_white_label: true, historico: true, dashboard: true, equipe: true } }
+    ];
+    const RECURSOS_LABELS = [
+      { id: "item_unico", label: t("Item \xDAnico", "Single Item") },
+      { id: "lote", label: t("Avalia\xE7\xE3o em Lote", "Batch Evaluation") },
+      { id: "ocr", label: t("OCR (leitura de placa por foto)", "OCR (nameplate photo reading)") },
+      { id: "pdf_white_label", label: t("PDF White Label", "White Label PDF") },
+      { id: "historico", label: t("Hist\xF3rico", "History") },
+      { id: "dashboard", label: t("Dashboard Executivo", "Executive Dashboard") },
+      { id: "equipe", label: t("Equipe (multiusu\xE1rio)", "Team (multi-user)") }
+    ];
+    const planoAtualId = "professional";
+    const planoAtual = PLANOS_MOCK.find((p) => p.id === planoAtualId);
+    const assinaturaAtual = {
+      status: "ativa",
+      proximaRenovacao: (() => { const d = /* @__PURE__ */ new Date(); d.setDate(d.getDate() + 18); return d; })(),
+      avaliacoesUsadas: history.length,
+      pdfsExportados: 0,
+      lotesUsados: 0
+    };
+    const diasRestantesAssinatura = Math.max(0, Math.ceil((assinaturaAtual.proximaRenovacao - /* @__PURE__ */ new Date()) / (1e3 * 60 * 60 * 24)));
     const PDF_CONFIG_PADRAO = {
       logoDataUrl: null,
       nomeEmpresa: "",
@@ -7637,6 +7674,67 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .exec-timeline-texto { color: #1B1D1F; flex: 1; }
         .exec-timeline-data { color: #9CA0A6; font-size: 0.75rem; }
 
+        /* ===== v20.0: Minha Assinatura ===== */
+        .assinatura-hero {
+          background: linear-gradient(160deg, #161616, #080808);
+          border-radius: 16px;
+          padding: 1.6rem 1.9rem;
+          margin: 0.5rem 1.5rem 1.4rem;
+          color: #EDECE6;
+        }
+        .assinatura-hero-topo { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.8rem; }
+        .assinatura-hero-eyebrow { font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.06em; color: #D89A00; }
+        .assinatura-hero-nome { font-family: 'Manrope', sans-serif; font-size: 1.5rem; font-weight: 700; margin: 0.3rem 0 0; color: #FFFFFF; }
+        .assinatura-status-badge { font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 0.3rem 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .assinatura-status-badge.status-ativa { background: rgba(74,222,128,0.15); color: #4ADE80; }
+        .assinatura-status-badge.status-trial { background: rgba(216,154,0,0.15); color: #D89A00; }
+        .assinatura-status-badge.status-expirada { background: rgba(220,80,80,0.15); color: #E88A8A; }
+        .assinatura-hero-info { display: flex; gap: 2.2rem; margin-top: 1.3rem; }
+        .assinatura-hero-info div { display: flex; flex-direction: column; gap: 0.2rem; }
+        .assinatura-hero-info span { font-size: 0.75rem; color: #9CA0A6; }
+        .assinatura-hero-info strong { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; color: #FFFFFF; }
+        .consumo-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.9rem; margin: 0.6rem 1.5rem 0; }
+        .consumo-card { background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 14px; padding: 1rem 1.1rem; box-shadow: 0 2px 10px rgba(20,20,20,0.05); }
+        .consumo-label { font-size: 0.7rem; color: #6B7280; display: block; }
+        .consumo-valor-row { margin-top: 0.4rem; }
+        .consumo-valor { font-family: 'IBM Plex Mono', monospace; font-size: 1.3rem; font-weight: 700; color: #1B1D1F; }
+        .consumo-limite { font-size: 0.8rem; color: #9CA0A6; }
+        .consumo-barra-track { width: 100%; height: 6px; background: #F0EEE7; border-radius: 999px; margin-top: 0.6rem; overflow: hidden; }
+        .consumo-barra-fill { height: 100%; background: linear-gradient(90deg, #D89A00, #F0C868); border-radius: 999px; }
+        .consumo-pct { display: block; font-size: 0.7rem; color: #9CA0A6; margin-top: 0.3rem; }
+        .assinatura-tabela-wrap { margin: 0.6rem 1.5rem 0; background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 14px; overflow: hidden; box-shadow: 0 2px 10px rgba(20,20,20,0.05); }
+        .assinatura-recursos-tabela { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .assinatura-recursos-tabela td { padding: 0.7rem 1.1rem; border-bottom: 1px solid #F0EEE7; }
+        .assinatura-recursos-tabela tr:last-child td { border-bottom: none; }
+        .assinatura-recurso-status { text-align: right; }
+        .recurso-disponivel { color: #1F5C3F; font-weight: 600; }
+        .recurso-indisponivel { color: #9CA0A6; }
+        .uso-filtros-row { display: flex; gap: 0.7rem; margin: 0.6rem 1.5rem 0; flex-wrap: wrap; }
+        .uso-busca-input { flex: 1; min-width: 200px; padding: 0.6rem 0.8rem; border: 1px solid #E4E2DC; border-radius: 8px; background: #FAFAF8; font-size: 0.85rem; }
+        .uso-periodo-select { padding: 0.6rem 0.8rem; border: 1px solid #E4E2DC; border-radius: 8px; background: #FAFAF8; font-size: 0.85rem; }
+        .uso-tabela { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+        .uso-tabela th { text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 0.66rem; text-transform: uppercase; color: #8A8D91; padding: 0.6rem 1.1rem; border-bottom: 2px solid #E4E2DC; }
+        .uso-tabela td { padding: 0.6rem 1.1rem; border-bottom: 1px solid #F0EEE7; color: #1B1D1F; }
+        .uso-paginacao { display: flex; align-items: center; justify-content: center; gap: 1rem; margin: 0.8rem 1.5rem 0; font-size: 0.85rem; }
+        .uso-paginacao button { background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 6px; padding: 0.3rem 0.7rem; cursor: pointer; }
+        .uso-paginacao button:disabled { opacity: 0.4; cursor: default; }
+        .planos-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 0.6rem 1.5rem 1rem; }
+        .plano-card { position: relative; background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 14px; padding: 1.3rem; box-shadow: 0 2px 10px rgba(20,20,20,0.05); }
+        .plano-card.plano-atual { border-color: #D89A00; background: #FFFDF7; }
+        .plano-atual-badge { position: absolute; top: -10px; right: 1rem; background: #D89A00; color: #1B1D1F; font-family: 'IBM Plex Mono', monospace; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; border-radius: 999px; padding: 0.2rem 0.6rem; }
+        .plano-nome { font-family: 'Manrope', sans-serif; font-size: 1.1rem; font-weight: 700; display: block; }
+        .plano-limites { list-style: none; margin: 0.8rem 0 1rem; padding: 0; display: flex; flex-direction: column; gap: 0.35rem; }
+        .plano-limites li { font-size: 0.82rem; color: #4A5568; }
+        .plano-card button { width: 100%; }
+
+        @media (max-width: 1180px) {
+          .consumo-grid, .planos-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 620px) {
+          .consumo-grid, .planos-grid { grid-template-columns: 1fr; }
+          .assinatura-hero-info { gap: 1.2rem; }
+        }
+
         @media (max-width: 1180px) {
           .exec-kpis, .exec-atalhos { grid-template-columns: repeat(2, 1fr); }
           .exec-duas-colunas { grid-template-columns: 1fr; }
@@ -9037,6 +9135,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HISTORY }),
       t("Hist\xF3rico", "History")
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "pill-tab" + (tab === "assinatura" ? " active" : ""),
+        onClick: () => setTab("assinatura")
+      },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ASSINATURA }),
+      t("Minha Assinatura", "My Subscription")
     ), isAdmin && /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -9286,7 +9392,126 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setAvisoPrecisaoAberto(false); handleSubmit(); } }, t("Continuar mesmo assim", "Continue anyway"))
           )
         );
-      })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: () => { const faltando = getCamposImportantesFaltando(form); if (faltando.length > 0 && !avisoPrecisaoAberto) { setAvisoPrecisaoAberto(true); return; } handleSubmit(); }, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }), /* @__PURE__ */ React.createElement(SkeletonResultCard, null)))))) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+      })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: () => { const faltando = getCamposImportantesFaltando(form); if (faltando.length > 0 && !avisoPrecisaoAberto) { setAvisoPrecisaoAberto(true); return; } handleSubmit(); }, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }), /* @__PURE__ */ React.createElement(SkeletonResultCard, null)))))) : tab === "assinatura" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+      /* @__PURE__ */ React.createElement(PanelTitle, null, t("Minha Assinatura", "My Subscription")),
+
+      // ---- 1. Hero da assinatura ----
+      /* @__PURE__ */ React.createElement("div", { className: "assinatura-hero" },
+        /* @__PURE__ */ React.createElement("div", { className: "assinatura-hero-topo" },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("span", { className: "assinatura-hero-eyebrow" }, t("Plano atual", "Current plan")),
+            /* @__PURE__ */ React.createElement("h3", { className: "assinatura-hero-nome" }, planoAtual.nome)
+          ),
+          /* @__PURE__ */ React.createElement("span", { className: "assinatura-status-badge status-" + assinaturaAtual.status }, assinaturaAtual.status === "ativa" ? t("Ativa", "Active") : assinaturaAtual.status === "trial" ? "Trial" : t("Expirada", "Expired"))
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "assinatura-hero-info" },
+          /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", null, t("Pr\xF3xima renova\xE7\xE3o", "Next renewal")), /* @__PURE__ */ React.createElement("strong", null, assinaturaAtual.proximaRenovacao.toLocaleDateString("pt-BR"))),
+          /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("span", null, t("Dias restantes", "Days left")), /* @__PURE__ */ React.createElement("strong", null, diasRestantesAssinatura))
+        )
+      ),
+
+      // ---- 2. Consumo do mês ----
+      /* @__PURE__ */ React.createElement("span", { className: "tag-label", style: { marginLeft: "1.5rem" } }, t("Consumo do M\xEAs", "Monthly Usage")),
+      /* @__PURE__ */ React.createElement("div", { className: "consumo-grid" },
+        [
+          { label: t("Avalia\xE7\xF5es utilizadas", "Evaluations used"), usado: assinaturaAtual.avaliacoesUsadas, limite: planoAtual.avaliacoesLimite },
+          { label: t("Avalia\xE7\xF5es restantes", "Evaluations left"), usado: planoAtual.avaliacoesLimite === null ? null : Math.max(0, planoAtual.avaliacoesLimite - assinaturaAtual.avaliacoesUsadas), limite: planoAtual.avaliacoesLimite, invertido: true },
+          { label: t("PDFs exportados", "PDFs exported"), usado: assinaturaAtual.pdfsExportados, limite: planoAtual.pdfsLimite },
+          { label: t("Avalia\xE7\xF5es em lote", "Batch evaluations"), usado: assinaturaAtual.lotesUsados, limite: planoAtual.lotesLimite }
+        ].map((c, i) => {
+          const ilimitado = c.limite === null;
+          const pct = ilimitado || !c.limite ? 0 : Math.min(100, Math.round((c.invertido ? planoAtual.avaliacoesLimite - c.usado : c.usado) / c.limite * 100));
+          return /* @__PURE__ */ React.createElement("div", { key: i, className: "consumo-card" },
+            /* @__PURE__ */ React.createElement("span", { className: "consumo-label" }, c.label),
+            /* @__PURE__ */ React.createElement("div", { className: "consumo-valor-row" },
+              /* @__PURE__ */ React.createElement("span", { className: "consumo-valor" }, c.usado === null ? "\u2014" : c.usado),
+              /* @__PURE__ */ React.createElement("span", { className: "consumo-limite" }, " / ", ilimitado ? t("ilimitado", "unlimited") : c.limite)
+            ),
+            !ilimitado && /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-fill", style: { width: pct + "%" } })),
+            !ilimitado && /* @__PURE__ */ React.createElement("span", { className: "consumo-pct" }, pct, "%")
+          );
+        })
+      ),
+
+      // ---- 3. Funcionalidades do plano ----
+      /* @__PURE__ */ React.createElement("span", { className: "tag-label", style: { marginLeft: "1.5rem", marginTop: "1.4rem", display: "block" } }, t("Funcionalidades do Plano", "Plan Features")),
+      /* @__PURE__ */ React.createElement("div", { className: "assinatura-tabela-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "assinatura-recursos-tabela" },
+        /* @__PURE__ */ React.createElement("tbody", null, RECURSOS_LABELS.map((r) => /* @__PURE__ */ React.createElement("tr", { key: r.id },
+          /* @__PURE__ */ React.createElement("td", null, r.label),
+          /* @__PURE__ */ React.createElement("td", { className: "assinatura-recurso-status" }, planoAtual.recursos[r.id] ? /* @__PURE__ */ React.createElement("span", { className: "recurso-disponivel" }, "\u2713 ", t("Dispon\xEDvel", "Available")) : /* @__PURE__ */ React.createElement("span", { className: "recurso-indisponivel" }, "\u2014 ", t("N\xE3o dispon\xEDvel", "Not available")))
+        )))
+      )),
+
+      // ---- 4. Histórico de uso ----
+      /* @__PURE__ */ React.createElement("span", { className: "tag-label", style: { marginLeft: "1.5rem", marginTop: "1.4rem", display: "block" } }, t("Hist\xF3rico de Uso", "Usage History")),
+      /* @__PURE__ */ React.createElement("div", { className: "uso-filtros-row" },
+        /* @__PURE__ */ React.createElement("input", { type: "text", className: "uso-busca-input", placeholder: t("Buscar equipamento ou categoria\u2026", "Search equipment or category\u2026"), value: usoHistoricoBusca, onChange: (e) => { setUsoHistoricoBusca(e.target.value); setUsoHistoricoPagina(1); } }),
+        /* @__PURE__ */ React.createElement("select", { className: "uso-periodo-select", value: usoHistoricoPeriodo, onChange: (e) => { setUsoHistoricoPeriodo(e.target.value); setUsoHistoricoPagina(1); } },
+          /* @__PURE__ */ React.createElement("option", { value: "todos" }, t("Todo o per\xEDodo", "All time")),
+          /* @__PURE__ */ React.createElement("option", { value: "7d" }, t("\xDAltimos 7 dias", "Last 7 days")),
+          /* @__PURE__ */ React.createElement("option", { value: "30d" }, t("\xDAltimos 30 dias", "Last 30 days"))
+        )
+      ),
+      (() => {
+        const agora = /* @__PURE__ */ new Date();
+        const limiteDias = usoHistoricoPeriodo === "7d" ? 7 : usoHistoricoPeriodo === "30d" ? 30 : null;
+        const termo = usoHistoricoBusca.trim().toLowerCase();
+        const filtrado = history.slice().sort((a, b) => b.id - a.id).filter((h) => {
+          if (limiteDias !== null && h.data) {
+            const diffDias = (agora - new Date(h.data)) / (1e3 * 60 * 60 * 24);
+            if (diffDias > limiteDias) return false;
+          }
+          if (!termo) return true;
+          return [h.item.categoria, h.item.marca, h.item.modelo].filter(Boolean).join(" ").toLowerCase().includes(termo);
+        });
+        const porPagina = 10;
+        const totalPaginas = Math.max(1, Math.ceil(filtrado.length / porPagina));
+        const paginaAtualUso = Math.min(usoHistoricoPagina, totalPaginas);
+        const pagina = filtrado.slice((paginaAtualUso - 1) * porPagina, paginaAtualUso * porPagina);
+        if (filtrado.length === 0) return /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { margin: "0.8rem 1.5rem" } }, t("Nenhum uso encontrado.", "No usage found."));
+        return /* @__PURE__ */ React.createElement(React.Fragment, null,
+          /* @__PURE__ */ React.createElement("div", { className: "assinatura-tabela-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "uso-tabela" },
+            /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null,
+              /* @__PURE__ */ React.createElement("th", null, t("Data", "Date")),
+              /* @__PURE__ */ React.createElement("th", null, t("Equipamento", "Equipment")),
+              /* @__PURE__ */ React.createElement("th", null, t("Categoria", "Category")),
+              /* @__PURE__ */ React.createElement("th", null, t("Tipo", "Type")),
+              /* @__PURE__ */ React.createElement("th", null, t("Consumiu avalia\xE7\xE3o?", "Used evaluation?"))
+            )),
+            /* @__PURE__ */ React.createElement("tbody", null, pagina.map((h) => /* @__PURE__ */ React.createElement("tr", { key: h.id },
+              /* @__PURE__ */ React.createElement("td", null, h.data ? new Date(h.data).toLocaleDateString("pt-BR") : "\u2014"),
+              /* @__PURE__ */ React.createElement("td", null, h.item.modelo || h.item.categoria || "\u2014"),
+              /* @__PURE__ */ React.createElement("td", null, h.item.categoria || "\u2014"),
+              /* @__PURE__ */ React.createElement("td", null, h.result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("Pesquisa em mercado", "Market research")),
+              /* @__PURE__ */ React.createElement("td", null, h.result.origem === "base_propria" ? t("N\xE3o", "No") : t("Sim", "Yes"))
+            )))
+          )),
+          totalPaginas > 1 && /* @__PURE__ */ React.createElement("div", { className: "uso-paginacao" },
+            /* @__PURE__ */ React.createElement("button", { type: "button", disabled: paginaAtualUso <= 1, onClick: () => setUsoHistoricoPagina(paginaAtualUso - 1) }, "\u2190"),
+            /* @__PURE__ */ React.createElement("span", null, paginaAtualUso, " / ", totalPaginas),
+            /* @__PURE__ */ React.createElement("button", { type: "button", disabled: paginaAtualUso >= totalPaginas, onClick: () => setUsoHistoricoPagina(paginaAtualUso + 1) }, "\u2192")
+          )
+        );
+      })(),
+
+      // ---- 5. Alterar plano ----
+      /* @__PURE__ */ React.createElement("span", { className: "tag-label", style: { marginLeft: "1.5rem", marginTop: "1.4rem", display: "block" } }, t("Alterar Plano", "Change Plan")),
+      /* @__PURE__ */ React.createElement("div", { className: "planos-grid" }, PLANOS_MOCK.map((p) => /* @__PURE__ */ React.createElement("div", { key: p.id, className: "plano-card" + (p.id === planoAtualId ? " plano-atual" : "") },
+        p.id === planoAtualId && /* @__PURE__ */ React.createElement("span", { className: "plano-atual-badge" }, t("SEU PLANO", "YOUR PLAN")),
+        /* @__PURE__ */ React.createElement("span", { className: "plano-nome", style: { color: p.cor } }, p.nome),
+        /* @__PURE__ */ React.createElement("ul", { className: "plano-limites" },
+          /* @__PURE__ */ React.createElement("li", null, p.avaliacoesLimite === null ? t("Avalia\xE7\xF5es ilimitadas", "Unlimited evaluations") : `${p.avaliacoesLimite} ${t("avalia\xE7\xF5es/m\xEAs", "evaluations/month")}`),
+          /* @__PURE__ */ React.createElement("li", null, p.pdfsLimite === null ? t("PDFs ilimitados", "Unlimited PDFs") : `${p.pdfsLimite} PDFs/m\xEAs`)
+        ),
+        p.id !== planoAtualId && /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setUpgradeModalAberto(true) }, t("Solicitar Upgrade", "Request Upgrade"))
+      ))),
+
+      upgradeModalAberto && /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: () => setUpgradeModalAberto(false) }, /* @__PURE__ */ React.createElement("div", { className: "modal-pdf", onClick: (e) => e.stopPropagation() },
+        /* @__PURE__ */ React.createElement("h4", null, t("Solicitar upgrade de plano", "Request plan upgrade")),
+        /* @__PURE__ */ React.createElement("p", { className: "modal-pdf-sub" }, t("Sua solicita\xE7\xE3o ser\xE1 registrada. A integra\xE7\xE3o de pagamento ainda n\xE3o est\xE1 ativa \u2014 nossa equipe vai entrar em contato pra confirmar a mudan\xE7a de plano.", "Your request will be recorded. Payment integration isn't active yet \u2014 our team will reach out to confirm the plan change.")),
+        /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-botoes" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setUpgradeModalAberto(false) }, t("Entendi", "Got it")))
+      ))
+    ) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Hist\xF3rico de Avalia\xE7\xF5es", "Evaluation History")),
       /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, t("Consulte e reabra avalia\xE7\xF5es realizadas anteriormente.", "Review and reopen previously performed evaluations.")),
       /* @__PURE__ */ React.createElement("div", { className: "historico-search-row" },
