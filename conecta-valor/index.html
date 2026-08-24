@@ -4003,6 +4003,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   // tens\xE3o/carca\xE7a n\xE3o s\xE3o coletados hoje, ent\xE3o n\xE3o entram na checagem).
   var MAPA_CAMPO_IMPORTANTE_FORM = {
     modelo: "modelo",
+    fabricante: "marca",
     potencia_cv: "potenciaCv",
     potencia_kw: "potenciaKw",
     rpm: "rpm",
@@ -4011,11 +4012,34 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   };
   var LABEL_CAMPO_IMPORTANTE = {
     modelo: "Modelo",
+    marca: "Marca",
     potenciaCv: "Pot\xEAncia",
     potenciaKw: "Pot\xEAncia",
     rpm: "RPM",
     anoFabricacao: "Ano",
     estado: "Estado",
+  };
+  // Rótulos pra atributos do ranking_importancia que não têm campo
+  // correspondente no formulário simples - usados só no checklist visual
+  // (aparecem sempre como não preenchidos, já que o form não os coleta).
+  var LABEL_ATRIBUTO_RANKING = {
+    tensao_v: "Tens\xE3o",
+    carcaca: "Carca\xE7a",
+    relacao_reducao: "Rela\xE7\xE3o de redu\xE7\xE3o",
+    torque_nm: "Torque",
+    montagem: "Montagem",
+    torque_nominal_nm: "Torque nominal",
+    potencia_admissivel_cv: "Pot\xEAncia admiss\xEDvel",
+    tipo: "Tipo",
+    vazao_m3h: "Vaz\xE3o",
+    pressao_mca: "Press\xE3o",
+    potencia_motor_cv: "Pot\xEAncia do motor",
+    material: "Material",
+    pressao_bar: "Press\xE3o",
+    vazao_m3min: "Vaz\xE3o",
+    potencia_kva: "Pot\xEAncia",
+    tipo_combustivel: "Tipo de combust\xEDvel",
+    horas_uso: "Horas de uso",
   };
   function getCamposImportantesFaltando(form) {
     const categoriaId = form.categoria_id || resolverCategoriaId(form.categoria);
@@ -4879,6 +4903,75 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     return base;
   }
 
+  // Nota de qualidade v2 (0-100) - composta por 5 fatores ponderados, todos
+  // derivados de dados que já existem na avaliação (nenhum cálculo novo de
+  // servidor, nenhuma chamada de IA). Pesos exatos pedidos:
+  // compatibilidade média 35% + qtd comparáveis 20% + campos técnicos 20% +
+  // dispersão de preços 15% + outliers removidos 10%. As curvas dentro de
+  // cada fator (ex: "6+ comparáveis = nota máxima nesse fator") são um
+  // critério visual razoável, não uma métrica estatisticamente validada -
+  // documentado aqui pra ficar claro que são escolhas de apresentação.
+  var BARRA_COMPAT_NOTA = { alta: 90, "m\xE9dia": 55, baixa: 25 };
+  function calcularNotaQualidadeV2(item, result) {
+    const comparaveis = result.comparaveis || [];
+
+    // 1) Compatibilidade média dos comparáveis - 35%
+    const subCompat = comparaveis.length > 0
+      ? comparaveis.reduce((soma, c) => soma + (BARRA_COMPAT_NOTA[c.compatibilidade] || 0), 0) / comparaveis.length
+      : 0;
+
+    // 2) Quantidade de comparáveis válidos - 20% (6+ comparáveis = nota máxima nesse fator)
+    const qtdUsados = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : comparaveis.length;
+    const subQtd = Math.min(100, (qtdUsados / 6) * 100);
+
+    // 3) Campos técnicos preenchidos - 20% (usa ranking_importancia já existente)
+    const categoriaId = item.categoria_id || resolverCategoriaId(item.categoria);
+    const schema = categoriaId && SCHEMA_FUNCAO[categoriaId];
+    const atributosImportantes = schema && schema.ranking_importancia || [];
+    let subCampos = 100;
+    if (atributosImportantes.length > 0) {
+      const jaContados = /* @__PURE__ */ new Set();
+      let total = 0, preenchidos = 0;
+      atributosImportantes.forEach((attr) => {
+        const chaveForm = MAPA_CAMPO_IMPORTANTE_FORM[attr];
+        const label = chaveForm ? LABEL_CAMPO_IMPORTANTE[chaveForm] : LABEL_ATRIBUTO_RANKING[attr] || attr;
+        if (jaContados.has(label)) return;
+        jaContados.add(label);
+        total++;
+        if (chaveForm && item[chaveForm] && String(item[chaveForm]).trim() !== "") preenchidos++;
+      });
+      subCampos = total > 0 ? preenchidos / total * 100 : 100;
+    }
+
+    // 4) Dispersão dos preços - 15% (menor dispersão = nota maior nesse fator)
+    let subDispersao = 100;
+    const precos = comparaveis.map((c) => Number(c.preco) || 0).filter((p) => p > 0);
+    if (precos.length >= 2) {
+      const min = Math.min(...precos);
+      const max = Math.max(...precos);
+      const media = result.faixa_media || precos.reduce((a, b) => a + b, 0) / precos.length;
+      const dispersaoPct = media > 0 ? (max - min) / media * 100 : 0;
+      subDispersao = dispersaoPct <= 15 ? 100 : dispersaoPct <= 30 ? 70 : 35;
+    }
+
+    // 5) Outliers removidos - 10% (menos outliers em relação ao total encontrado = nota maior)
+    let subOutliers = 100;
+    if (result.funil_comparaveis && result.funil_comparaveis.encontrados > 0 && result.funil_comparaveis.outliers_removidos > 0) {
+      const proporcao = result.funil_comparaveis.outliers_removidos / result.funil_comparaveis.encontrados;
+      subOutliers = Math.max(30, 100 - proporcao * 150);
+    }
+
+    const nota = subCompat * 0.35 + subQtd * 0.2 + subCampos * 0.2 + subDispersao * 0.15 + subOutliers * 0.1;
+    return {
+      nota: Math.round(Math.max(0, Math.min(100, nota))),
+      subCompat: Math.round(subCompat),
+      subQtd: Math.round(subQtd),
+      subCampos: Math.round(subCampos),
+      subDispersao: Math.round(subDispersao),
+      subOutliers: Math.round(subOutliers)
+    };
+  }
+
   // Fatores que influenciaram a estimativa, baseado só no que o item já
   // tinha preenchido - não é um cálculo novo, é uma leitura do que já
   // existe no item, com um rótulo de influência fixo por tipo de campo.
@@ -4984,6 +5077,33 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       ? Math.round(comparaveisOrdenados.reduce((soma, c) => soma + (BARRA_COMPAT[c.compatibilidade] || 0), 0) / comparaveisOrdenados.length)
       : null;
 
+    // ===== v18.0: Qualidade da Avaliação 2.0 =====
+    const notaV2 = calcularNotaQualidadeV2(item, result);
+    const classificarCompat = (pct) => pct >= 90 ? t("Excelente", "Excellent") : pct >= 75 ? t("Boa", "Good") : pct >= 60 ? t("Moderada", "Moderate") : t("Baixa", "Low");
+    const classificarDispersao = (pct) => pct <= 15 ? t("Mercado consistente", "Consistent market") : pct <= 30 ? t("Mercado variado", "Varied market") : t("Mercado heterog\xEAneo", "Heterogeneous market");
+    const categoriaIdQual = item.categoria_id || resolverCategoriaId(item.categoria);
+    const schemaQual = categoriaIdQual && SCHEMA_FUNCAO[categoriaIdQual];
+    const atributosQual = schemaQual && schemaQual.ranking_importancia || [];
+    const checklistTecnico = [];
+    const jaAdicionadosChecklist = /* @__PURE__ */ new Set();
+    atributosQual.forEach((attr) => {
+      const chaveForm = MAPA_CAMPO_IMPORTANTE_FORM[attr];
+      const label = chaveForm ? LABEL_CAMPO_IMPORTANTE[chaveForm] : LABEL_ATRIBUTO_RANKING[attr] || attr;
+      if (jaAdicionadosChecklist.has(label)) return;
+      jaAdicionadosChecklist.add(label);
+      const preenchido = !!(chaveForm && item[chaveForm] && String(item[chaveForm]).trim() !== "");
+      checklistTecnico.push({ label, preenchido });
+    });
+    const qtdPreenchidosChecklist = checklistTecnico.filter((c) => c.preenchido).length;
+    const encontradosQual = result.funil_comparaveis ? result.funil_comparaveis.encontrados : comparaveisOrdenados.length;
+    const usadosQual = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : comparaveisOrdenados.length;
+    const descartadosQual = Math.max(0, encontradosQual - usadosQual);
+    const outliersQual = result.funil_comparaveis && result.funil_comparaveis.outliers_removidos || 0;
+    const precosQual = comparaveisOrdenados.map((c) => Number(c.preco) || 0).filter((p) => p > 0);
+    const menorPrecoQual = precosQual.length > 0 ? Math.min(...precosQual) : null;
+    const maiorPrecoQual = precosQual.length > 0 ? Math.max(...precosQual) : null;
+    const dispersaoQual = precosQual.length >= 2 && result.faixa_media > 0 ? Math.round((maiorPrecoQual - menorPrecoQual) / result.faixa_media * 100) : null;
+
     return /* @__PURE__ */ React.createElement("div", { className: "tag-card" },
       /* @__PURE__ */ React.createElement(Rivet, null),
       /* @__PURE__ */ React.createElement("span", { className: "tag-report-kicker" }, t("Avalia\xE7\xE3o de Mercado", "Market Valuation")),
@@ -5001,18 +5121,64 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         )
       ),
 
-      // ===== Card Qualidade da Avalia\xE7\xE3o (preto premium) =====
-      notaQualidade !== null && /* @__PURE__ */ React.createElement("div", { className: "qualidade-card" },
-        /* @__PURE__ */ React.createElement("span", { className: "tag-label light" }, t("Qualidade da Avalia\xE7\xE3o", "Evaluation Quality")),
-        /* @__PURE__ */ React.createElement("div", { className: "qualidade-nota-row" },
-          /* @__PURE__ */ React.createElement("span", { className: "qualidade-nota" }, notaQualidade),
-          /* @__PURE__ */ React.createElement("span", { className: "qualidade-nota-max" }, "/100"),
-          result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, t("confian\xE7a ", "confidence "), result.confianca_avaliacao)
+      // ===== Painel Qualidade da Avalia\xE7\xE3o 2.0 (premium) =====
+      notaV2 && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-painel" },
+        /* @__PURE__ */ React.createElement("div", { className: "qualidade2-header" },
+          /* @__PURE__ */ React.createElement("span", { className: "qualidade2-titulo" }, t("Qualidade da Avalia\xE7\xE3o", "Evaluation Quality")),
+          /* @__PURE__ */ React.createElement("div", { className: "qualidade2-nota-row" },
+            /* @__PURE__ */ React.createElement("span", { className: "qualidade2-nota" }, notaV2.nota),
+            /* @__PURE__ */ React.createElement("span", { className: "qualidade2-nota-max" }, "/100"),
+            result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, result.confianca_avaliacao === "alta" ? t("Alta confian\xE7a", "High confidence") : result.confianca_avaliacao === "m\xE9dia" ? t("M\xE9dia confian\xE7a", "Medium confidence") : t("Baixa confian\xE7a", "Low confidence"))
+          )
         ),
-        /* @__PURE__ */ React.createElement("div", { className: "qualidade-detalhe" },
-          result.funil_comparaveis && /* @__PURE__ */ React.createElement("span", null, t("Comparáveis usados: ", "Comparables used: "), result.funil_comparaveis.usados_no_calculo),
-          compatibilidadeMedia !== null && /* @__PURE__ */ React.createElement("span", null, t("Compatibilidade m\xE9dia: ", "Average compatibility: "), compatibilidadeMedia, "%"),
-          /* @__PURE__ */ React.createElement("span", null, t("Origem: ", "Source: "), result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("IA + mercado", "AI + market"))
+        /* @__PURE__ */ React.createElement("div", { className: "qualidade2-corpo" },
+
+          // ---- Compatibilidade Média ----
+          /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao" },
+            /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao-head" },
+              /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-titulo" }, t("Compatibilidade M\xE9dia", "Average Compatibility")),
+              compatibilidadeMedia !== null && /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-valor" }, compatibilidadeMedia, "% \u2014 ", classificarCompat(compatibilidadeMedia))
+            ),
+            compatibilidadeMedia !== null && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "qualidade2-barra-fill", style: { width: compatibilidadeMedia + "%" } }))
+          ),
+
+          // ---- Dados Técnicos Informados ----
+          checklistTecnico.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao" },
+            /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-titulo" }, t(`Voc\xEA informou ${qtdPreenchidosChecklist} dos ${checklistTecnico.length} dados mais importantes`, `You provided ${qtdPreenchidosChecklist} of the ${checklistTecnico.length} most important data points`)),
+            /* @__PURE__ */ React.createElement("div", { className: "qualidade2-checklist" }, checklistTecnico.map((c, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "qualidade2-check-item" + (c.preenchido ? " preenchido" : "") }, c.preenchido ? "\u2713" : "\u25CB", " ", c.label)))
+          ),
+
+          // ---- Comparáveis Utilizados ----
+          /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao" },
+            /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-titulo" }, t("Compar\xE1veis Utilizados", "Comparables Used")),
+            /* @__PURE__ */ React.createElement("div", { className: "qualidade2-indicadores" },
+              /* @__PURE__ */ React.createElement("div", { className: "qualidade2-indicador" }, /* @__PURE__ */ React.createElement("span", { className: "qualidade2-indicador-num" }, encontradosQual), /* @__PURE__ */ React.createElement("span", { className: "qualidade2-indicador-label" }, t("encontrados", "found"))),
+              /* @__PURE__ */ React.createElement("div", { className: "qualidade2-indicador" }, /* @__PURE__ */ React.createElement("span", { className: "qualidade2-indicador-num verde" }, usadosQual), /* @__PURE__ */ React.createElement("span", { className: "qualidade2-indicador-label" }, t("utilizados", "used"))),
+              /* @__PURE__ */ React.createElement("div", { className: "qualidade2-indicador" }, /* @__PURE__ */ React.createElement("span", { className: "qualidade2-indicador-num" }, descartadosQual), /* @__PURE__ */ React.createElement("span", { className: "qualidade2-indicador-label" }, t("descartados", "discarded")))
+            ),
+            descartadosQual > 0 && /* @__PURE__ */ React.createElement("p", { className: "qualidade2-nota-explicativa" }, outliersQual > 0 ? t(`${descartadosQual} compar\xE1veis foram descartados por incompatibilidade t\xE9cnica ou por serem valores discrepantes (outliers) em rela\xE7\xE3o ao restante.`, `${descartadosQual} comparables were discarded due to technical incompatibility or being outliers relative to the rest.`) : t(`${descartadosQual} compar\xE1veis foram descartados por incompatibilidade t\xE9cnica com o item avaliado.`, `${descartadosQual} comparables were discarded due to technical incompatibility with the evaluated item.`))
+          ),
+
+          // ---- Dispersão dos Preços ----
+          dispersaoQual !== null && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao" },
+            /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-titulo" }, t("Dispers\xE3o dos Pre\xE7os", "Price Dispersion")),
+            /* @__PURE__ */ React.createElement("div", { className: "qualidade2-dispersao-row" },
+              /* @__PURE__ */ React.createElement("span", null, t("Menor: ", "Lowest: "), formatBRL(menorPrecoQual)),
+              /* @__PURE__ */ React.createElement("span", null, t("Maior: ", "Highest: "), formatBRL(maiorPrecoQual)),
+              /* @__PURE__ */ React.createElement("span", { className: "qualidade2-dispersao-pct" }, dispersaoQual, "% \u2014 ", classificarDispersao(dispersaoQual))
+            )
+          ),
+
+          // ---- Como chegamos ao valor ----
+          /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao" },
+            /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-titulo" }, t("Como chegamos ao valor", "How we got to this value")),
+            /* @__PURE__ */ React.createElement("div", { className: "qualidade2-etapas" },
+              [t("Identifica\xE7\xE3o t\xE9cnica do equipamento", "Technical identification of the equipment"), t("Busca de equipamentos compat\xEDveis", "Search for compatible equipment"), t("Remo\xE7\xE3o autom\xE1tica de outliers", "Automatic outlier removal"), t("Consolida\xE7\xE3o da faixa de mercado", "Market range consolidation")].map((etapa, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "qualidade2-etapa" },
+                /* @__PURE__ */ React.createElement("span", { className: "qualidade2-etapa-num" }, i + 1),
+                /* @__PURE__ */ React.createElement("span", { className: "qualidade2-etapa-texto" }, etapa)
+              ))
+            )
+          )
         )
       ),
 
@@ -7113,37 +7279,69 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           color: #B9BCC2;
         }
 
-        /* ===== v15.1: Qualidade da Avaliação ===== */
-        .qualidade-card {
-          background: #080808;
+        /* ===== v18.0: Qualidade da Avaliação 2.0 (painel premium) ===== */
+        .qualidade2-painel {
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
           border-radius: 16px;
-          padding: 1.4rem 1.75rem;
           margin: 0 0 1.25rem;
-          color: #EDECE6;
+          overflow: hidden;
+          box-shadow: 0 3px 14px rgba(20,20,20,0.06);
         }
-        .tag-label.light { color: #B9BCC2; }
-        .qualidade-nota-row {
-          display: flex;
-          align-items: baseline;
-          gap: 0.5rem;
-          margin-top: 0.5rem;
+        .qualidade2-header {
+          background: linear-gradient(135deg, #161616, #080808);
+          padding: 1.3rem 1.6rem;
+          border-bottom: 2px solid #D89A00;
         }
-        .qualidade-nota {
+        .qualidade2-titulo {
           font-family: 'IBM Plex Mono', monospace;
-          font-size: 2.1rem;
+          font-size: 0.72rem;
+          text-transform: uppercase;
+          letter-spacing: 0.06em;
+          color: #D89A00;
+        }
+        .qualidade2-nota-row { display: flex; align-items: baseline; gap: 0.6rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .qualidade2-nota { font-family: 'IBM Plex Mono', monospace; font-size: 2.4rem; font-weight: 700; color: #4ADE80; }
+        .qualidade2-nota-max { font-size: 1.05rem; color: #8A8D91; }
+        .qualidade2-corpo { padding: 1.4rem 1.6rem; display: flex; flex-direction: column; gap: 1.3rem; }
+        .qualidade2-secao { padding-bottom: 1.1rem; border-bottom: 1px solid #F0EEE7; }
+        .qualidade2-secao:last-child { border-bottom: none; padding-bottom: 0; }
+        .qualidade2-secao-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem; }
+        .qualidade2-secao-titulo {
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.7rem;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: #96650B;
+        }
+        .qualidade2-secao-valor { font-size: 0.88rem; font-weight: 600; color: #1B1D1F; }
+        .qualidade2-barra-track { width: 100%; height: 8px; background: #F0EEE7; border-radius: 999px; margin-top: 0.6rem; overflow: hidden; }
+        .qualidade2-barra-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #D89A00, #F0C868); }
+        .qualidade2-checklist { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 0.7rem; }
+        .qualidade2-check-item { font-size: 0.85rem; color: #A8ACB3; }
+        .qualidade2-check-item.preenchido { color: #1F5C3F; font-weight: 600; }
+        .qualidade2-indicadores { display: flex; gap: 1.8rem; margin-top: 0.7rem; }
+        .qualidade2-indicador { display: flex; flex-direction: column; align-items: flex-start; }
+        .qualidade2-indicador-num { font-family: 'IBM Plex Mono', monospace; font-size: 1.5rem; font-weight: 700; color: #1B1D1F; }
+        .qualidade2-indicador-num.verde { color: #1F5C3F; }
+        .qualidade2-indicador-label { font-size: 0.72rem; color: #6B7280; margin-top: 0.15rem; }
+        .qualidade2-nota-explicativa { font-size: 0.8rem; color: #6B7280; margin-top: 0.7rem; line-height: 1.5; }
+        .qualidade2-dispersao-row { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-top: 0.7rem; font-size: 0.88rem; color: #3A3D42; }
+        .qualidade2-dispersao-pct { font-weight: 700; color: #1B1D1F; }
+        .qualidade2-etapas { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.7rem; }
+        .qualidade2-etapa { display: flex; align-items: center; gap: 0.7rem; font-size: 0.85rem; color: #3A3D42; }
+        .qualidade2-etapa-num {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 22px; height: 22px;
+          border-radius: 50%;
+          background: #FBF0DC;
+          color: #96650B;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.75rem;
           font-weight: 700;
-          color: #4ADE80;
-        }
-        .qualidade-nota-max {
-          font-size: 1rem;
-          color: #7A7E85;
-        }
-        .qualidade-detalhe {
-          display: flex;
-          gap: 1.25rem;
-          margin-top: 0.6rem;
-          font-size: 0.8rem;
-          color: #B9BCC2;
+          flex-shrink: 0;
         }
 
         /* ===== v15.1: O que é este equipamento (chips) ===== */
