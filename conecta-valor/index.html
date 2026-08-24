@@ -3994,6 +3994,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var ICON_SEARCH = "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM21 21l-4.35-4.35";
   var ICON_CHART = "M4 20V10m6 10V4m6 16v-7";
   var ICON_GLOBE = "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3a13 13 0 0 1 3 9 13 13 0 0 1-3 9 13 13 0 0 1-3-9 13 13 0 0 1 3-9Z";
+  var ICON_HISTORY = "M3 12a9 9 0 1 0 3-6.7M3 4v4.5h4.5M12 7v5l3.5 2";
   // Detecta campos importantes faltando pro aviso inteligente (Se\xE7\xE3o 5),
   // reaproveitando ranking_importancia (mesmo dado j\xE1 usado no Compatibility
   // Score) - n\xE3o \xE9 uma lista nova, \xE9 leitura do que j\xE1 existe por categoria.
@@ -4717,6 +4718,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [error, setError] = (0, import_react.useState)(null);
     const [result, setResult] = (0, import_react.useState)(null);
     const [history, setHistory] = (0, import_react.useState)([]);
+    const [historicoSearch, setHistoricoSearch] = (0, import_react.useState)("");
     const [selecionadosPdf, setSelecionadosPdf] = (0, import_react.useState)({});
     const [stats, setStats] = (0, import_react.useState)(null);
     const [statsLoading, setStatsLoading] = (0, import_react.useState)(false);
@@ -6858,6 +6860,72 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-size: 0.72rem;
           color: #4A5568;
         }
+
+        /* ===== v17.0: Histórico de Avaliações ===== */
+        .historico-search-row { margin: 1rem 1.5rem 0; }
+        .historico-search-input {
+          width: 100%;
+          padding: 0.7rem 0.9rem;
+          border: 1px solid #E4E2DC;
+          border-radius: 10px;
+          background: #FAFAF8;
+          font-family: 'Inter', sans-serif;
+          font-size: 0.92rem;
+        }
+        .historico-search-input:focus {
+          outline: 2px solid rgba(216,154,0,0.45);
+          outline-offset: 1px;
+          border-color: #D89A00;
+        }
+        .historico-lista {
+          margin: 1.2rem 1.5rem 0;
+          display: flex;
+          flex-direction: column;
+          gap: 0.8rem;
+        }
+        .historico-card {
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
+          border-radius: 12px;
+          padding: 1.1rem 1.3rem;
+          box-shadow: 0 2px 10px rgba(20,20,20,0.05);
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1rem;
+          flex-wrap: wrap;
+        }
+        .historico-card-titulo { font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 1rem; color: #1B1D1F; }
+        .historico-card-meta { display: flex; gap: 0.6rem; margin-top: 0.25rem; font-size: 0.82rem; color: #6B7280; }
+        .historico-card-valores { display: flex; align-items: center; gap: 0.7rem; margin-top: 0.5rem; flex-wrap: wrap; }
+        .historico-card-valor { font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: #1F5C3F; font-size: 1rem; }
+        .historico-card-faixa { font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; color: #6B7280; }
+        .historico-card-data { font-size: 0.75rem; color: #8A8D91; margin-top: 0.4rem; }
+        .btn-abrir-avaliacao {
+          flex-shrink: 0;
+          background: #FFFFFF;
+          border: 1.5px solid #D89A00;
+          color: #96650B;
+          font-family: 'Manrope', sans-serif;
+          font-weight: 700;
+          font-size: 0.85rem;
+          padding: 0.6rem 1.2rem;
+          border-radius: 9px;
+          cursor: pointer;
+          transition: background 0.15s ease;
+        }
+        .btn-abrir-avaliacao:hover { background: #FBF0DC; }
+        .historico-empty {
+          margin: 2.5rem 1.5rem;
+          text-align: center;
+          padding: 3rem 1.5rem;
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
+          border-radius: 14px;
+          box-shadow: 0 2px 10px rgba(20,20,20,0.04);
+        }
+        .historico-empty .nav-icon { width: 40px; height: 40px; margin: 0 auto 1rem; color: #D89A00; }
+        .historico-empty p { font-size: 0.95rem; color: #4A5568; margin-bottom: 1.2rem; }
         .compat-tag {
           display: inline-block;
           font-family: 'IBM Plex Mono', monospace;
@@ -7720,6 +7788,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BATCH }),
       t("Lote", "Batch")
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
+        className: "pill-tab" + (tab === "historico" ? " active" : ""),
+        onClick: () => setTab("historico")
+      },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HISTORY }),
+      t("Hist\xF3rico", "History")
     ), isAdmin && /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -7787,7 +7863,50 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => updateField("categoria", e.target.value),
         placeholder: t("Ex: Motor el\xE9trico, linha de envase, terreno industrial\u2026", "E.g.: Electric motor, filling line, industrial land\u2026")
       }
-    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), (() => { const faltando = getCamposImportantesFaltando(form); return faltando.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "aviso-completude-card" }, /* @__PURE__ */ React.createElement("p", { className: "aviso-completude-texto" }, t("Quanto mais informa\xE7\xF5es voc\xEA preencher, mais precisa tende a ser a estimativa deste equipamento.", "The more information you fill in, the more accurate the estimate for this equipment tends to be.")), /* @__PURE__ */ React.createElement("ul", { className: "aviso-completude-lista" }, faltando.map((campo, i) => /* @__PURE__ */ React.createElement("li", { key: i }, campo)))); })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmit, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }))))) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), (() => { const faltando = getCamposImportantesFaltando(form); return faltando.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "aviso-completude-card" }, /* @__PURE__ */ React.createElement("p", { className: "aviso-completude-texto" }, t("Quanto mais informa\xE7\xF5es voc\xEA preencher, mais precisa tende a ser a estimativa deste equipamento.", "The more information you fill in, the more accurate the estimate for this equipment tends to be.")), /* @__PURE__ */ React.createElement("ul", { className: "aviso-completude-lista" }, faltando.map((campo, i) => /* @__PURE__ */ React.createElement("li", { key: i }, campo)))); })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmit, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }))))) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+      /* @__PURE__ */ React.createElement(PanelTitle, null, t("Hist\xF3rico de Avalia\xE7\xF5es", "Evaluation History")),
+      /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, t("Consulte e reabra avalia\xE7\xF5es realizadas anteriormente.", "Review and reopen previously performed evaluations.")),
+      /* @__PURE__ */ React.createElement("div", { className: "historico-search-row" },
+        /* @__PURE__ */ React.createElement("input", { type: "text", className: "historico-search-input", value: historicoSearch, onChange: (e) => setHistoricoSearch(e.target.value), placeholder: t("Buscar equipamento, fabricante ou categoria\u2026", "Search equipment, manufacturer or category\u2026") })
+      ),
+      (() => {
+        const termo = historicoSearch.trim().toLowerCase();
+        const historicoOrdenado = history.slice().sort((a, b) => b.id - a.id);
+        const filtrado = historicoOrdenado.filter((h) => {
+          if (!termo) return true;
+          const categoria = (h.item.categoria || "").toLowerCase();
+          const marca = (h.item.marca || "").toLowerCase();
+          const modelo = (h.item.modelo || "").toLowerCase();
+          return categoria.includes(termo) || marca.includes(termo) || modelo.includes(termo);
+        });
+        if (history.length === 0) {
+          return /* @__PURE__ */ React.createElement("div", { className: "historico-empty" },
+            /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HISTORY }),
+            /* @__PURE__ */ React.createElement("p", null, t("Voc\xEA ainda n\xE3o realizou nenhuma avalia\xE7\xE3o.", "You haven't performed any evaluation yet.")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setTab("single") }, t("Avaliar Primeiro Equipamento", "Evaluate First Equipment"))
+          );
+        }
+        if (filtrado.length === 0) {
+          return /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, t("Nenhuma avalia\xE7\xE3o encontrada para essa busca.", "No evaluation found for this search."));
+        }
+        return /* @__PURE__ */ React.createElement("div", { className: "historico-lista" }, filtrado.map((h) => /* @__PURE__ */ React.createElement("div", { key: h.id, className: "historico-card" },
+          /* @__PURE__ */ React.createElement("div", { className: "historico-card-main" },
+            /* @__PURE__ */ React.createElement("div", { className: "historico-card-titulo" }, h.item.modelo || h.item.categoria || t("Equipamento", "Equipment")),
+            /* @__PURE__ */ React.createElement("div", { className: "historico-card-meta" },
+              h.item.marca && /* @__PURE__ */ React.createElement("span", null, normalizarMarca(h.item.marca)),
+              h.item.categoria && /* @__PURE__ */ React.createElement("span", null, h.item.categoria)
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "historico-card-valores" },
+              h.result.faixa_media && /* @__PURE__ */ React.createElement("span", { className: "historico-card-valor" }, formatBRL(h.result.faixa_media)),
+              (h.result.faixa_min || h.result.faixa_max) && /* @__PURE__ */ React.createElement("span", { className: "historico-card-faixa" }, formatBRL(h.result.faixa_min), " \u2013 ", formatBRL(h.result.faixa_max)),
+              h.result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + h.result.confianca_avaliacao }, t("confian\xE7a ", "confidence "), h.result.confianca_avaliacao)
+            ),
+            h.data && /* @__PURE__ */ React.createElement("div", { className: "historico-card-data" }, new Date(h.data).toLocaleDateString("pt-BR"))
+          ),
+          /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn-abrir-avaliacao", onClick: () => { setForm(h.item); setResult(h.result); setError(null); setTab("single"); } }, t("Abrir Avalia\xE7\xE3o", "Open Evaluation"))
+        )));
+      })()
+    ) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
