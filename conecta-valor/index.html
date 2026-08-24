@@ -4062,6 +4062,22 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     return faltando;
   }
 
+  function SkeletonResultCard() {
+    return /* @__PURE__ */ React.createElement("div", { className: "skeleton-card", "aria-hidden": "true" },
+      /* @__PURE__ */ React.createElement("div", { className: "skeleton-line skeleton-titulo" }),
+      /* @__PURE__ */ React.createElement("div", { className: "skeleton-line skeleton-valor" }),
+      /* @__PURE__ */ React.createElement("div", { className: "skeleton-badges" },
+        /* @__PURE__ */ React.createElement("div", { className: "skeleton-badge" }),
+        /* @__PURE__ */ React.createElement("div", { className: "skeleton-badge" })
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "skeleton-cards-row" },
+        /* @__PURE__ */ React.createElement("div", { className: "skeleton-mini-card" }),
+        /* @__PURE__ */ React.createElement("div", { className: "skeleton-mini-card" }),
+        /* @__PURE__ */ React.createElement("div", { className: "skeleton-mini-card" })
+      )
+    );
+  }
+
   function LoadingPremium({ elapsed, t }) {
     const ETAPAS = [
       { label: t("Identificando equipamento", "Identifying equipment"), ate: 5 },
@@ -5396,6 +5412,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [history, setHistory] = (0, import_react.useState)([]);
     const [historicoSearch, setHistoricoSearch] = (0, import_react.useState)("");
     const [pdfModalAberto, setPdfModalAberto] = (0, import_react.useState)(false);
+    const [buscaInteligente, setBuscaInteligente] = (0, import_react.useState)("");
+    const [sugestoesAbertas, setSugestoesAbertas] = (0, import_react.useState)(false);
+    const [avisoPrecisaoAberto, setAvisoPrecisaoAberto] = (0, import_react.useState)(false);
     const PDF_CONFIG_PADRAO = {
       logoDataUrl: null,
       nomeEmpresa: "",
@@ -6545,6 +6564,39 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     function removerFoto(idx) {
       setPhotos((prev) => prev.filter((_, i) => i !== idx));
     }
+    // Sugestões da busca inteligente - vêm do histórico real de avaliações
+    // já feitas (mesmo dado usado na tela de Histórico), não de um catálogo
+    // de equipamentos que o Conecta Valor não tem. Sem IA, só filtro de texto.
+    function sugestoesBuscaInteligente(texto) {
+      const termo = texto.trim().toLowerCase();
+      if (termo.length < 2) return [];
+      const vistos = /* @__PURE__ */ new Set();
+      const resultado = [];
+      history.forEach((h) => {
+        const chave = [h.item.marca, h.item.modelo, h.item.categoria].filter(Boolean).join("|").toLowerCase();
+        if (!chave || vistos.has(chave)) return;
+        const textoCompleto = [h.item.marca, h.item.modelo, h.item.categoria].filter(Boolean).join(" ").toLowerCase();
+        if (!textoCompleto.includes(termo)) return;
+        vistos.add(chave);
+        resultado.push(h.item);
+      });
+      return resultado.slice(0, 8);
+    }
+    function preencherComSugestao(itemSugerido) {
+      const camposAlvo = ["categoria", "marca", "modelo", "potenciaCv", "potenciaKw", "rpm", "anoFabricacao", "estado"];
+      const temConflito = camposAlvo.some((campo) => form[campo] && itemSugerido[campo] && form[campo] !== itemSugerido[campo]);
+      if (temConflito && !window.confirm(t("O formul\xE1rio j\xE1 tem dados preenchidos. Substituir pelos dados da sugest\xE3o selecionada?", "The form already has data filled in. Replace it with the selected suggestion's data?"))) {
+        return;
+      }
+      setForm((f) => {
+        const novo = { ...f };
+        camposAlvo.forEach((campo) => { if (itemSugerido[campo]) novo[campo] = itemSugerido[campo]; });
+        return novo;
+      });
+      setBuscaInteligente("");
+      setSugestoesAbertas(false);
+    }
+
     async function handleSubmit() {
       setLoading(true);
       setError(null);
@@ -7222,6 +7274,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         button.primary:active:not(:disabled) { transform: translateY(0); box-shadow: inset 0 1px 2px rgba(0,0,0,0.15); }
         button.primary:disabled { opacity: 0.6; cursor: wait; }
+
+        /* ===== v19.3: Botão de submit do formulário Item Único - escopado, não afeta .primary em outras telas ===== */
+        .submit-row button.primary {
+          background: #1B1D1F;
+          color: #FFFFFF;
+          box-shadow: none;
+        }
+        .submit-row button.primary:hover:not(:disabled) {
+          background: #2A2D30;
+          box-shadow: 0 0 0 2px rgba(216,154,0,0.35);
+          transform: none;
+        }
+        .aviso-completude-botoes button.secondary {
+          background: #FFFFFF;
+          color: #1B1D1F;
+          border: 1px solid #D8D5CC;
+        }
+        .aviso-completude-botoes button.secondary:hover { border-color: #D89A00; color: #96650B; }
         .error-box {
           margin: 1rem 1.5rem 0;
           background: #FBEAEA;
@@ -7693,6 +7763,98 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           gap: 0.15rem;
         }
         .aviso-completude-lista li { font-size: 0.8rem; color: #7A5B0B; font-weight: 600; }
+        .aviso-completude-botoes { display: flex; gap: 0.7rem; margin-top: 0.9rem; }
+        .aviso-completude-botoes button { flex: 1; }
+
+        /* ===== v19.3: Breadcrumb ===== */
+        .breadcrumb { display: flex; align-items: center; gap: 0.4rem; font-size: 0.78rem; color: #9CA0A6; margin: 0 1.5rem 0.8rem; }
+        .breadcrumb-link { cursor: pointer; color: #6B7280; }
+        .breadcrumb-link:hover { color: #D89A00; text-decoration: underline; }
+        .breadcrumb-sep { color: #C7C2B8; }
+        .breadcrumb-atual { color: #1B1D1F; font-weight: 600; }
+
+        /* ===== v19.3: Busca inteligente ===== */
+        .busca-inteligente-wrap { position: relative; margin: 0 1.5rem 1.2rem; }
+        .busca-inteligente-input-row { position: relative; display: flex; align-items: center; }
+        .busca-lupa { position: absolute; left: 0.9rem; pointer-events: none; }
+        .busca-inteligente-input {
+          width: 100%;
+          padding: 0.75rem 5.5rem 0.75rem 2.6rem;
+          border: 1px solid #E4E2DC;
+          border-radius: 10px;
+          background: #FAFAF8;
+          font-size: 0.95rem;
+        }
+        .busca-inteligente-input:focus { outline: 2px solid rgba(216,154,0,0.45); outline-offset: 1px; border-color: #D89A00; }
+        .busca-limpar-btn {
+          position: absolute;
+          right: 0.6rem;
+          background: transparent;
+          border: none;
+          color: #6B7280;
+          font-size: 0.78rem;
+          font-weight: 600;
+          cursor: pointer;
+          padding: 0.3rem 0.5rem;
+        }
+        .busca-limpar-btn:hover { color: #1B1D1F; }
+        .busca-exemplos { margin-top: 0.5rem; font-size: 0.75rem; color: #9CA0A6; }
+        .busca-exemplos span { color: #6B7280; font-weight: 600; }
+        .busca-dropdown {
+          position: absolute;
+          top: calc(100% + 4px);
+          left: 0;
+          right: 0;
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
+          border-radius: 10px;
+          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+          z-index: 50;
+          max-height: 320px;
+          overflow-y: auto;
+        }
+        .busca-sugestao {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          gap: 0.7rem;
+          padding: 0.7rem 0.9rem;
+          background: transparent;
+          border: none;
+          border-bottom: 1px solid #F0EEE7;
+          cursor: pointer;
+          text-align: left;
+        }
+        .busca-sugestao:last-child { border-bottom: none; }
+        .busca-sugestao:hover { background: #FBF0DC; }
+        .busca-sugestao .nav-icon { width: 16px; height: 16px; color: #D89A00; flex-shrink: 0; }
+        .busca-sugestao-titulo { display: block; font-size: 0.88rem; font-weight: 600; color: #1B1D1F; }
+        .busca-sugestao-cat { display: block; font-size: 0.74rem; color: #8A8D91; margin-top: 0.1rem; }
+        .busca-sem-resultado { padding: 0.9rem; font-size: 0.82rem; color: #8A8D91; margin: 0; }
+
+        /* ===== v19.3: Skeleton loading ===== */
+        .skeleton-card { margin-top: 1rem; padding: 1.5rem; background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 16px; }
+        .skeleton-line, .skeleton-badge, .skeleton-mini-card {
+          background: linear-gradient(90deg, #F0EEE7 25%, #E8E5DC 50%, #F0EEE7 75%);
+          background-size: 200% 100%;
+          animation: skeleton-pulso 1.4s ease-in-out infinite;
+          border-radius: 6px;
+        }
+        .skeleton-titulo { width: 45%; height: 22px; margin-bottom: 1rem; }
+        .skeleton-valor { width: 65%; height: 34px; margin-bottom: 1.1rem; }
+        .skeleton-badges { display: flex; gap: 0.6rem; margin-bottom: 1.2rem; }
+        .skeleton-badge { width: 90px; height: 22px; border-radius: 999px; }
+        .skeleton-cards-row { display: flex; gap: 0.7rem; }
+        .skeleton-mini-card { flex: 1; height: 60px; border-radius: 10px; }
+        @keyframes skeleton-pulso {
+          0% { background-position: 200% 0; }
+          100% { background-position: -200% 0; }
+        }
+
+        @media (max-width: 620px) {
+          .busca-dropdown { max-height: 260px; }
+          .aviso-completude-botoes { flex-direction: column; }
+        }
 
         .como-chegamos-card {
           background: #F7F6F2;
@@ -9008,7 +9170,44 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       })(), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
       "A Conecta Valor usa Intelig\xEAncia Artificial e dados reais de mercado para gerar refer\xEAncias de valor para ativos industriais \u2014 m\xE1quinas, linhas de produ\xE7\xE3o, galp\xF5es e mais.",
       "Conecta Valor uses Artificial Intelligence and real market data to generate value references for industrial assets \u2014 machines, production lines, warehouses and more."
-    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "input-mode-tabs" }, /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null),
+      /* @__PURE__ */ React.createElement("div", { className: "breadcrumb" },
+        /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-link", onClick: () => setTab("dashboard") }, t("In\xEDcio", "Home")),
+        /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-sep" }, "\u2192"),
+        /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-link", onClick: () => { setResult(null); setError(null); } }, t("Item \xDAnico", "Single Item")),
+        /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-sep" }, "\u2192"),
+        /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-atual" }, result ? t("Resultado", "Result") : t("Nova Avalia\xE7\xE3o", "New Evaluation"))
+      ),
+      !result && /* @__PURE__ */ React.createElement("div", { className: "busca-inteligente-wrap" },
+        /* @__PURE__ */ React.createElement("div", { className: "busca-inteligente-input-row" },
+          /* @__PURE__ */ React.createElement("svg", { className: "busca-lupa", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "#8A8D91", strokeWidth: "2" }, /* @__PURE__ */ React.createElement("circle", { cx: "11", cy: "11", r: "7" }), /* @__PURE__ */ React.createElement("path", { d: "M20 20l-3.5-3.5" })),
+          /* @__PURE__ */ React.createElement("input", {
+            type: "text",
+            className: "busca-inteligente-input",
+            placeholder: t("Digite fabricante, modelo ou equipamento\u2026", "Enter manufacturer, model or equipment\u2026"),
+            value: buscaInteligente,
+            onChange: (e) => { setBuscaInteligente(e.target.value); setSugestoesAbertas(true); },
+            onFocus: () => setSugestoesAbertas(true),
+            onBlur: () => setTimeout(() => setSugestoesAbertas(false), 150)
+          }),
+          buscaInteligente && /* @__PURE__ */ React.createElement("button", { type: "button", className: "busca-limpar-btn", onClick: () => { setBuscaInteligente(""); setSugestoesAbertas(false); } }, t("Limpar", "Clear"))
+        ),
+        sugestoesAbertas && buscaInteligente.trim().length >= 2 && (() => {
+          const sugestoes = sugestoesBuscaInteligente(buscaInteligente);
+          return sugestoes.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "busca-dropdown" }, sugestoes.map((s, i) => /* @__PURE__ */ React.createElement("button", { key: i, type: "button", className: "busca-sugestao", onMouseDown: () => preencherComSugestao(s) },
+            /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ENGRENAGEM }),
+            /* @__PURE__ */ React.createElement("div", null,
+              /* @__PURE__ */ React.createElement("span", { className: "busca-sugestao-titulo" }, [normalizarMarca(s.marca), s.modelo].filter(Boolean).join(" ") || s.categoria),
+              /* @__PURE__ */ React.createElement("span", { className: "busca-sugestao-cat" }, s.categoria)
+            )
+          ))) : /* @__PURE__ */ React.createElement("div", { className: "busca-dropdown" }, /* @__PURE__ */ React.createElement("p", { className: "busca-sem-resultado" }, t("Nenhuma avalia\xE7\xE3o anterior encontrada com esse termo.", "No previous evaluation found with that term.")));
+        })(),
+        /* @__PURE__ */ React.createElement("div", { className: "busca-exemplos" },
+          /* @__PURE__ */ React.createElement("span", null, t("Exemplos: ", "Examples: ")),
+          "WEG W22 10 CV \xB7 Motorredutor SEW WA20 \xB7 Compressor Atlas Copco GA75"
+        )
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "input-mode-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -9040,7 +9239,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => updateField("categoria", e.target.value),
         placeholder: t("Ex: Motor el\xE9trico, linha de envase, terreno industrial\u2026", "E.g.: Electric motor, filling line, industrial land\u2026")
       }
-    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado" }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw" }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv" }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm" }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), (() => { const faltando = getCamposImportantesFaltando(form); return faltando.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "aviso-completude-card" }, /* @__PURE__ */ React.createElement("p", { className: "aviso-completude-texto" }, t("Quanto mais informa\xE7\xF5es voc\xEA preencher, mais precisa tende a ser a estimativa deste equipamento.", "The more information you fill in, the more accurate the estimate for this equipment tends to be.")), /* @__PURE__ */ React.createElement("ul", { className: "aviso-completude-lista" }, faltando.map((campo, i) => /* @__PURE__ */ React.createElement("li", { key: i }, campo)))); })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: handleSubmit, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }))))) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+    )), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "marca" }, t("Marca / fabricante", "Brand / manufacturer")), /* @__PURE__ */ React.createElement("input", { id: "marca", value: form.marca, onChange: (e) => updateField("marca", e.target.value), placeholder: config.marcaPlaceholder })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "modelo" }, t("Modelo", "Model")), /* @__PURE__ */ React.createElement("input", { id: "modelo", value: form.modelo, onChange: (e) => updateField("modelo", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "estado", title: t("Condi\xE7\xE3o f\xEDsica atual do equipamento \u2014 influencia diretamente a faixa de valor.", "Current physical condition of the equipment \u2014 directly influences the value range.") }, t("Estado de conserva\xE7\xE3o", "Condition")), /* @__PURE__ */ React.createElement("select", { id: "estado", value: form.estado, onChange: (e) => updateField("estado", e.target.value) }, ESTADOS.map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, s)))), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => setMostrarMaisDetalhes((v) => !v) }, mostrarMaisDetalhes ? t("\u2212 esconder detalhes extras", "\u2212 hide extra details") : t("+ mais detalhes (pot\xEAncia, peso, ano\u2026)", "+ more details (power, weight, year\u2026)"))), mostrarMaisDetalhes && /* @__PURE__ */ React.createElement(React.Fragment, null, isRotativeEquipment(form.categoria) && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "kw", title: t("Pot\xEAncia nominal do motor ou equipamento, em quilowatts.", "Nominal power of the motor or equipment, in kilowatts.") }, t("Pot\xEAncia (kW)", "Power (kW)")), /* @__PURE__ */ React.createElement("input", { id: "kw", type: "number", step: "0.01", min: "0", value: form.potenciaKw, onChange: (e) => updateField("potenciaKw", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "cv", title: t("Pot\xEAncia nominal do motor ou equipamento, em cavalos-vapor.", "Nominal power of the motor or equipment, in horsepower.") }, t("Pot\xEAncia (CV)", "Power (HP)")), /* @__PURE__ */ React.createElement("input", { id: "cv", type: "number", step: "0.1", min: "0", value: form.potenciaCv, onChange: (e) => updateField("potenciaCv", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "rpm", title: t("Rota\xE7\xE3o nominal do equipamento, em rota\xE7\xF5es por minuto.", "Nominal rotation speed of the equipment, in revolutions per minute.") }, t("Rota\xE7\xE3o (RPM)", "Speed (RPM)")), /* @__PURE__ */ React.createElement("input", { id: "rpm", type: "number", min: "0", value: form.rpm, onChange: (e) => updateField("rpm", e.target.value) }))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "peso" }, t("Peso (kg)", "Weight (kg)"), " ", isRotativeEquipment(form.categoria) ? "" : t("\u2014 se aplic\xE1vel", "\u2014 if applicable")), /* @__PURE__ */ React.createElement("input", { id: "peso", type: "number", step: "0.1", min: "0", value: form.pesoKg, onChange: (e) => updateField("pesoKg", e.target.value) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "ano" }, t("Ano do equipamento", "Equipment year")), /* @__PURE__ */ React.createElement("input", { id: "ano", type: "number", min: "1900", max: "2100", value: form.anoFabricacao, onChange: (e) => updateField("anoFabricacao", e.target.value), placeholder: t("Ex: 2018", "E.g.: 2018") })), /* @__PURE__ */ React.createElement("div", { className: "field-full" }, /* @__PURE__ */ React.createElement("label", { htmlFor: "obs" }, t("Observa\xE7\xF5es \u2014 caracter\xEDsticas espec\xEDficas deste item", "Notes \u2014 specific characteristics of this item")), /* @__PURE__ */ React.createElement("textarea", { id: "obs", value: form.obs, onChange: (e) => updateField("obs", e.target.value), placeholder: obsPlaceholder(form.categoria) }), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, config.obsHint))), avisoPrecisaoAberto && (() => {
+        const faltando = getCamposImportantesFaltando(form);
+        return /* @__PURE__ */ React.createElement("div", { className: "aviso-completude-card" },
+          /* @__PURE__ */ React.createElement("p", { className: "aviso-completude-texto" }, t("Quanto mais informa\xE7\xF5es, mais precisa tende a ser sua avalia\xE7\xE3o.", "The more information, the more accurate your evaluation tends to be.")),
+          faltando.length > 0 && /* @__PURE__ */ React.createElement("ul", { className: "aviso-completude-lista" }, faltando.map((campo, i) => /* @__PURE__ */ React.createElement("li", { key: i }, campo))),
+          /* @__PURE__ */ React.createElement("div", { className: "aviso-completude-botoes" },
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => setAvisoPrecisaoAberto(false) }, t("Completar informa\xE7\xF5es", "Complete information")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setAvisoPrecisaoAberto(false); handleSubmit(); } }, t("Continuar mesmo assim", "Continue anyway"))
+          )
+        );
+      })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: () => { const faltando = getCamposImportantesFaltando(form); if (faltando.length > 0 && !avisoPrecisaoAberto) { setAvisoPrecisaoAberto(true); return; } handleSubmit(); }, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }), /* @__PURE__ */ React.createElement(SkeletonResultCard, null)))))) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Hist\xF3rico de Avalia\xE7\xF5es", "Evaluation History")),
       /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, t("Consulte e reabra avalia\xE7\xF5es realizadas anteriormente.", "Review and reopen previously performed evaluations.")),
       /* @__PURE__ */ React.createElement("div", { className: "historico-search-row" },
