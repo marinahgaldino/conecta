@@ -3995,6 +3995,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var ICON_CHART = "M4 20V10m6 10V4m6 16v-7";
   var ICON_GLOBE = "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3a13 13 0 0 1 3 9 13 13 0 0 1-3 9 13 13 0 0 1-3-9 13 13 0 0 1 3-9Z";
   var ICON_HISTORY = "M3 12a9 9 0 1 0 3-6.7M3 4v4.5h4.5M12 7v5l3.5 2";
+  var ICON_ENGRENAGEM = "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1";
   // Detecta campos importantes faltando pro aviso inteligente (Se\xE7\xE3o 5),
   // reaproveitando ranking_importancia (mesmo dado j\xE1 usado no Compatibility
   // Score) - n\xE3o \xE9 uma lista nova, \xE9 leitura do que j\xE1 existe por categoria.
@@ -5064,6 +5065,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const qtdComparaveisExibida = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : (result.comparaveis || []).length;
     const notaQualidade = calcularNotaQualidade(result);
     const equipInfo = item.categoria_id && EQUIPMENT_INFO[item.categoria_id];
+    const faixaPosicaoPct = (result.faixa_max > result.faixa_min)
+      ? Math.max(0, Math.min(100, (result.faixa_media - result.faixa_min) / (result.faixa_max - result.faixa_min) * 100))
+      : 50;
     const ORDEM_COMPAT = { alta: 3, "m\xE9dia": 2, baixa: 1 };
     const comparaveisOrdenados = (result.comparaveis || []).slice().sort((a, b) => {
       const diffCompat = (ORDEM_COMPAT[b.compatibilidade] || 0) - (ORDEM_COMPAT[a.compatibilidade] || 0);
@@ -5130,14 +5134,28 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       /* @__PURE__ */ React.createElement(Rivet, null),
       /* @__PURE__ */ React.createElement("span", { className: "tag-report-kicker" }, t("Avalia\xE7\xE3o de Mercado", "Market Valuation")),
 
-      // ===== Card de Resultado Premium (preto) =====
+      // ===== Hero Card Premium (V19.0) =====
       /* @__PURE__ */ React.createElement("div", { className: "resultado-premium" },
-        /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-eyebrow" }, item.categoria),
-        /* @__PURE__ */ React.createElement("h3", { className: "resultado-premium-titulo" }, titulo),
+        /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-topo" },
+          /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-icone", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ENGRENAGEM })),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-eyebrow" }, [item.categoria, normalizarMarca(item.marca)].filter(Boolean).join(" \xB7 ")),
+            /* @__PURE__ */ React.createElement("h3", { className: "resultado-premium-titulo" }, titulo)
+          )
+        ),
         result.origem === "base_propria" && /* @__PURE__ */ React.createElement("span", { className: "badge-instantaneo" }, "\u26A1 ", t("instant\xE2neo \u2014 sua base", "instant \u2014 your base")),
-        /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-valor" }, formatBRL(result.faixa_min), " \u2013 ", formatBRL(result.faixa_max)),
+        /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-valor-label" }, t("Valor estimado", "Estimated value")),
+        /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-valor-grande" }, formatBRL(result.faixa_media)),
+        /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-faixa-bar" },
+          /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-faixa-extremos" },
+            /* @__PURE__ */ React.createElement("span", null, formatBRL(result.faixa_min)),
+            /* @__PURE__ */ React.createElement("span", null, formatBRL(result.faixa_max))
+          ),
+          /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-faixa-track" }, /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-faixa-marcador", style: { left: faixaPosicaoPct + "%" } }))
+        ),
         /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-meta" },
           result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, t("confian\xE7a ", "confidence "), result.confianca_avaliacao),
+          equipInfo && /* @__PURE__ */ React.createElement("span", { className: "chip liquidez-" + equipInfo.liquidez.toLowerCase() }, t("Liquidez: ", "Liquidity: "), equipInfo.liquidez),
           /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, qtdComparaveisExibida, " ", t(qtdComparaveisExibida === 1 ? "compar\xE1vel" : "compar\xE1veis", qtdComparaveisExibida === 1 ? "comparable" : "comparables")),
           /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("IA + mercado", "AI + market"))
         )
@@ -5227,7 +5245,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           // ===== Card "O que \xE9 este equipamento?" =====
           equipInfo && /* @__PURE__ */ React.createElement("div", { className: "equipment-info-card" },
             /* @__PURE__ */ React.createElement("div", { className: "equipment-info-head" },
-              /* @__PURE__ */ React.createElement("span", { className: "equipment-info-icon", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("svg", { width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "#D89A00", strokeWidth: "1.6" }, /* @__PURE__ */ React.createElement("path", { d: "M4 21V9l8-6 8 6v12" }), /* @__PURE__ */ React.createElement("path", { d: "M9 21v-6h6v6" }))),
+              /* @__PURE__ */ React.createElement("span", { className: "equipment-info-icon", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("svg", { width: "22", height: "22", viewBox: "0 0 24 24", fill: "none", stroke: "#D89A00", strokeWidth: "1.6" }, /* @__PURE__ */ React.createElement("path", { d: "M4 21V9l8-6 8 6v12" }), /* @__PURE__ */ React.createElement("path", { d: "M9 21v-6h6v6" }))),
               /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("O que \xE9 este equipamento", "What this equipment is"))
             ),
             /* @__PURE__ */ React.createElement("p", { className: "equipment-info-desc" }, equipInfo.descricao_curta),
@@ -5238,6 +5256,25 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("O que \xE9 esse equipamento", "What this equipment is")),
             /* @__PURE__ */ React.createElement("p", null, result.explicacao_tecnica)
           ),
+
+          // ===== Especifica\xE7\xF5es T\xE9cnicas (cards) =====
+          (() => {
+            const specs = [
+              item.potenciaCv && { label: t("Pot\xEAncia", "Power"), valor: `${item.potenciaCv} CV` },
+              !item.potenciaCv && item.potenciaKw && { label: t("Pot\xEAncia", "Power"), valor: `${item.potenciaKw} kW` },
+              item.rpm && { label: "RPM", valor: item.rpm },
+              item.anoFabricacao && { label: t("Ano", "Year"), valor: item.anoFabricacao },
+              item.estado && { label: t("Estado", "Condition"), valor: item.estado },
+              item.pesoKg && { label: t("Peso", "Weight"), valor: `${item.pesoKg} kg` }
+            ].filter(Boolean);
+            return specs.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "especificacoes-secao" },
+              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Especifica\xE7\xF5es T\xE9cnicas", "Technical Specifications")),
+              /* @__PURE__ */ React.createElement("div", { className: "especificacoes-grid" }, specs.map((s, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "especificacao-card" },
+                /* @__PURE__ */ React.createElement("span", { className: "especificacao-label" }, s.label),
+                /* @__PURE__ */ React.createElement("span", { className: "especificacao-valor" }, s.valor)
+              )))
+            );
+          })(),
 
           result.item_identificado && (result.item_identificado.categoria || result.item_identificado.marca || result.item_identificado.modelo || result.item_identificado.potencia_cv || result.item_identificado.ano) && /* @__PURE__ */ React.createElement("div", { className: "item-identificado-box" },
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "\u{1F4F7} ", t("Identificado pela foto", "Identified from photo"), result.item_identificado.confianca && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.item_identificado.confianca }, t("confian\xE7a ", "confidence "), result.item_identificado.confianca)),
@@ -7279,12 +7316,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
         /* ===== v15.1: Resultado Premium ===== */
         .resultado-premium {
-          background: #080808;
+          background: linear-gradient(160deg, #161616, #080808);
           border-radius: 16px;
           padding: 1.75rem 2rem;
           margin: 0.5rem 0 1.25rem;
           color: #EDECE6;
         }
+        .resultado-premium-topo { display: flex; align-items: flex-start; gap: 0.9rem; }
+        .resultado-premium-icone {
+          width: 42px; height: 42px;
+          border-radius: 10px;
+          background: rgba(216,154,0,0.12);
+          border: 1px solid rgba(216,154,0,0.3);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+        .resultado-premium-icone .nav-icon { width: 22px; height: 22px; color: #D89A00; }
         .resultado-premium-eyebrow {
           font-family: 'IBM Plex Mono', monospace;
           font-size: 0.72rem;
@@ -7296,27 +7345,66 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-family: 'Manrope', sans-serif;
           font-size: 1.3rem;
           font-weight: 700;
-          margin: 0.35rem 0 0.9rem;
+          margin: 0.3rem 0 0;
           color: #FFFFFF;
         }
-        .resultado-premium-valor {
+        .resultado-premium-valor-label {
+          display: block;
+          font-size: 0.78rem;
+          color: #8A8D91;
+          margin-top: 1.3rem;
+        }
+        .resultado-premium-valor-grande {
           font-family: 'IBM Plex Mono', monospace;
-          font-size: clamp(1.6rem, 3.2vw, 2.1rem);
+          font-size: clamp(2.4rem, 5vw, 3.4rem);
           font-weight: 700;
           color: #4ADE80;
           letter-spacing: -0.01em;
+          line-height: 1.1;
+          margin-top: 0.2rem;
+        }
+        .resultado-premium-faixa-bar { margin-top: 1.2rem; }
+        .resultado-premium-faixa-extremos { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; color: #B9BCC2; margin-bottom: 0.4rem; }
+        .resultado-premium-faixa-track { position: relative; width: 100%; height: 6px; background: rgba(255,255,255,0.12); border-radius: 999px; }
+        .resultado-premium-faixa-marcador {
+          position: absolute;
+          top: 50%;
+          width: 14px; height: 14px;
+          border-radius: 50%;
+          background: #4ADE80;
+          border: 2px solid #080808;
+          transform: translate(-50%, -50%);
+          box-shadow: 0 0 0 2px #4ADE80;
         }
         .resultado-premium-meta {
           display: flex;
           flex-wrap: wrap;
           align-items: center;
           gap: 0.9rem;
-          margin-top: 0.9rem;
+          margin-top: 1.1rem;
         }
         .resultado-premium-meta-item {
           font-size: 0.82rem;
           color: #B9BCC2;
         }
+
+        /* ===== v19.0: Especificações Técnicas (cards) ===== */
+        .especificacoes-secao { margin: 0.9rem 0; }
+        .especificacoes-grid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+          gap: 0.6rem;
+          margin-top: 0.6rem;
+        }
+        .especificacao-card {
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
+          border-radius: 10px;
+          padding: 0.65rem 0.8rem;
+          box-shadow: 0 2px 6px rgba(20,20,20,0.04);
+        }
+        .especificacao-label { display: block; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.03em; color: #8A8D91; }
+        .especificacao-valor { display: block; font-family: 'IBM Plex Mono', monospace; font-size: 0.92rem; font-weight: 700; color: #1B1D1F; margin-top: 0.2rem; }
 
         /* ===== v18.0: Qualidade da Avaliação 2.0 (painel premium) ===== */
         .qualidade2-painel {
@@ -7391,8 +7479,18 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .qualidade2-nota-explicativa { font-size: 0.8rem; color: #6B7280; margin-top: 0.7rem; line-height: 1.5; }
         .qualidade2-dispersao-row { display: flex; flex-wrap: wrap; gap: 1.2rem; margin-top: 0.7rem; font-size: 0.88rem; color: #3A3D42; }
         .qualidade2-dispersao-pct { font-weight: 700; color: #1B1D1F; }
-        .qualidade2-etapas { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.7rem; }
-        .qualidade2-etapa { display: flex; align-items: center; gap: 0.7rem; font-size: 0.85rem; color: #3A3D42; }
+        .qualidade2-etapas { display: flex; flex-direction: column; gap: 0; margin-top: 0.7rem; }
+        .qualidade2-etapa { display: flex; align-items: flex-start; gap: 0.9rem; font-size: 0.85rem; color: #3A3D42; position: relative; padding-bottom: 1.3rem; }
+        .qualidade2-etapa:last-child { padding-bottom: 0; }
+        .qualidade2-etapa:not(:last-child)::before {
+          content: "";
+          position: absolute;
+          left: 11px;
+          top: 24px;
+          bottom: 0;
+          width: 2px;
+          background: #EFEEEA;
+        }
         .qualidade2-etapa-num {
           display: inline-flex;
           align-items: center;
@@ -7405,7 +7503,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-size: 0.75rem;
           font-weight: 700;
           flex-shrink: 0;
+          position: relative;
+          z-index: 1;
         }
+        .qualidade2-etapa-texto { padding-top: 0.15rem; }
 
         /* ===== v15.1: O que é este equipamento (chips) ===== */
         .chips-row {
