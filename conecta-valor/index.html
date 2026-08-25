@@ -5556,9 +5556,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // mostra um número fabricado, só formata a data real que já existe.
   function formatarUltimoAcesso(data, t) {
     const dias = Math.max(0, Math.round(((/* @__PURE__ */ new Date()) - data) / (1e3 * 60 * 60 * 24)));
-    if (dias === 0) return { texto: t("Hoje", "Today"), classe: "acesso-recente" };
-    if (dias === 1) return { texto: t("Ontem", "Yesterday"), classe: "acesso-recente" };
-    if (dias <= 30) return { texto: t(`H\xE1 ${dias} dias`, `${dias} days ago`), classe: "acesso-medio" };
+    if (dias === 0) return { texto: t("Hoje", "Today"), classe: "acesso-hoje" };
+    if (dias === 1) return { texto: t("Ontem", "Yesterday"), classe: "acesso-ontem" };
+    if (dias <= 7) return { texto: t(`H\xE1 ${dias} dias`, `${dias} days ago`), classe: "acesso-semana" };
+    if (dias <= 30) return { texto: t(`H\xE1 ${dias} dias`, `${dias} days ago`), classe: "acesso-mes" };
     return { texto: t("H\xE1 mais de 30 dias", "More than 30 days ago"), classe: "acesso-antigo" };
   }
 
@@ -5607,7 +5608,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, columns.map((c, i) => /* @__PURE__ */ React.createElement("th", { key: i }, c.label)))),
       /* @__PURE__ */ React.createElement("tbody", null, rows.length === 0
         ? /* @__PURE__ */ React.createElement("tr", null, /* @__PURE__ */ React.createElement("td", { colSpan: columns.length, className: "admin-tabela-vazio" }, t("Nenhum cliente encontrado.", "No clients found.")))
-        : rows.map((row, i) => /* @__PURE__ */ React.createElement("tr", { key: row.id || i, className: onRowClick ? "admin-tabela-linha" : "", onClick: () => onRowClick && onRowClick(row) }, columns.map((c, j) => /* @__PURE__ */ React.createElement("td", { key: j }, c.render ? c.render(row) : row[c.key])))))
+        : rows.map((row, i) => /* @__PURE__ */ React.createElement("tr", { key: row.id || i, className: onRowClick ? "admin-tabela-linha crm-table-row" : "", onClick: () => onRowClick && onRowClick(row) }, columns.map((c, j) => /* @__PURE__ */ React.createElement("td", { key: j }, c.render ? c.render(row) : row[c.key])))))
     ));
   }
 
@@ -8528,6 +8529,92 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .drawer-secao p { margin: 0 0 0.25rem; font-size: 0.85rem; color: #1B1D1F; }
         .drawer-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; padding: 1.2rem 1.5rem; margin-top: auto; }
 
+        /* ===== v21.1a: CRM Premium ===== */
+        .crm-toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin: 0.8rem 1.5rem 0; flex-wrap: wrap; }
+        .crm-toolbar-left { display: flex; flex-direction: column; gap: 0.6rem; flex: 1; min-width: 260px; }
+        .crm-toolbar-right { flex-shrink: 0; }
+        .crm-search { width: 100%; max-width: 420px; padding: 0.65rem 0.9rem; border: 1px solid #E4E2DC; border-radius: 8px; background: #FAFAF8; font-size: 0.88rem; }
+        .crm-filter-group { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+        .crm-filter-group select { padding: 0.55rem 0.8rem; border: 1px solid #E4E2DC; border-radius: 8px; background: #FAFAF8; font-size: 0.82rem; }
+        .crm-toolbar-count { display: block; font-size: 0.78rem; color: #6B7280; margin: 0.7rem 1.5rem 0.4rem; }
+        .crm-client-cell { display: flex; align-items: center; gap: 0.7rem; min-width: 200px; }
+        .crm-avatar {
+          width: 36px; height: 36px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #3B6EA5, #2A5680);
+          color: #FFFFFF;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.72rem;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+        .crm-avatar-img { object-fit: cover; background: #FFFFFF; border: 1px solid #E4E2DC; }
+        .crm-company-info { display: flex; flex-direction: column; }
+        .crm-company-nome { font-size: 0.88rem; font-weight: 700; color: #1B1D1F; }
+        .crm-company-responsavel { font-size: 0.76rem; color: #8A8D91; margin-top: 0.1rem; }
+        .crm-usage-mini { display: flex; flex-direction: column; gap: 0.3rem; min-width: 90px; font-size: 0.76rem; color: #4A5568; }
+        .crm-usage-mini .consumo-barra-track { height: 4px; }
+        .crm-last-access { font-size: 0.76rem; font-weight: 600; border-radius: 999px; padding: 0.2rem 0.6rem; white-space: nowrap; }
+        .crm-last-access.acesso-hoje { background: rgba(74,222,128,0.15); color: #1F5C3F; }
+        .crm-last-access.acesso-ontem { background: rgba(59,110,165,0.14); color: #3B6EA5; }
+        .crm-last-access.acesso-semana { background: rgba(216,154,0,0.15); color: #96650B; }
+        .crm-last-access.acesso-mes { background: rgba(216,140,0,0.18); color: #B85C00; }
+        .crm-last-access.acesso-antigo { background: rgba(192,82,74,0.15); color: #C0524A; }
+        .acesso-linha.acesso-hoje { color: #1F5C3F; }
+        .acesso-linha.acesso-ontem { color: #3B6EA5; }
+        .acesso-linha.acesso-semana { color: #96650B; }
+        .acesso-linha.acesso-mes { color: #B85C00; }
+        .acesso-linha.acesso-antigo { color: #C0524A; }
+        .crm-id-chip {
+          display: inline-block;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.78rem;
+          font-weight: 700;
+          background: #1B1D1F;
+          color: #D89A00;
+          border-radius: 6px;
+          padding: 0.3rem 0.7rem;
+          margin-bottom: 0.6rem;
+        }
+        .crm-empty-state {
+          margin: 1.5rem 1.5rem 0;
+          text-align: center;
+          padding: 3.5rem 1.5rem;
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
+          border-radius: 16px;
+          box-shadow: 0 3px 12px rgba(20,20,20,0.05);
+        }
+        .crm-empty-icon { display: inline-flex; width: 56px; height: 56px; border-radius: 50%; background: #F4F3EF; align-items: center; justify-content: center; margin-bottom: 1rem; }
+        .crm-empty-icon .nav-icon { width: 28px; height: 28px; color: #9CA0A6; }
+        .crm-empty-state h4 { font-family: 'Manrope', sans-serif; font-size: 1.15rem; color: #1B1D1F; margin: 0 0 0.4rem; }
+        .crm-empty-state p { font-size: 0.88rem; color: #6B7280; margin-bottom: 1.3rem; }
+        .admin-metric-subtitulo { display: block; font-size: 0.68rem; color: #9CA0A6; margin-top: 0.5rem; font-style: italic; }
+        .health-ring-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; }
+        .health-ring-label { font-size: 0.78rem; font-weight: 700; }
+        .drawer-timeline { display: flex; flex-direction: column; margin-top: 0.6rem; }
+        .drawer-timeline-item { display: flex; align-items: center; gap: 0.7rem; padding: 0.5rem 0; border-bottom: 1px solid #F7F6F2; font-size: 0.82rem; }
+        .drawer-timeline-item:last-child { border-bottom: none; }
+        .drawer-timeline-dot { width: 7px; height: 7px; border-radius: 50%; background: #3B6EA5; flex-shrink: 0; }
+        .drawer-timeline-texto { color: #1B1D1F; flex: 1; }
+        .drawer-timeline-data { color: #9CA0A6; font-size: 0.74rem; }
+        .crm-section-title { color: #3B6EA5 !important; }
+
+        @media (max-width: 1100px) {
+          .admin-tabela th:nth-child(6), .admin-tabela td:nth-child(6),
+          .admin-tabela th:nth-child(7), .admin-tabela td:nth-child(7) { display: none; }
+        }
+        @media (max-width: 720px) {
+          .crm-toolbar { flex-direction: column; }
+          .crm-toolbar-right button { width: 100%; }
+          .admin-tabela-wrap table, .admin-tabela-wrap thead, .admin-tabela-wrap tbody, .admin-tabela-wrap th, .admin-tabela-wrap td, .admin-tabela-wrap tr { display: block; }
+          .admin-tabela thead { display: none; }
+          .admin-tabela tr { border: 1px solid #E4E2DC; border-radius: 12px; margin-bottom: 0.7rem; padding: 0.8rem; }
+          .admin-tabela td { border-bottom: none !important; padding: 0.35rem 0 !important; }
+          .drawer-cliente { width: 100vw; max-width: 100vw; }
+        }
+
         @media (max-width: 1180px) {
           .admin-metric-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -10565,10 +10652,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
       // ---- Dashboard Admin: hero KPIs ----
       /* @__PURE__ */ React.createElement("div", { className: "admin-metric-grid" },
-        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_BOX, valor: adminClientes.filter((c) => c.subscription.status === STATUS.ACTIVE).length, label: t("Clientes ativos", "Active clients"), cor: "#1F5C3F" }),
-        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_HISTORY, valor: adminClientes.filter((c) => c.subscription.status === STATUS.TRIAL).length, label: t("Trials ativos", "Active trials"), cor: "#D89A00" }),
-        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_ASSINATURA, valor: adminClientes.filter((c) => c.subscription.status === STATUS.EXPIRED).length, label: t("Assinaturas vencidas", "Overdue subscriptions"), cor: "#C0524A" }),
-        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_CHART, valor: history.length, label: t("Avalia\xE7\xF5es realizadas no m\xEAs", "Evaluations this month") })
+        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_BOX, valor: adminClientes.filter((c) => c.subscription.status === STATUS.ACTIVE).length, label: t("Clientes ativos", "Active clients"), cor: "#1F5C3F", subtitulo: t("Sem hist\xF3rico suficiente para tend\xEAncia.", "Not enough history for a trend yet.") }),
+        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_HISTORY, valor: adminClientes.filter((c) => c.subscription.status === STATUS.TRIAL).length, label: t("Trials ativos", "Active trials"), cor: "#D89A00", subtitulo: t("Tend\xEAncia dispon\xEDvel ap\xF3s 30 dias.", "Trend available after 30 days.") }),
+        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_ASSINATURA, valor: adminClientes.filter((c) => c.subscription.status === STATUS.EXPIRED).length, label: t("Assinaturas vencidas", "Overdue subscriptions"), cor: "#C0524A", subtitulo: t("Sem hist\xF3rico suficiente para tend\xEAncia.", "Not enough history for a trend yet.") }),
+        /* @__PURE__ */ React.createElement(AdminMetricCard, { icon: ICON_CHART, valor: history.length, label: t("Avalia\xE7\xF5es realizadas no m\xEAs", "Evaluations this month"), subtitulo: t("Tend\xEAncia dispon\xEDvel ap\xF3s 30 dias.", "Trend available after 30 days.") })
       ),
 
       // ---- KPIs executivos (2ª linha) ----
@@ -10579,51 +10666,119 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement(AdminMetricCard, { valor: adminClientes.filter((c) => c.subscription.plano_id === "enterprise").length, label: t("Empresas Enterprise", "Enterprise Companies") })
       ),
 
-      // ---- Tabela de clientes ----
+      // ---- Toolbar CRM ----
       /* @__PURE__ */ React.createElement("span", { className: "tag-label", style: { marginLeft: "1.5rem", marginTop: "1.4rem", display: "block" } }, t("Clientes", "Clients")),
-      /* @__PURE__ */ React.createElement("div", { className: "admin-filtros-row" },
-        /* @__PURE__ */ React.createElement("input", { type: "text", className: "uso-busca-input", placeholder: t("Buscar empresa ou respons\xE1vel\u2026", "Search company or contact\u2026"), value: adminBusca, onChange: (e) => { setAdminBusca(e.target.value); setAdminPagina(1); } }),
-        /* @__PURE__ */ React.createElement("select", { className: "uso-periodo-select", value: adminFiltroPlano, onChange: (e) => { setAdminFiltroPlano(e.target.value); setAdminPagina(1); } },
-          /* @__PURE__ */ React.createElement("option", { value: "todos" }, t("Todos os planos", "All plans")),
-          billingStore.availablePlans.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.nome[lang] || p.nome.pt))
-        ),
-        /* @__PURE__ */ React.createElement("select", { className: "uso-periodo-select", value: adminFiltroStatus, onChange: (e) => { setAdminFiltroStatus(e.target.value); setAdminPagina(1); } },
-          /* @__PURE__ */ React.createElement("option", { value: "todos" }, t("Todos os status", "All statuses")),
-          [STATUS.TRIAL, STATUS.ACTIVE, STATUS.EXPIRED, STATUS.CANCELLED, STATUS.PAST_DUE].map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, getStatusConfig(s, t).badge))
-        )
-      ),
-      (() => {
-        const termo = adminBusca.trim().toLowerCase();
-        let filtrado = adminClientes.filter((c) => {
-          if (adminFiltroPlano !== "todos" && c.subscription.plano_id !== adminFiltroPlano) return false;
-          if (adminFiltroStatus !== "todos" && c.subscription.status !== adminFiltroStatus) return false;
-          if (!termo) return true;
-          return [c.organization.nome, c.responsavel].filter(Boolean).join(" ").toLowerCase().includes(termo);
-        });
-        filtrado = filtrado.slice().sort((a, b) => a.organization.nome.localeCompare(b.organization.nome));
-        const porPagina = 10;
-        const totalPaginas = Math.max(1, Math.ceil(filtrado.length / porPagina));
-        const paginaAtualAdmin = Math.min(adminPagina, totalPaginas);
-        const pagina = filtrado.slice((paginaAtualAdmin - 1) * porPagina, paginaAtualAdmin * porPagina);
-        const colunas = [
-          { key: "empresa", label: t("Empresa", "Company"), render: (c) => c.organization.nome },
-          { key: "responsavel", label: t("Respons\xE1vel", "Contact"), render: (c) => c.responsavel },
-          { key: "plano", label: t("Plano", "Plan"), render: (c) => /* @__PURE__ */ React.createElement(PlanBadge, { planId: c.subscription.plano_id, lang }) },
-          { key: "status", label: t("Status", "Status"), render: (c) => /* @__PURE__ */ React.createElement(StatusBadge, { status: c.subscription.status, t }) },
-          { key: "uso", label: t("Avalia\xE7\xF5es utilizadas", "Evaluations used"), render: (c) => `${c.usage.avaliacoes_utilizadas} / ${c.usage.avaliacoes_limite === null ? t("ilimitado", "unlimited") : c.usage.avaliacoes_limite}` },
-          { key: "renovacao", label: t("Renova\xE7\xE3o", "Renewal"), render: (c) => c.subscription.renovacao.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR") }
-        ];
-        return /* @__PURE__ */ React.createElement(React.Fragment, null,
-          /* @__PURE__ */ React.createElement(AdminTable, { columns: colunas, rows: pagina, onRowClick: (c) => setClienteSelecionado(c), t }),
-          totalPaginas > 1 && /* @__PURE__ */ React.createElement("div", { className: "uso-paginacao" },
-            /* @__PURE__ */ React.createElement("button", { type: "button", disabled: paginaAtualAdmin <= 1, onClick: () => setAdminPagina(paginaAtualAdmin - 1) }, "\u2190"),
-            /* @__PURE__ */ React.createElement("span", null, paginaAtualAdmin, " / ", totalPaginas),
-            /* @__PURE__ */ React.createElement("button", { type: "button", disabled: paginaAtualAdmin >= totalPaginas, onClick: () => setAdminPagina(paginaAtualAdmin + 1) }, "\u2192")
+      adminClientes.length === 0 ? /* @__PURE__ */ React.createElement("div", { className: "crm-empty-state" },
+        /* @__PURE__ */ React.createElement("span", { className: "crm-empty-icon" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_EMPRESA })),
+        /* @__PURE__ */ React.createElement("h4", null, t("Nenhum cliente cadastrado", "No clients yet")),
+        /* @__PURE__ */ React.createElement("p", null, t("Comece criando sua primeira empresa.", "Start by creating your first company.")),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setClienteModalAberto({ modo: "criar", cliente: null }) }, t("Criar primeiro cliente", "Create first client"))
+      ) : /* @__PURE__ */ React.createElement(React.Fragment, null,
+        /* @__PURE__ */ React.createElement("div", { className: "crm-toolbar" },
+          /* @__PURE__ */ React.createElement("div", { className: "crm-toolbar-left" },
+            /* @__PURE__ */ React.createElement("input", { type: "text", className: "crm-search", placeholder: t("Buscar empresa, respons\xE1vel, e-mail ou cidade\u2026", "Search company, contact, email or city\u2026"), value: adminBusca, onChange: (e) => { setAdminBusca(e.target.value); setAdminPagina(1); } }),
+            /* @__PURE__ */ React.createElement("div", { className: "crm-filter-group" },
+              /* @__PURE__ */ React.createElement("select", { value: adminFiltroPlano, onChange: (e) => { setAdminFiltroPlano(e.target.value); setAdminPagina(1); } },
+                /* @__PURE__ */ React.createElement("option", { value: "todos" }, t("Todos os planos", "All plans")),
+                billingStore.availablePlans.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.nome[lang] || p.nome.pt))
+              ),
+              /* @__PURE__ */ React.createElement("select", { value: adminFiltroStatus, onChange: (e) => { setAdminFiltroStatus(e.target.value); setAdminPagina(1); } },
+                /* @__PURE__ */ React.createElement("option", { value: "todos" }, t("Todos os status", "All statuses")),
+                [STATUS.TRIAL, STATUS.ACTIVE, STATUS.EXPIRED, STATUS.CANCELLED, STATUS.PAST_DUE].map((s) => /* @__PURE__ */ React.createElement("option", { key: s, value: s }, getStatusConfig(s, t).badge))
+              ),
+              /* @__PURE__ */ React.createElement("select", { value: adminOrdenacao, onChange: (e) => { setAdminOrdenacao(e.target.value); setAdminPagina(1); } },
+                /* @__PURE__ */ React.createElement("option", { value: "empresa_asc" }, t("Empresa (A\u2192Z)", "Company (A\u2192Z)")),
+                /* @__PURE__ */ React.createElement("option", { value: "empresa_desc" }, t("Empresa (Z\u2192A)", "Company (Z\u2192A)")),
+                /* @__PURE__ */ React.createElement("option", { value: "ultimo_acesso" }, t("\xDAltimo acesso", "Last access")),
+                /* @__PURE__ */ React.createElement("option", { value: "renovacao" }, t("Renova\xE7\xE3o", "Renewal")),
+                /* @__PURE__ */ React.createElement("option", { value: "health_score" }, t("Health Score", "Health Score"))
+              )
+            )
+          ),
+          /* @__PURE__ */ React.createElement("div", { className: "crm-toolbar-right" },
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => setClienteModalAberto({ modo: "criar", cliente: null }) }, "+ ", t("Criar Cliente", "Create Client"))
           )
-        );
-      })(),
+        ),
 
-      clienteSelecionado && /* @__PURE__ */ React.createElement(ClientDrawer, { cliente: clienteSelecionado, onFechar: () => setClienteSelecionado(null), onAcao: handleAcaoCliente, t, lang })
+        (() => {
+          const termo = adminBusca.trim().toLowerCase();
+          let filtrado = adminClientes.filter((c) => {
+            if (adminFiltroPlano !== "todos" && c.subscription.plano_id !== adminFiltroPlano) return false;
+            if (adminFiltroStatus !== "todos" && c.subscription.status !== adminFiltroStatus) return false;
+            if (!termo) return true;
+            return [c.organization.nome, c.responsavel, c.email, c.cidade].filter(Boolean).join(" ").toLowerCase().includes(termo);
+          });
+          filtrado = filtrado.slice().sort((a, b) => {
+            if (adminOrdenacao === "empresa_asc") return a.organization.nome.localeCompare(b.organization.nome);
+            if (adminOrdenacao === "empresa_desc") return b.organization.nome.localeCompare(a.organization.nome);
+            if (adminOrdenacao === "ultimo_acesso") return b.ultimoAcesso - a.ultimoAcesso;
+            if (adminOrdenacao === "renovacao") return a.subscription.renovacao - b.subscription.renovacao;
+            if (adminOrdenacao === "health_score") return calcularHealthScore(b).score - calcularHealthScore(a).score;
+            return 0;
+          });
+          const porPagina = 10;
+          const totalPaginas = Math.max(1, Math.ceil(filtrado.length / porPagina));
+          const paginaAtualAdmin = Math.min(adminPagina, totalPaginas);
+          const pagina = filtrado.slice((paginaAtualAdmin - 1) * porPagina, paginaAtualAdmin * porPagina);
+          const colunas = [
+            { key: "cliente", label: t("Cliente", "Client"), render: (c) => /* @__PURE__ */ React.createElement("div", { className: "crm-client-cell" },
+              c.logoDataUrl
+                ? /* @__PURE__ */ React.createElement("img", { src: c.logoDataUrl, alt: "", className: "crm-avatar crm-avatar-img" })
+                : /* @__PURE__ */ React.createElement("span", { className: "crm-avatar" }, iniciaisDoNome(c.organization.nome)),
+              /* @__PURE__ */ React.createElement("div", { className: "crm-company-info" },
+                /* @__PURE__ */ React.createElement("span", { className: "crm-company-nome" }, c.organization.nome),
+                /* @__PURE__ */ React.createElement("span", { className: "crm-company-responsavel" }, c.responsavel)
+              )
+            ) },
+            { key: "plano", label: t("Plano", "Plan"), render: (c) => /* @__PURE__ */ React.createElement(PlanBadge, { planId: c.subscription.plano_id, lang }) },
+            { key: "status", label: t("Status", "Status"), render: (c) => /* @__PURE__ */ React.createElement(StatusBadge, { status: c.subscription.status, t }) },
+            { key: "uso", label: t("Uso do Plano", "Plan Usage"), render: (c) => {
+              const u = getClientUsage(c, "avaliacoes");
+              return /* @__PURE__ */ React.createElement("div", { className: "crm-usage-mini" },
+                /* @__PURE__ */ React.createElement("span", null, u.utilizado, " / ", u.ilimitado ? "\u221E" : u.limite),
+                !u.ilimitado && /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-fill", style: { width: u.percentual + "%" } }))
+              );
+            } },
+            { key: "ultimo_acesso", label: t("\xDAltimo acesso", "Last access"), render: (c) => {
+              const a = formatarUltimoAcesso(c.ultimoAcesso, t);
+              return /* @__PURE__ */ React.createElement("span", { className: "crm-last-access " + a.classe }, a.texto);
+            } },
+            { key: "renovacao", label: t("Renova\xE7\xE3o", "Renewal"), render: (c) => c.subscription.renovacao.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR") }
+          ];
+          return /* @__PURE__ */ React.createElement(React.Fragment, null,
+            /* @__PURE__ */ React.createElement("span", { className: "crm-toolbar-count" }, t(`${filtrado.length} cliente${filtrado.length === 1 ? "" : "s"} encontrado${filtrado.length === 1 ? "" : "s"}`, `${filtrado.length} client${filtrado.length === 1 ? "" : "s"} found`)),
+            /* @__PURE__ */ React.createElement(AdminTable, { columns: colunas, rows: pagina, onRowClick: (c) => setClienteSelecionado(c), t }),
+            totalPaginas > 1 && /* @__PURE__ */ React.createElement("div", { className: "uso-paginacao" },
+              /* @__PURE__ */ React.createElement("button", { type: "button", disabled: paginaAtualAdmin <= 1, onClick: () => setAdminPagina(paginaAtualAdmin - 1) }, "\u2190"),
+              /* @__PURE__ */ React.createElement("span", null, paginaAtualAdmin, " / ", totalPaginas),
+              /* @__PURE__ */ React.createElement("button", { type: "button", disabled: paginaAtualAdmin >= totalPaginas, onClick: () => setAdminPagina(paginaAtualAdmin + 1) }, "\u2192")
+            )
+          );
+        })()
+      ),
+
+      clienteSelecionado && /* @__PURE__ */ React.createElement(ClientDrawer, { cliente: clienteSelecionado, onFechar: () => setClienteSelecionado(null), onAcao: handleAcaoCliente, onSalvarObservacoes: salvarObservacoesCliente, eventos: adminEventosClientes[clienteSelecionado.id], t, lang }),
+
+      clienteModalAberto && /* @__PURE__ */ React.createElement(ClientFormModal, {
+        modo: clienteModalAberto.modo,
+        clienteInicial: clienteModalAberto.modo === "editar" ? {
+          empresa: clienteModalAberto.cliente.organization.nome,
+          responsavel: clienteModalAberto.cliente.responsavel,
+          cargo: clienteModalAberto.cliente.cargo,
+          telefone: clienteModalAberto.cliente.telefone,
+          cidade: clienteModalAberto.cliente.cidade,
+          estado: clienteModalAberto.cliente.estado,
+          email: clienteModalAberto.cliente.email,
+          planoId: clienteModalAberto.cliente.subscription.plano_id,
+          diasTrial: 14,
+          observacoes: clienteModalAberto.cliente.observacoes,
+          logoDataUrl: clienteModalAberto.cliente.logoDataUrl
+        } : null,
+        onFechar: () => setClienteModalAberto(null),
+        onSalvar: handleSalvarCliente,
+        t,
+        lang
+      })
     ) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Hist\xF3rico de Avalia\xE7\xF5es", "Evaluation History")),
       /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, t("Consulte e reabra avalia\xE7\xF5es realizadas anteriormente.", "Review and reopen previously performed evaluations.")),
