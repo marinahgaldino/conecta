@@ -5294,17 +5294,26 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // Constrói um cliente admin reaproveitando a MESMA estrutura de dados de
   // subscriptionState (subscription/usage/organization) - nenhum dado
   // duplicado, mesmo getPlanLimits() usado pela área do cliente.
-  function criarClienteAdmin({ id, empresa, responsavel, email, telefone, planoId, status, diasParaRenovar, avaliacoesUsadas, observacoes }) {
+  function criarClienteAdmin({ id, empresa, responsavel, cargo, email, telefone, cidade, estado, site, cnpj, logoDataUrl, planoId, status, diasParaRenovar, ultimoAcessoDias, avaliacoesUsadas, observacoes }) {
     const limites = getPlanLimits(planoId);
     const renovacao = /* @__PURE__ */ new Date();
     renovacao.setDate(renovacao.getDate() + diasParaRenovar);
     const dataInicio = /* @__PURE__ */ new Date();
     dataInicio.setDate(dataInicio.getDate() - (90 - diasParaRenovar));
+    const ultimoAcesso = /* @__PURE__ */ new Date();
+    ultimoAcesso.setDate(ultimoAcesso.getDate() - (ultimoAcessoDias || 0));
     return {
       id,
       responsavel,
+      cargo: cargo || "",
       email,
       telefone,
+      cidade: cidade || "",
+      estado: estado || "",
+      site: site || "",
+      cnpj: cnpj || "",
+      logoDataUrl: logoDataUrl || null,
+      ultimoAcesso,
       observacoes: observacoes || "",
       organization: { id: `org_${id}`, nome: empresa, owner: responsavel, members: [] },
       subscription: {
@@ -5332,16 +5341,32 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       }
     };
   }
+  // Health Score (0-100): saúde da conta, composta por 3 fatores
+  // documentados - uso do plano (40%, mais uso = mais engajada), recência
+  // de acesso (35%, quanto mais recente melhor) e volume de avaliações
+  // (25%, escalado até um teto razoável). Curvas dentro de cada fator são
+  // critério de apresentação, não uma métrica estatisticamente validada -
+  // mesmo espírito documentado já usado na nota de qualidade da avaliação.
+  function calcularHealthScore(cliente) {
+    const limite = cliente.usage.avaliacoes_limite;
+    const usoPct = limite ? Math.min(100, cliente.usage.avaliacoes_utilizadas / limite * 100) : cliente.usage.avaliacoes_utilizadas > 0 ? 100 : 0;
+    const diasDesdeAcesso = Math.max(0, Math.round(((/* @__PURE__ */ new Date()) - cliente.ultimoAcesso) / (1e3 * 60 * 60 * 24)));
+    const acessoScore = diasDesdeAcesso <= 3 ? 100 : diasDesdeAcesso <= 7 ? 80 : diasDesdeAcesso <= 15 ? 55 : diasDesdeAcesso <= 30 ? 30 : 10;
+    const volumeScore = Math.min(100, cliente.usage.avaliacoes_utilizadas / 200 * 100);
+    const score = Math.round(usoPct * 0.4 + acessoScore * 0.35 + volumeScore * 0.25);
+    const classificacao = score >= 80 ? "excelente" : score >= 60 ? "boa" : score >= 40 ? "atencao" : "inativa";
+    return { score: Math.max(0, Math.min(100, score)), classificacao, diasDesdeAcesso };
+  }
   // PLACEHOLDER: ainda não existe base real de clientes/organizações no
   // Supabase. Esta seed serve só pra popular a arquitetura visual - quando
   // houver uma tabela real de clientes, troca-se só esta lista por uma
   // leitura do banco, sem tocar em nenhum componente que a consome.
   var ADMIN_CLIENTS_SEED = [
-    { id: "c1", empresa: "Hilco Industrial", responsavel: "Marina Galdino", email: "marina@hilco.com", telefone: "(11) 99999-0001", planoId: "enterprise", status: STATUS.ACTIVE, diasParaRenovar: 24, avaliacoesUsadas: 412 },
-    { id: "c2", empresa: "Milmaq Equipamentos", responsavel: "Carlos Silva", email: "carlos@milmaq.com.br", telefone: "(11) 99999-0002", planoId: "professional", status: STATUS.ACTIVE, diasParaRenovar: 9, avaliacoesUsadas: 187 },
-    { id: "c3", empresa: "Recicla Sul", responsavel: "Fernanda Costa", email: "fernanda@reciclasul.com", telefone: "(51) 99999-0003", planoId: "starter", status: STATUS.TRIAL, diasParaRenovar: 5, avaliacoesUsadas: 22 },
-    { id: "c4", empresa: "Ferro & Cia", responsavel: "Roberto Alves", email: "roberto@ferroecia.com", telefone: "(21) 99999-0004", planoId: "professional", status: STATUS.EXPIRED, diasParaRenovar: -6, avaliacoesUsadas: 298 },
-    { id: "c5", empresa: "Nordeste M\xE1quinas", responsavel: "Juliana Pereira", email: "juliana@nemaquinas.com", telefone: "(85) 99999-0005", planoId: "starter", status: STATUS.CANCELLED, diasParaRenovar: -20, avaliacoesUsadas: 41 }
+    { id: "c1", empresa: "Hilco Industrial", responsavel: "Marina Galdino", cargo: "Especialista em Avalia\xE7\xE3o", email: "marina@hilco.com", telefone: "(11) 99999-0001", cidade: "S\xE3o Paulo", estado: "SP", planoId: "enterprise", status: STATUS.ACTIVE, diasParaRenovar: 24, ultimoAcessoDias: 0, avaliacoesUsadas: 412 },
+    { id: "c2", empresa: "Milmaq Equipamentos", responsavel: "Carlos Silva", cargo: "Diretor Comercial", email: "carlos@milmaq.com.br", telefone: "(11) 99999-0002", cidade: "Campinas", estado: "SP", planoId: "professional", status: STATUS.ACTIVE, diasParaRenovar: 9, ultimoAcessoDias: 2, avaliacoesUsadas: 187 },
+    { id: "c3", empresa: "Recicla Sul", responsavel: "Fernanda Costa", cargo: "Gerente de Opera\xE7\xF5es", email: "fernanda@reciclasul.com", telefone: "(51) 99999-0003", cidade: "Porto Alegre", estado: "RS", planoId: "starter", status: STATUS.TRIAL, diasParaRenovar: 5, ultimoAcessoDias: 1, avaliacoesUsadas: 22 },
+    { id: "c4", empresa: "Ferro & Cia", responsavel: "Roberto Alves", cargo: "S\xF3cio-propriet\xE1rio", email: "roberto@ferroecia.com", telefone: "(21) 99999-0004", cidade: "Rio de Janeiro", estado: "RJ", planoId: "professional", status: STATUS.EXPIRED, diasParaRenovar: -6, ultimoAcessoDias: 18, avaliacoesUsadas: 298 },
+    { id: "c5", empresa: "Nordeste M\xE1quinas", responsavel: "Juliana Pereira", cargo: "Compradora", email: "juliana@nemaquinas.com", telefone: "(85) 99999-0005", cidade: "Fortaleza", estado: "CE", planoId: "starter", status: STATUS.CANCELLED, diasParaRenovar: -20, ultimoAcessoDias: 55, avaliacoesUsadas: 41 }
   ].map(criarClienteAdmin);
 
   function PersonalizarPdfModal({ pdfConfig, setPdfConfig, onFechar, onGerar, t }) {
@@ -5490,6 +5515,46 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     );
   }
 
+  function ClientFormModal({ modo, clienteInicial, onFechar, onSalvar, t, lang }) {
+    const [f, setF] = (0, import_react.useState)(clienteInicial || {
+      empresa: "", responsavel: "", cargo: "", telefone: "", cidade: "", estado: "", email: "", planoId: "starter", diasTrial: 14, observacoes: "", logoDataUrl: null
+    });
+    function upd(campo, valor) { setF((atual) => ({ ...atual, [campo]: valor })); }
+    function handleLogoUpload(e) {
+      const file = (e.target.files || [])[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => upd("logoDataUrl", ev.target.result);
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    }
+    const podeSalvar = f.empresa.trim() && f.responsavel.trim() && f.email.trim();
+    return /* @__PURE__ */ React.createElement("div", { className: "modal-overlay", onClick: onFechar }, /* @__PURE__ */ React.createElement("div", { className: "modal-pdf", onClick: (e) => e.stopPropagation() },
+      /* @__PURE__ */ React.createElement("h4", null, modo === "editar" ? t("Editar cliente", "Edit client") : t("Criar cliente", "Create client")),
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-grid" },
+        /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Empresa", "Company"), value: f.empresa, onChange: (e) => upd("empresa", e.target.value) }),
+        /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Respons\xE1vel", "Contact"), value: f.responsavel, onChange: (e) => upd("responsavel", e.target.value) }),
+        /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cargo", "Role"), value: f.cargo, onChange: (e) => upd("cargo", e.target.value) }),
+        /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Telefone", "Phone"), value: f.telefone, onChange: (e) => upd("telefone", e.target.value) }),
+        /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cidade", "City"), value: f.cidade, onChange: (e) => upd("cidade", e.target.value) }),
+        /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Estado", "State"), value: f.estado, onChange: (e) => upd("estado", e.target.value) }),
+        /* @__PURE__ */ React.createElement("input", { type: "email", placeholder: t("E-mail", "Email"), value: f.email, onChange: (e) => upd("email", e.target.value) }),
+        /* @__PURE__ */ React.createElement("select", { value: f.planoId, onChange: (e) => upd("planoId", e.target.value) }, PLANS.map((p) => /* @__PURE__ */ React.createElement("option", { key: p.id, value: p.id }, p.nome[lang] || p.nome.pt))),
+        modo !== "editar" && /* @__PURE__ */ React.createElement("input", { type: "number", min: "0", placeholder: t("Dias de Trial", "Trial days"), value: f.diasTrial, onChange: (e) => upd("diasTrial", Number(e.target.value) || 0) })
+      ),
+      /* @__PURE__ */ React.createElement("textarea", { className: "drawer-obs-textarea", style: { marginTop: "0.8rem" }, placeholder: t("Observa\xE7\xF5es", "Notes"), value: f.observacoes, onChange: (e) => upd("observacoes", e.target.value) }),
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-secao", style: { marginTop: "0.9rem" } },
+        /* @__PURE__ */ React.createElement("span", { className: "modal-pdf-secao-titulo" }, t("Logo (opcional)", "Logo (optional)")),
+        f.logoDataUrl && /* @__PURE__ */ React.createElement("img", { src: f.logoDataUrl, alt: "", className: "drawer-logo-preview" }),
+        /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/png,image/jpeg", onChange: handleLogoUpload, className: "modal-pdf-file" })
+      ),
+      /* @__PURE__ */ React.createElement("div", { className: "modal-pdf-botoes" },
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: onFechar }, t("Cancelar", "Cancel")),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", disabled: !podeSalvar, onClick: () => onSalvar(f) }, modo === "editar" ? t("Salvar altera\xE7\xF5es", "Save changes") : t("Criar cliente", "Create client"))
+      )
+    ));
+  }
+
   function AdminTable({ columns, rows, onRowClick, t }) {
     return /* @__PURE__ */ React.createElement("div", { className: "admin-tabela-wrap" }, /* @__PURE__ */ React.createElement("table", { className: "admin-tabela" },
       /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null, columns.map((c, i) => /* @__PURE__ */ React.createElement("th", { key: i }, c.label)))),
@@ -5499,10 +5564,36 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ));
   }
 
-  function ClientDrawer({ cliente, onFechar, onAcao, t, lang }) {
+  function HealthScoreRing({ score, classificacao, t }) {
+    const raio = 34;
+    const circunferencia = 2 * Math.PI * raio;
+    const preenchido = circunferencia * (score / 100);
+    const CORES = { excelente: "#1F5C3F", boa: "#4ADE80", atencao: "#D89A00", inativa: "#C0524A" };
+    const LABELS = { excelente: t("Excelente", "Excellent"), boa: t("Boa", "Good"), atencao: t("Aten\xE7\xE3o", "Attention"), inativa: t("Inativa", "Inactive") };
+    const cor = CORES[classificacao] || CORES.atencao;
+    return /* @__PURE__ */ React.createElement("div", { className: "health-ring-wrap" },
+      /* @__PURE__ */ React.createElement("svg", { width: "84", height: "84", viewBox: "0 0 84 84" },
+        /* @__PURE__ */ React.createElement("circle", { cx: "42", cy: "42", r: raio, fill: "none", stroke: "#F0EEE7", strokeWidth: "8" }),
+        /* @__PURE__ */ React.createElement("circle", { cx: "42", cy: "42", r: raio, fill: "none", stroke: cor, strokeWidth: "8", strokeDasharray: `${preenchido} ${circunferencia}`, strokeLinecap: "round", transform: "rotate(-90 42 42)" }),
+        /* @__PURE__ */ React.createElement("text", { x: "42", y: "47", textAnchor: "middle", fontSize: "18", fontFamily: "IBM Plex Mono, monospace", fontWeight: "700", fill: "#1B1D1F" }, score)
+      ),
+      /* @__PURE__ */ React.createElement("span", { className: "health-ring-label", style: { color: cor } }, LABELS[classificacao] || classificacao)
+    );
+  }
+
+  function ClientDrawer({ cliente, onFechar, onAcao, onSalvarObservacoes, t, lang }) {
     if (!cliente) return null;
     const limites = getPlanLimits(cliente.subscription.plano_id);
     const diasRestantes = Math.ceil((cliente.subscription.renovacao - /* @__PURE__ */ new Date()) / (1e3 * 60 * 60 * 24));
+    const health = calcularHealthScore(cliente);
+    const [obsDraft, setObsDraft] = (0, import_react.useState)(cliente.observacoes || "");
+    (0, import_react.useEffect)(() => { setObsDraft(cliente.observacoes || ""); }, [cliente.id]);
+    const USO_ITENS = [
+      { chave: "avaliacoes", label: t("Avalia\xE7\xF5es", "Evaluations"), usado: cliente.usage.avaliacoes_utilizadas, limite: cliente.usage.avaliacoes_limite },
+      { chave: "pdfs", label: "PDFs", usado: cliente.usage.pdfs_utilizados, limite: cliente.usage.pdfs_limite },
+      { chave: "ocr", label: "OCR", usado: cliente.usage.fotos_utilizadas, limite: cliente.usage.fotos_limite },
+      { chave: "lotes", label: t("Lotes", "Batches"), usado: cliente.usage.lotes_utilizados, limite: cliente.usage.lotes_limite }
+    ];
     return /* @__PURE__ */ React.createElement("div", { className: "drawer-overlay", onClick: onFechar }, /* @__PURE__ */ React.createElement("div", { className: "drawer-cliente", onClick: (e) => e.stopPropagation() },
       /* @__PURE__ */ React.createElement("div", { className: "drawer-cliente-head" },
         /* @__PURE__ */ React.createElement("h4", null, cliente.organization.nome),
@@ -5512,30 +5603,61 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement(StatusBadge, { status: cliente.subscription.status, t }),
         /* @__PURE__ */ React.createElement(PlanBadge, { planId: cliente.subscription.plano_id, lang })
       ),
+
+      // ---- Empresa ----
       /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
-        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Contato", "Contact")),
-        /* @__PURE__ */ React.createElement("p", null, cliente.responsavel),
-        /* @__PURE__ */ React.createElement("p", null, cliente.email),
-        /* @__PURE__ */ React.createElement("p", null, cliente.telefone)
+        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Empresa", "Company")),
+        cliente.logoDataUrl && /* @__PURE__ */ React.createElement("img", { src: cliente.logoDataUrl, alt: "", className: "drawer-logo-preview" }),
+        /* @__PURE__ */ React.createElement("p", null, [cliente.cidade, cliente.estado].filter(Boolean).join(" / ") || "\u2014"),
+        /* @__PURE__ */ React.createElement("p", null, cliente.responsavel, cliente.cargo && ` \u2014 ${cliente.cargo}`),
+        /* @__PURE__ */ React.createElement("p", null, cliente.telefone || "\u2014"),
+        /* @__PURE__ */ React.createElement("p", null, cliente.email || "\u2014"),
+        cliente.site && /* @__PURE__ */ React.createElement("p", null, cliente.site),
+        cliente.cnpj && /* @__PURE__ */ React.createElement("p", null, "CNPJ: ", cliente.cnpj)
       ),
+
+      // ---- Assinatura ----
       /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
         /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Assinatura", "Subscription")),
+        /* @__PURE__ */ React.createElement("p", null, t("Trial: ", "Trial: "), cliente.subscription.trial ? t("Sim", "Yes") : t("N\xE3o", "No")),
         /* @__PURE__ */ React.createElement("p", null, t("Dias restantes: ", "Days left: "), diasRestantes),
         /* @__PURE__ */ React.createElement("p", null, t("Renova em: ", "Renews on: "), cliente.subscription.renovacao.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR"))
       ),
+
+      // ---- Uso ----
       /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
         /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Uso", "Usage")),
-        /* @__PURE__ */ React.createElement("p", null, `${cliente.usage.avaliacoes_utilizadas} / ${limites.avaliacoes === null ? t("ilimitado", "unlimited") : limites.avaliacoes} ${t("avalia\xE7\xF5es", "evaluations")}`)
+        /* @__PURE__ */ React.createElement("div", { className: "drawer-uso-grid" }, USO_ITENS.map((u, i) => {
+          const ilimitado = u.limite === null;
+          const pct = ilimitado || !u.limite ? 0 : Math.min(100, Math.round(u.usado / u.limite * 100));
+          return /* @__PURE__ */ React.createElement("div", { key: i, className: "drawer-uso-card" },
+            /* @__PURE__ */ React.createElement("span", { className: "drawer-uso-label" }, u.label),
+            /* @__PURE__ */ React.createElement("span", { className: "drawer-uso-valor" }, u.usado, " / ", ilimitado ? "\u221E" : u.limite),
+            !ilimitado && /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-fill", style: { width: pct + "%" } }))
+          );
+        }))
       ),
-      cliente.observacoes && /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
-        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Observa\xE7\xF5es", "Notes")),
-        /* @__PURE__ */ React.createElement("p", null, cliente.observacoes)
+
+      // ---- Saúde da Conta ----
+      /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Sa\xFAde da Conta", "Account Health")),
+        /* @__PURE__ */ React.createElement(HealthScoreRing, { score: health.score, classificacao: health.classificacao, t }),
+        /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.6rem" } }, t(`\xDAltimo acesso: ${health.diasDesdeAcesso === 0 ? "hoje" : health.diasDesdeAcesso + " dia(s) atr\xE1s"}`, `Last access: ${health.diasDesdeAcesso === 0 ? "today" : health.diasDesdeAcesso + " day(s) ago"}`))
       ),
+
+      // ---- Observações Internas ----
+      /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Observa\xE7\xF5es Internas", "Internal Notes")),
+        /* @__PURE__ */ React.createElement("textarea", { className: "drawer-obs-textarea", value: obsDraft, onChange: (e) => setObsDraft(e.target.value), onBlur: () => onSalvarObservacoes(cliente.id, obsDraft), placeholder: t("Anota\xE7\xF5es vis\xEDveis s\xF3 pra equipe interna\u2026", "Notes visible only to the internal team\u2026") })
+      ),
+
       /* @__PURE__ */ React.createElement("div", { className: "drawer-botoes" },
-        /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => onAcao("editar", cliente) }, t("Editar", "Edit")),
-        /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => onAcao("suspender", cliente) }, t("Suspender", "Suspend")),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => onAcao("editar", cliente) }, t("Editar Cliente", "Edit Client")),
         /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => onAcao("renovar_trial", cliente) }, t("Renovar Trial", "Renew Trial")),
-        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => onAcao("upgrade", cliente) }, t("Upgrade", "Upgrade"))
+        cliente.subscription.status === STATUS.CANCELLED || cliente.subscription.status === STATUS.EXPIRED
+          ? /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => onAcao("reativar", cliente) }, t("Reativar Conta", "Reactivate Account"))
+          : /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => onAcao("suspender", cliente) }, t("Suspender Conta", "Suspend Account")),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => onAcao("upgrade", cliente) }, t("Upgrade de Plano", "Plan Upgrade"))
       )
     ));
   }
@@ -5901,18 +6023,81 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [adminFiltroPlano, setAdminFiltroPlano] = (0, import_react.useState)("todos");
     const [adminFiltroStatus, setAdminFiltroStatus] = (0, import_react.useState)("todos");
     const [adminPagina, setAdminPagina] = (0, import_react.useState)(1);
+    const [clienteModalAberto, setClienteModalAberto] = (0, import_react.useState)(null);
+    (0, import_react.useEffect)(() => {
+      if (!storageDisponivel()) return;
+      (async () => {
+        try {
+          const r = await appStorage.get("admin-observacoes-clientes");
+          if (r && r.value) {
+            const salvo = JSON.parse(r.value);
+            setAdminClientes((atual) => atual.map((c) => salvo[c.id] !== void 0 ? { ...c, observacoes: salvo[c.id] } : c));
+          }
+        } catch (e) { /* sem observa\xE7\xF5es salvas ainda */ }
+      })();
+    }, []);
+    async function salvarObservacoesCliente(clienteId, texto) {
+      setAdminClientes((atual) => atual.map((c) => c.id === clienteId ? { ...c, observacoes: texto } : c));
+      setClienteSelecionado((c) => c && c.id === clienteId ? { ...c, observacoes: texto } : c);
+      if (!storageDisponivel()) return;
+      try {
+        const r = await appStorage.get("admin-observacoes-clientes");
+        const salvo = r && r.value ? JSON.parse(r.value) : {};
+        salvo[clienteId] = texto;
+        await appStorage.set("admin-observacoes-clientes", JSON.stringify(salvo));
+      } catch (e) { console.warn("N\xE3o foi poss\xEDvel salvar as observa\xE7\xF5es:", e.message); }
+    }
     function handleAcaoCliente(acao, cliente) {
       if (acao === "suspender") {
         setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.CANCELLED } } : c));
         setClienteSelecionado((c) => c && c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.CANCELLED } } : c);
+      } else if (acao === "reativar") {
+        setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.ACTIVE, trial: false } } : c));
+        setClienteSelecionado((c) => c && c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.ACTIVE, trial: false } } : c);
       } else if (acao === "renovar_trial") {
         const novaRenovacao = /* @__PURE__ */ new Date();
         novaRenovacao.setDate(novaRenovacao.getDate() + 7);
         setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.TRIAL, trial: true, renovacao: novaRenovacao } } : c));
         setClienteSelecionado((c) => c && c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.TRIAL, trial: true, renovacao: novaRenovacao } } : c);
-      } else {
-        alert(t("A\xE7\xE3o simulada - sem integra\xE7\xE3o de backend ainda nesta vers\xE3o.", "Simulated action - no backend integration yet in this version."));
+      } else if (acao === "editar") {
+        setClienteModalAberto({ modo: "editar", cliente });
+      } else if (acao === "upgrade") {
+        const idx = PLANS.findIndex((p) => p.id === cliente.subscription.plano_id);
+        const proximoPlano = PLANS[Math.min(PLANS.length - 1, idx + 1)];
+        if (proximoPlano.id === cliente.subscription.plano_id) {
+          alert(t("Este cliente j\xE1 est\xE1 no plano mais alto.", "This client is already on the highest plan."));
+          return;
+        }
+        const novosLimites = getPlanLimits(proximoPlano.id);
+        const atualizar = (c) => ({ ...c, subscription: { ...c.subscription, plano_id: proximoPlano.id }, usage: { ...c.usage, avaliacoes_limite: novosLimites.avaliacoes, lotes_limite: novosLimites.lotes, pdfs_limite: novosLimites.pdfs, fotos_limite: novosLimites.fotos } });
+        setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? atualizar(c) : c));
+        setClienteSelecionado((c) => c && c.id === cliente.id ? atualizar(c) : c);
       }
+    }
+    function handleSalvarCliente(dadosForm) {
+      if (clienteModalAberto.modo === "editar") {
+        const clienteId = clienteModalAberto.cliente.id;
+        const atualizado = criarClienteAdmin({
+          id: clienteId, empresa: dadosForm.empresa, responsavel: dadosForm.responsavel, cargo: dadosForm.cargo,
+          email: dadosForm.email, telefone: dadosForm.telefone, cidade: dadosForm.cidade, estado: dadosForm.estado,
+          logoDataUrl: dadosForm.logoDataUrl, planoId: dadosForm.planoId, status: clienteModalAberto.cliente.subscription.status,
+          diasParaRenovar: Math.ceil((clienteModalAberto.cliente.subscription.renovacao - /* @__PURE__ */ new Date()) / (1e3 * 60 * 60 * 24)),
+          ultimoAcessoDias: Math.round(((/* @__PURE__ */ new Date()) - clienteModalAberto.cliente.ultimoAcesso) / (1e3 * 60 * 60 * 24)),
+          avaliacoesUsadas: clienteModalAberto.cliente.usage.avaliacoes_utilizadas, observacoes: dadosForm.observacoes
+        });
+        setAdminClientes((atual) => atual.map((c) => c.id === clienteId ? atualizado : c));
+        setClienteSelecionado((c) => c && c.id === clienteId ? atualizado : c);
+      } else {
+        const novoId = `c${Date.now()}`;
+        const novoCliente = criarClienteAdmin({
+          id: novoId, empresa: dadosForm.empresa, responsavel: dadosForm.responsavel, cargo: dadosForm.cargo,
+          email: dadosForm.email, telefone: dadosForm.telefone, cidade: dadosForm.cidade, estado: dadosForm.estado,
+          logoDataUrl: dadosForm.logoDataUrl, planoId: dadosForm.planoId, status: STATUS.TRIAL,
+          diasParaRenovar: dadosForm.diasTrial || 14, ultimoAcessoDias: 0, avaliacoesUsadas: 0, observacoes: dadosForm.observacoes
+        });
+        setAdminClientes((atual) => [...atual, novoCliente]);
+      }
+      setClienteModalAberto(null);
     }
     const [usoHistoricoBusca, setUsoHistoricoBusca] = (0, import_react.useState)("");
     const [usoHistoricoPeriodo, setUsoHistoricoPeriodo] = (0, import_react.useState)("todos");
