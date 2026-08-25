@@ -4033,6 +4033,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var ICON_ENGRENAGEM = "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1";
   var ICON_ASSINATURA = "M3 7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7ZM3 10h18M7 15h4";
   var ICON_SHIELD = "M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3ZM9.5 12l1.8 1.8L15 10";
+  var ICON_EMPRESA = "M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16M14 10h5a1 1 0 0 1 1 1v10M8 8h1M8 12h1M8 16h1M2 21h20";
   // Detecta campos importantes faltando pro aviso inteligente (Se\xE7\xE3o 5),
   // reaproveitando ranking_importancia (mesmo dado j\xE1 usado no Compatibility
   // Score) - n\xE3o \xE9 uma lista nova, \xE9 leitura do que j\xE1 existe por categoria.
@@ -5239,8 +5240,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // plano/uso, mesmo que hoje venham da mesma fonte mock). Sem interface
   // visual ainda - só a estrutura de dados e o Provider, prontos pra
   // quando existir tela de "Equipe"/multiusuário.
-  function construirOrganizationStore(organizationDoBillingStore) {
-    const org = organizationDoBillingStore || { id: null, nome: null };
+  function construirOrganizationStore(organizationDoBillingStore, perfilEditavel) {
+    const org = { ...(organizationDoBillingStore || { id: null, nome: null }), ...(perfilEditavel || {}) };
     return {
       organization: org,
       owner: org.owner || null,
@@ -5254,6 +5255,40 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   }
   function useOrganizationStore() {
     return (0, import_react.useContext)(OrganizationContext);
+  }
+
+  // ===== v21.0a: AuthContext - camada única sobre a sessão REAL do
+  // Supabase (não é autenticação paralela). Deriva tudo de session/isAdmin
+  // que já existem no app; signOut() reaproveita a mesma função de logout
+  // já usada em outro lugar da UI, não duplica lógica.
+  function construirAuthStore(session, isAdminFlag, organizationId, handleLogoutFn) {
+    const isAuthenticated = !!(session && session.user);
+    const currentUser = isAuthenticated ? {
+      id: session.user.id || null,
+      email: session.user.email || null,
+      nome: session.user.user_metadata && session.user.user_metadata.nome || null,
+      // Campos futuros pedidos - derivados da sessão Supabase quando
+      // disponíveis, null quando não vêm (não inventamos valor).
+      last_login: session.user.last_sign_in_at || null,
+      created_at: session.user.created_at || null,
+      updated_at: session.user.updated_at || null,
+      auth_provider: session.user.app_metadata && session.user.app_metadata.provider || null
+    } : null;
+    return {
+      isAuthenticated,
+      currentUser,
+      organizationId: organizationId || null,
+      role: isAdminFlag ? ROLES.ADMIN : ROLES.MEMBER,
+      isAdmin: isAdminFlag,
+      signOut: handleLogoutFn
+    };
+  }
+  var AuthContext = React.createContext(null);
+  function AuthProvider({ value, children }) {
+    return /* @__PURE__ */ React.createElement(AuthContext.Provider, { value }, children);
+  }
+  function useAuth() {
+    return (0, import_react.useContext)(AuthContext);
   }
 
   // Constrói um cliente admin reaproveitando a MESMA estrutura de dados de
@@ -5887,7 +5922,38 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // billingStore. Se um limite mudar em PLANS, todos os cards mudam
     // sozinhos, sem tocar em JSX nenhum.
     const billingStore = (0, import_react.useMemo)(() => construirBillingStore(history), [history]);
-    const organizationStore = (0, import_react.useMemo)(() => construirOrganizationStore(billingStore.currentOrganization), [billingStore]);
+    // ===== v21.0a: Perfil da Empresa + Responsável Técnico (persistidos
+    // localmente, mesmo padrão já usado pro template de PDF) =====
+    const EMPRESA_PERFIL_PADRAO = { logoDataUrl: null, nome: "", responsavel: "", cargo: "", cidade: "", estado: "", telefone: "", email: "", site: "", cnpj: "" };
+    const [empresaPerfil, setEmpresaPerfil] = (0, import_react.useState)(EMPRESA_PERFIL_PADRAO);
+    const RESPONSAVEL_TECNICO_PADRAO = { nome: "", cargo: "", crea: "", assinaturaDataUrl: null };
+    const [responsavelTecnico, setResponsavelTecnico] = (0, import_react.useState)(RESPONSAVEL_TECNICO_PADRAO);
+    (0, import_react.useEffect)(() => {
+      if (!storageDisponivel()) return;
+      (async () => {
+        try {
+          const r = await appStorage.get("empresa-perfil");
+          if (r && r.value) setEmpresaPerfil((p) => ({ ...p, ...JSON.parse(r.value) }));
+        } catch (e) { /* sem perfil salvo ainda, mant\xE9m o padr\xE3o */ }
+        try {
+          const r2 = await appStorage.get("responsavel-tecnico");
+          if (r2 && r2.value) setResponsavelTecnico((p) => ({ ...p, ...JSON.parse(r2.value) }));
+        } catch (e) { /* sem respons\xE1vel t\xE9cnico salvo ainda */ }
+      })();
+    }, []);
+    async function salvarEmpresaPerfil(perfil) {
+      setEmpresaPerfil(perfil);
+      if (!storageDisponivel()) return;
+      try { await appStorage.set("empresa-perfil", JSON.stringify(perfil)); } catch (e) { console.warn("N\xE3o foi poss\xEDvel salvar o perfil da empresa:", e.message); }
+    }
+    async function salvarResponsavelTecnico(dados) {
+      setResponsavelTecnico(dados);
+      if (!storageDisponivel()) return;
+      try { await appStorage.set("responsavel-tecnico", JSON.stringify(dados)); } catch (e) { console.warn("N\xE3o foi poss\xEDvel salvar o respons\xE1vel t\xE9cnico:", e.message); }
+    }
+    const organizationStore = (0, import_react.useMemo)(() => construirOrganizationStore(billingStore.currentOrganization, empresaPerfil), [billingStore, empresaPerfil]);
+    const authStore = (0, import_react.useMemo)(() => construirAuthStore(session, isAdmin, organizationStore.organization.id, handleLogout), [session, isAdmin, organizationStore]);
+    const [menuUsuarioAberto, setMenuUsuarioAberto] = (0, import_react.useState)(false);
     const planoAtual = billingStore.currentPlan;
     const PDF_CONFIG_PADRAO = {
       logoDataUrl: null,
@@ -7425,7 +7491,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         "S\xF3 quero ver a interface (modo teste, sem salvar nada)"
       )))));
     }
-    return /* @__PURE__ */ React.createElement(BillingContext.Provider, { value: billingStore }, /* @__PURE__ */ React.createElement(OrganizationContext.Provider, { value: organizationStore }, /* @__PURE__ */ React.createElement("div", { className: "app" }, /* @__PURE__ */ React.createElement("style", null, `
+    return /* @__PURE__ */ React.createElement(BillingContext.Provider, { value: billingStore }, /* @__PURE__ */ React.createElement(OrganizationContext.Provider, { value: organizationStore }, /* @__PURE__ */ React.createElement(AuthContext.Provider, { value: authStore }, /* @__PURE__ */ React.createElement("div", { className: "app" }, /* @__PURE__ */ React.createElement("style", null, `
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
         * { box-sizing: border-box; }
@@ -9586,6 +9652,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
+        className: "pill-tab" + (tab === "empresa" ? " active" : ""),
+        onClick: () => setTab("empresa")
+      },
+      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_EMPRESA }),
+      t("Empresa", "Company")
+    ), /* @__PURE__ */ React.createElement(
+      "button",
+      {
         className: "pill-tab" + (tab === "assinatura" ? " active" : ""),
         onClick: () => setTab("assinatura")
       },
@@ -10359,7 +10433,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("span", { className: "history-preco" }, formatBRL(h.result.faixa_min), " \u2013 ", formatBRL(h.result.faixa_max)),
         h.data && /* @__PURE__ */ React.createElement("span", { className: "history-date" }, new Date(h.data).toLocaleDateString("pt-BR"))
       )
-    )))), /* @__PURE__ */ React.createElement("footer", { className: "app-footer" }, /* @__PURE__ */ React.createElement("p", { className: "footer-brand" }, /* @__PURE__ */ React.createElement(BrandWordmark, { text: config.titulo })), /* @__PURE__ */ React.createElement("button", { type: "button", className: "footer-link", onClick: () => setShowTermos((v) => !v) }, "Termos de Uso"), showTermos && /* @__PURE__ */ React.createElement("div", { className: "termos-box" }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Termos de Uso \u2014 ", config.titulo)), /* @__PURE__ */ React.createElement("p", null, "Esta ferramenta oferece estimativas de valor de mercado para ativos industriais, com apoio de intelig\xEAncia artificial, com finalidade exclusivamente informativa e consultiva."), /* @__PURE__ */ React.createElement("p", null, "As estimativas N\xC3O constituem laudo t\xE9cnico certificado, parecer de valor oficial, nem garantia de venda \u2014 n\xE3o substituem avalia\xE7\xE3o por profissional habilitado quando exigida por lei ou norma t\xE9cnica."), /* @__PURE__ */ React.createElement("p", null, 'As estimativas s\xE3o fornecidas "no estado em que se encontram", sem garantia de precis\xE3o ou atualidade. O usu\xE1rio \xE9 o \xFAnico respons\xE1vel por decis\xF5es comerciais tomadas com base nelas.'), /* @__PURE__ */ React.createElement("p", null, "Os dados usados nas estimativas v\xEAm de observa\xE7\xF5es de mercado p\xFAblicas \u2014 n\xE3o reproduzimos an\xFAncios, descri\xE7\xF5es ou fotos de terceiros, apenas fatos objetivos (categoria, marca, pre\xE7o, localiza\xE7\xE3o)."), /* @__PURE__ */ React.createElement("p", null, "Dados inseridos podem ser armazenados para composi\xE7\xE3o de hist\xF3rico e aprimoramento de estimativas futuras."), /* @__PURE__ */ React.createElement("p", { style: { fontStyle: "italic", color: "#8A8D91" } }, "\xDAltima atualiza\xE7\xE3o: 24/07/2026."))))));
+    )))), /* @__PURE__ */ React.createElement("footer", { className: "app-footer" }, /* @__PURE__ */ React.createElement("p", { className: "footer-brand" }, /* @__PURE__ */ React.createElement(BrandWordmark, { text: config.titulo })), /* @__PURE__ */ React.createElement("button", { type: "button", className: "footer-link", onClick: () => setShowTermos((v) => !v) }, "Termos de Uso"), showTermos && /* @__PURE__ */ React.createElement("div", { className: "termos-box" }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Termos de Uso \u2014 ", config.titulo)), /* @__PURE__ */ React.createElement("p", null, "Esta ferramenta oferece estimativas de valor de mercado para ativos industriais, com apoio de intelig\xEAncia artificial, com finalidade exclusivamente informativa e consultiva."), /* @__PURE__ */ React.createElement("p", null, "As estimativas N\xC3O constituem laudo t\xE9cnico certificado, parecer de valor oficial, nem garantia de venda \u2014 n\xE3o substituem avalia\xE7\xE3o por profissional habilitado quando exigida por lei ou norma t\xE9cnica."), /* @__PURE__ */ React.createElement("p", null, 'As estimativas s\xE3o fornecidas "no estado em que se encontram", sem garantia de precis\xE3o ou atualidade. O usu\xE1rio \xE9 o \xFAnico respons\xE1vel por decis\xF5es comerciais tomadas com base nelas.'), /* @__PURE__ */ React.createElement("p", null, "Os dados usados nas estimativas v\xEAm de observa\xE7\xF5es de mercado p\xFAblicas \u2014 n\xE3o reproduzimos an\xFAncios, descri\xE7\xF5es ou fotos de terceiros, apenas fatos objetivos (categoria, marca, pre\xE7o, localiza\xE7\xE3o)."), /* @__PURE__ */ React.createElement("p", null, "Dados inseridos podem ser armazenados para composi\xE7\xE3o de hist\xF3rico e aprimoramento de estimativas futuras."), /* @__PURE__ */ React.createElement("p", { style: { fontStyle: "italic", color: "#8A8D91" } }, "\xDAltima atualiza\xE7\xE3o: 24/07/2026.")))))));
   }
 
   // entry.jsx
