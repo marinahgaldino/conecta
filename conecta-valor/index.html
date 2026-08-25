@@ -5294,7 +5294,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // Constrói um cliente admin reaproveitando a MESMA estrutura de dados de
   // subscriptionState (subscription/usage/organization) - nenhum dado
   // duplicado, mesmo getPlanLimits() usado pela área do cliente.
-  function criarClienteAdmin({ id, empresa, responsavel, cargo, email, telefone, cidade, estado, site, cnpj, logoDataUrl, planoId, status, diasParaRenovar, ultimoAcessoDias, avaliacoesUsadas, observacoes }) {
+  function criarClienteAdmin({ id, idInterno, empresa, responsavel, cargo, email, telefone, cidade, estado, site, cnpj, logoDataUrl, planoId, status, diasParaRenovar, ultimoAcessoDias, avaliacoesUsadas, observacoes }) {
     const limites = getPlanLimits(planoId);
     const renovacao = /* @__PURE__ */ new Date();
     renovacao.setDate(renovacao.getDate() + diasParaRenovar);
@@ -5304,6 +5304,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ultimoAcesso.setDate(ultimoAcesso.getDate() - (ultimoAcessoDias || 0));
     return {
       id,
+      idInterno: idInterno || null,
+      ultimaAtualizacao: /* @__PURE__ */ new Date(),
       responsavel,
       cargo: cargo || "",
       email,
@@ -5357,16 +5359,50 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const classificacao = score >= 80 ? "excelente" : score >= 60 ? "boa" : score >= 40 ? "atencao" : "inativa";
     return { score: Math.max(0, Math.min(100, score)), classificacao, diasDesdeAcesso };
   }
+  // Mesma lógica/formato de billingStore.getRemainingUsage() (utilizado/
+  // limite/restante/percentual/ilimitado), mas aplicável a QUALQUER
+  // cliente do CRM - não dá pra reaproveitar o método do billingStore
+  // direto porque ele só conhece a assinatura de quem está logado, e a
+  // regra desta versão é não alterar billingStore. Ponto único de cálculo
+  // pro drawer, evita recalcular percentual à mão em cada barra.
+  var MAPA_RECURSO_USAGE_CLIENTE = {
+    avaliacoes: { utilizado: "avaliacoes_utilizadas", limite: "avaliacoes_limite" },
+    lotes: { utilizado: "lotes_utilizados", limite: "lotes_limite" },
+    pdfs: { utilizado: "pdfs_utilizados", limite: "pdfs_limite" },
+    ocr: { utilizado: "fotos_utilizadas", limite: "fotos_limite" }
+  };
+  function getRemainingUsageDoCliente(cliente, resource) {
+    const mapa = MAPA_RECURSO_USAGE_CLIENTE[resource];
+    if (!mapa) return { utilizado: 0, limite: null, restante: null, percentual: 0, ilimitado: false };
+    const utilizado = cliente.usage[mapa.utilizado] || 0;
+    const limite = cliente.usage[mapa.limite];
+    const ilimitado = limite === null || limite === void 0;
+    return {
+      utilizado,
+      limite: ilimitado ? null : limite,
+      restante: ilimitado ? null : Math.max(0, limite - utilizado),
+      percentual: ilimitado ? 0 : Math.min(100, Math.round(utilizado / limite * 100)),
+      ilimitado
+    };
+  }
+  // Alias - mesmo cálculo, nome usado no restante da tela CRM.
+  var getClientUsage = getRemainingUsageDoCliente;
+  // ID interno sequencial (CV-2026-0001) - gerado uma vez na criação,
+  // persistido no próprio objeto do cliente.
+  function gerarIdInterno(sequencia) {
+    const ano = (/* @__PURE__ */ new Date()).getFullYear();
+    return `CV-${ano}-${String(sequencia).padStart(4, "0")}`;
+  }
   // PLACEHOLDER: ainda não existe base real de clientes/organizações no
   // Supabase. Esta seed serve só pra popular a arquitetura visual - quando
   // houver uma tabela real de clientes, troca-se só esta lista por uma
   // leitura do banco, sem tocar em nenhum componente que a consome.
   var ADMIN_CLIENTS_SEED = [
-    { id: "c1", empresa: "Hilco Industrial", responsavel: "Marina Galdino", cargo: "Especialista em Avalia\xE7\xE3o", email: "marina@hilco.com", telefone: "(11) 99999-0001", cidade: "S\xE3o Paulo", estado: "SP", planoId: "enterprise", status: STATUS.ACTIVE, diasParaRenovar: 24, ultimoAcessoDias: 0, avaliacoesUsadas: 412 },
-    { id: "c2", empresa: "Milmaq Equipamentos", responsavel: "Carlos Silva", cargo: "Diretor Comercial", email: "carlos@milmaq.com.br", telefone: "(11) 99999-0002", cidade: "Campinas", estado: "SP", planoId: "professional", status: STATUS.ACTIVE, diasParaRenovar: 9, ultimoAcessoDias: 2, avaliacoesUsadas: 187 },
-    { id: "c3", empresa: "Recicla Sul", responsavel: "Fernanda Costa", cargo: "Gerente de Opera\xE7\xF5es", email: "fernanda@reciclasul.com", telefone: "(51) 99999-0003", cidade: "Porto Alegre", estado: "RS", planoId: "starter", status: STATUS.TRIAL, diasParaRenovar: 5, ultimoAcessoDias: 1, avaliacoesUsadas: 22 },
-    { id: "c4", empresa: "Ferro & Cia", responsavel: "Roberto Alves", cargo: "S\xF3cio-propriet\xE1rio", email: "roberto@ferroecia.com", telefone: "(21) 99999-0004", cidade: "Rio de Janeiro", estado: "RJ", planoId: "professional", status: STATUS.EXPIRED, diasParaRenovar: -6, ultimoAcessoDias: 18, avaliacoesUsadas: 298 },
-    { id: "c5", empresa: "Nordeste M\xE1quinas", responsavel: "Juliana Pereira", cargo: "Compradora", email: "juliana@nemaquinas.com", telefone: "(85) 99999-0005", cidade: "Fortaleza", estado: "CE", planoId: "starter", status: STATUS.CANCELLED, diasParaRenovar: -20, ultimoAcessoDias: 55, avaliacoesUsadas: 41 }
+    { id: "c1", idInterno: gerarIdInterno(1), empresa: "Hilco Industrial", responsavel: "Marina Galdino", cargo: "Especialista em Avalia\xE7\xE3o", email: "marina@hilco.com", telefone: "(11) 99999-0001", cidade: "S\xE3o Paulo", estado: "SP", planoId: "enterprise", status: STATUS.ACTIVE, diasParaRenovar: 24, ultimoAcessoDias: 0, avaliacoesUsadas: 412 },
+    { id: "c2", idInterno: gerarIdInterno(2), empresa: "Milmaq Equipamentos", responsavel: "Carlos Silva", cargo: "Diretor Comercial", email: "carlos@milmaq.com.br", telefone: "(11) 99999-0002", cidade: "Campinas", estado: "SP", planoId: "professional", status: STATUS.ACTIVE, diasParaRenovar: 9, ultimoAcessoDias: 2, avaliacoesUsadas: 187 },
+    { id: "c3", idInterno: gerarIdInterno(3), empresa: "Recicla Sul", responsavel: "Fernanda Costa", cargo: "Gerente de Opera\xE7\xF5es", email: "fernanda@reciclasul.com", telefone: "(51) 99999-0003", cidade: "Porto Alegre", estado: "RS", planoId: "starter", status: STATUS.TRIAL, diasParaRenovar: 5, ultimoAcessoDias: 1, avaliacoesUsadas: 22 },
+    { id: "c4", idInterno: gerarIdInterno(4), empresa: "Ferro & Cia", responsavel: "Roberto Alves", cargo: "S\xF3cio-propriet\xE1rio", email: "roberto@ferroecia.com", telefone: "(21) 99999-0004", cidade: "Rio de Janeiro", estado: "RJ", planoId: "professional", status: STATUS.EXPIRED, diasParaRenovar: -6, ultimoAcessoDias: 18, avaliacoesUsadas: 298 },
+    { id: "c5", idInterno: gerarIdInterno(5), empresa: "Nordeste M\xE1quinas", responsavel: "Juliana Pereira", cargo: "Compradora", email: "juliana@nemaquinas.com", telefone: "(85) 99999-0005", cidade: "Fortaleza", estado: "CE", planoId: "starter", status: STATUS.CANCELLED, diasParaRenovar: -20, ultimoAcessoDias: 55, avaliacoesUsadas: 41 }
   ].map(criarClienteAdmin);
 
   function PersonalizarPdfModal({ pdfConfig, setPdfConfig, onFechar, onGerar, t }) {
@@ -5621,11 +5657,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       { tipo: "ultimo_acesso", data: cliente.ultimoAcesso }
     ].sort((a, b) => b.data - a.data);
     const USO_ITENS = [
-      { chave: "avaliacoes", label: t("Avalia\xE7\xF5es", "Evaluations"), usado: cliente.usage.avaliacoes_utilizadas, limite: cliente.usage.avaliacoes_limite },
-      { chave: "pdfs", label: "PDFs", usado: cliente.usage.pdfs_utilizados, limite: cliente.usage.pdfs_limite },
-      { chave: "ocr", label: "OCR", usado: cliente.usage.fotos_utilizadas, limite: cliente.usage.fotos_limite },
-      { chave: "lotes", label: t("Lotes", "Batches"), usado: cliente.usage.lotes_utilizados, limite: cliente.usage.lotes_limite }
-    ];
+      { chave: "avaliacoes", label: t("Avalia\xE7\xF5es", "Evaluations") },
+      { chave: "pdfs", label: "PDFs" },
+      { chave: "ocr", label: "OCR" },
+      { chave: "lotes", label: t("Lotes", "Batches") }
+    ].map((item) => ({ ...item, uso: getClientUsage(cliente, item.chave) }));
     return /* @__PURE__ */ React.createElement("div", { className: "drawer-overlay", onClick: onFechar }, /* @__PURE__ */ React.createElement("div", { className: "drawer-cliente", onClick: (e) => e.stopPropagation() },
       /* @__PURE__ */ React.createElement("div", { className: "drawer-cliente-head" },
         /* @__PURE__ */ React.createElement("h4", null, cliente.organization.nome),
@@ -5658,16 +5694,12 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
       // ---- Uso ----
       /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
-        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Uso", "Usage")),
-        /* @__PURE__ */ React.createElement("div", { className: "drawer-uso-grid" }, USO_ITENS.map((u, i) => {
-          const ilimitado = u.limite === null;
-          const pct = ilimitado || !u.limite ? 0 : Math.min(100, Math.round(u.usado / u.limite * 100));
-          return /* @__PURE__ */ React.createElement("div", { key: i, className: "drawer-uso-card" },
-            /* @__PURE__ */ React.createElement("span", { className: "drawer-uso-label" }, u.label),
-            /* @__PURE__ */ React.createElement("span", { className: "drawer-uso-valor" }, u.usado, " / ", ilimitado ? "\u221E" : u.limite),
-            !ilimitado && /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-fill", style: { width: pct + "%" } }))
-          );
-        }))
+        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo crm-section-title" }, t("Uso do Plano", "Plan Usage")),
+        /* @__PURE__ */ React.createElement("div", { className: "drawer-uso-grid" }, USO_ITENS.map((u, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "drawer-uso-card" },
+          /* @__PURE__ */ React.createElement("span", { className: "drawer-uso-label" }, u.label),
+          /* @__PURE__ */ React.createElement("span", { className: "drawer-uso-valor" }, u.uso.utilizado, " / ", u.uso.ilimitado ? "\u221E" : u.uso.limite),
+          !u.uso.ilimitado && /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-fill", style: { width: u.uso.percentual + "%" } }))
+        )))
       ),
 
       // ---- Saúde da Conta ----
@@ -5686,6 +5718,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           /* @__PURE__ */ React.createElement("span", { className: "drawer-timeline-texto" }, ev.tipo === "ultimo_acesso" ? t("\xDAltimo acesso", "Last access") : TIMELINE_LABELS[ev.tipo] || ev.tipo),
           /* @__PURE__ */ React.createElement("span", { className: "drawer-timeline-data" }, ev.data.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR"))
         )))
+      ),
+
+      // ---- Informações Internas ----
+      /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo crm-section-title" }, t("Informa\xE7\xF5es Internas", "Internal Information")),
+        cliente.idInterno && /* @__PURE__ */ React.createElement("span", { className: "crm-id-chip" }, cliente.idInterno),
+        /* @__PURE__ */ React.createElement("p", null, t("Criado em: ", "Created on: "), cliente.subscription.data_inicio.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR")),
+        /* @__PURE__ */ React.createElement("p", null, t("\xDAltima atualiza\xE7\xE3o: ", "Last updated: "), cliente.ultimaAtualizacao.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR"))
       ),
 
       // ---- Observações Internas ----
@@ -6136,7 +6176,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       if (clienteModalAberto.modo === "editar") {
         const clienteId = clienteModalAberto.cliente.id;
         const atualizado = criarClienteAdmin({
-          id: clienteId, empresa: dadosForm.empresa, responsavel: dadosForm.responsavel, cargo: dadosForm.cargo,
+          id: clienteId, idInterno: clienteModalAberto.cliente.idInterno, empresa: dadosForm.empresa, responsavel: dadosForm.responsavel, cargo: dadosForm.cargo,
           email: dadosForm.email, telefone: dadosForm.telefone, cidade: dadosForm.cidade, estado: dadosForm.estado,
           logoDataUrl: dadosForm.logoDataUrl, planoId: dadosForm.planoId, status: clienteModalAberto.cliente.subscription.status,
           diasParaRenovar: Math.ceil((clienteModalAberto.cliente.subscription.renovacao - /* @__PURE__ */ new Date()) / (1e3 * 60 * 60 * 24)),
@@ -6148,7 +6188,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       } else {
         const novoId = `c${Date.now()}`;
         const novoCliente = criarClienteAdmin({
-          id: novoId, empresa: dadosForm.empresa, responsavel: dadosForm.responsavel, cargo: dadosForm.cargo,
+          id: novoId, idInterno: gerarIdInterno(adminClientes.length + 1), empresa: dadosForm.empresa, responsavel: dadosForm.responsavel, cargo: dadosForm.cargo,
           email: dadosForm.email, telefone: dadosForm.telefone, cidade: dadosForm.cidade, estado: dadosForm.estado,
           logoDataUrl: dadosForm.logoDataUrl, planoId: dadosForm.planoId, status: STATUS.TRIAL,
           diasParaRenovar: dadosForm.diasTrial || 14, ultimoAcessoDias: 0, avaliacoesUsadas: 0, observacoes: dadosForm.observacoes
