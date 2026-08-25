@@ -5507,12 +5507,23 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     return /* @__PURE__ */ React.createElement("span", { className: "plan-badge-admin", style: { borderColor: plan.cor, color: plan.cor } }, plan.nome[lang] || plan.nome.pt);
   }
 
-  function AdminMetricCard({ icon, valor, label, cor }) {
+  function AdminMetricCard({ icon, valor, label, cor, subtitulo }) {
     return /* @__PURE__ */ React.createElement("div", { className: "admin-metric-card" },
       icon && /* @__PURE__ */ React.createElement(NavIcon, { d: icon }),
       /* @__PURE__ */ React.createElement("span", { className: "admin-metric-valor", style: cor ? { color: cor } : void 0 }, valor),
-      /* @__PURE__ */ React.createElement("span", { className: "admin-metric-label" }, label)
+      /* @__PURE__ */ React.createElement("span", { className: "admin-metric-label" }, label),
+      subtitulo && /* @__PURE__ */ React.createElement("span", { className: "admin-metric-subtitulo" }, subtitulo)
     );
+  }
+
+  // Último acesso formatado com rótulo relativo + classe de cor - nunca
+  // mostra um número fabricado, só formata a data real que já existe.
+  function formatarUltimoAcesso(data, t) {
+    const dias = Math.max(0, Math.round(((/* @__PURE__ */ new Date()) - data) / (1e3 * 60 * 60 * 24)));
+    if (dias === 0) return { texto: t("Hoje", "Today"), classe: "acesso-recente" };
+    if (dias === 1) return { texto: t("Ontem", "Yesterday"), classe: "acesso-recente" };
+    if (dias <= 30) return { texto: t(`H\xE1 ${dias} dias`, `${dias} days ago`), classe: "acesso-medio" };
+    return { texto: t("H\xE1 mais de 30 dias", "More than 30 days ago"), classe: "acesso-antigo" };
   }
 
   function ClientFormModal({ modo, clienteInicial, onFechar, onSalvar, t, lang }) {
@@ -5564,30 +5575,51 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ));
   }
 
-  function HealthScoreRing({ score, classificacao, t }) {
-    const raio = 34;
+  function HealthScoreRing({ score, classificacao, grande, t }) {
+    const tamanho = grande ? 108 : 84;
+    const raio = grande ? 44 : 34;
+    const centro = tamanho / 2;
     const circunferencia = 2 * Math.PI * raio;
     const preenchido = circunferencia * (score / 100);
     const CORES = { excelente: "#1F5C3F", boa: "#4ADE80", atencao: "#D89A00", inativa: "#C0524A" };
     const LABELS = { excelente: t("Excelente", "Excellent"), boa: t("Boa", "Good"), atencao: t("Aten\xE7\xE3o", "Attention"), inativa: t("Inativa", "Inactive") };
     const cor = CORES[classificacao] || CORES.atencao;
     return /* @__PURE__ */ React.createElement("div", { className: "health-ring-wrap" },
-      /* @__PURE__ */ React.createElement("svg", { width: "84", height: "84", viewBox: "0 0 84 84" },
-        /* @__PURE__ */ React.createElement("circle", { cx: "42", cy: "42", r: raio, fill: "none", stroke: "#F0EEE7", strokeWidth: "8" }),
-        /* @__PURE__ */ React.createElement("circle", { cx: "42", cy: "42", r: raio, fill: "none", stroke: cor, strokeWidth: "8", strokeDasharray: `${preenchido} ${circunferencia}`, strokeLinecap: "round", transform: "rotate(-90 42 42)" }),
-        /* @__PURE__ */ React.createElement("text", { x: "42", y: "47", textAnchor: "middle", fontSize: "18", fontFamily: "IBM Plex Mono, monospace", fontWeight: "700", fill: "#1B1D1F" }, score)
+      /* @__PURE__ */ React.createElement("svg", { width: tamanho, height: tamanho, viewBox: `0 0 ${tamanho} ${tamanho}` },
+        /* @__PURE__ */ React.createElement("circle", { cx: centro, cy: centro, r: raio, fill: "none", stroke: "#F0EEE7", strokeWidth: grande ? "10" : "8" }),
+        /* @__PURE__ */ React.createElement("circle", { cx: centro, cy: centro, r: raio, fill: "none", stroke: cor, strokeWidth: grande ? "10" : "8", strokeDasharray: `${preenchido} ${circunferencia}`, strokeLinecap: "round", transform: `rotate(-90 ${centro} ${centro})` }),
+        /* @__PURE__ */ React.createElement("text", { x: centro, y: centro + 5, textAnchor: "middle", fontSize: grande ? "22" : "18", fontFamily: "IBM Plex Mono, monospace", fontWeight: "700", fill: "#1B1D1F" }, score)
       ),
       /* @__PURE__ */ React.createElement("span", { className: "health-ring-label", style: { color: cor } }, LABELS[classificacao] || classificacao)
     );
   }
 
-  function ClientDrawer({ cliente, onFechar, onAcao, onSalvarObservacoes, t, lang }) {
+  function ClientDrawer({ cliente, onFechar, onAcao, onSalvarObservacoes, eventos, t, lang }) {
     if (!cliente) return null;
     const limites = getPlanLimits(cliente.subscription.plano_id);
     const diasRestantes = Math.ceil((cliente.subscription.renovacao - /* @__PURE__ */ new Date()) / (1e3 * 60 * 60 * 24));
     const health = calcularHealthScore(cliente);
+    const HEALTH_EXPLICACOES = {
+      excelente: t("Cliente engajado: uso consistente do plano e acesso recente.", "Engaged client: consistent plan usage and recent access."),
+      boa: t("Uso saud\xE1vel, sem sinais de risco no momento.", "Healthy usage, no risk signals at the moment."),
+      atencao: t("Uso abaixo do esperado ou acesso menos frequente \u2014 vale um contato.", "Below-expected usage or less frequent access \u2014 worth a check-in."),
+      inativa: t("Sem uso relevante recente \u2014 risco de cancelamento.", "No relevant recent usage \u2014 churn risk.")
+    };
     const [obsDraft, setObsDraft] = (0, import_react.useState)(cliente.observacoes || "");
     (0, import_react.useEffect)(() => { setObsDraft(cliente.observacoes || ""); }, [cliente.id]);
+    const acessoFormatado = formatarUltimoAcesso(cliente.ultimoAcesso, t);
+    const TIMELINE_LABELS = {
+      criado: t("Conta criada", "Account created"),
+      plano_alterado: t("Plano alterado", "Plan changed"),
+      trial_renovado: t("Trial renovado", "Trial renewed"),
+      suspenso: t("Conta suspensa", "Account suspended"),
+      reativado: t("Conta reativada", "Account reactivated")
+    };
+    const timelineCompleta = [
+      { tipo: "criado", data: cliente.subscription.data_inicio },
+      ...(eventos || []),
+      { tipo: "ultimo_acesso", data: cliente.ultimoAcesso }
+    ].sort((a, b) => b.data - a.data);
     const USO_ITENS = [
       { chave: "avaliacoes", label: t("Avalia\xE7\xF5es", "Evaluations"), usado: cliente.usage.avaliacoes_utilizadas, limite: cliente.usage.avaliacoes_limite },
       { chave: "pdfs", label: "PDFs", usado: cliente.usage.pdfs_utilizados, limite: cliente.usage.pdfs_limite },
@@ -5641,8 +5673,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       // ---- Saúde da Conta ----
       /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
         /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Sa\xFAde da Conta", "Account Health")),
-        /* @__PURE__ */ React.createElement(HealthScoreRing, { score: health.score, classificacao: health.classificacao, t }),
-        /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.6rem" } }, t(`\xDAltimo acesso: ${health.diasDesdeAcesso === 0 ? "hoje" : health.diasDesdeAcesso + " dia(s) atr\xE1s"}`, `Last access: ${health.diasDesdeAcesso === 0 ? "today" : health.diasDesdeAcesso + " day(s) ago"}`))
+        /* @__PURE__ */ React.createElement(HealthScoreRing, { score: health.score, classificacao: health.classificacao, grande: true, t }),
+        /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.6rem" } }, HEALTH_EXPLICACOES[health.classificacao]),
+        /* @__PURE__ */ React.createElement("p", { className: "field-hint acesso-linha " + acessoFormatado.classe }, t("\xDAltimo acesso: ", "Last access: "), acessoFormatado.texto)
+      ),
+
+      // ---- Timeline da Conta ----
+      /* @__PURE__ */ React.createElement("div", { className: "drawer-secao" },
+        /* @__PURE__ */ React.createElement("span", { className: "drawer-secao-titulo" }, t("Timeline da Conta", "Account Timeline")),
+        /* @__PURE__ */ React.createElement("div", { className: "drawer-timeline" }, timelineCompleta.map((ev, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "drawer-timeline-item" },
+          /* @__PURE__ */ React.createElement("span", { className: "drawer-timeline-dot" }),
+          /* @__PURE__ */ React.createElement("span", { className: "drawer-timeline-texto" }, ev.tipo === "ultimo_acesso" ? t("\xDAltimo acesso", "Last access") : TIMELINE_LABELS[ev.tipo] || ev.tipo),
+          /* @__PURE__ */ React.createElement("span", { className: "drawer-timeline-data" }, ev.data.toLocaleDateString(lang === "en" ? "en-US" : "pt-BR"))
+        )))
       ),
 
       // ---- Observações Internas ----
@@ -6024,6 +6067,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [adminFiltroStatus, setAdminFiltroStatus] = (0, import_react.useState)("todos");
     const [adminPagina, setAdminPagina] = (0, import_react.useState)(1);
     const [clienteModalAberto, setClienteModalAberto] = (0, import_react.useState)(null);
+    const [adminOrdenacao, setAdminOrdenacao] = (0, import_react.useState)("empresa_asc");
+    // Timeline da conta - eventos reais que acontecem na sessão (upgrade,
+    // renovação, criação) - não fabrica histórico antigo que não existe,
+    // só registra o que acontece de verdade a partir de agora.
+    const [adminEventosClientes, setAdminEventosClientes] = (0, import_react.useState)({});
+    function registrarEventoCliente(clienteId, tipo) {
+      setAdminEventosClientes((atual) => ({
+        ...atual,
+        [clienteId]: [...(atual[clienteId] || []), { tipo, data: /* @__PURE__ */ new Date() }]
+      }));
+    }
     (0, import_react.useEffect)(() => {
       if (!storageDisponivel()) return;
       (async () => {
@@ -6051,14 +6105,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       if (acao === "suspender") {
         setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.CANCELLED } } : c));
         setClienteSelecionado((c) => c && c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.CANCELLED } } : c);
+        registrarEventoCliente(cliente.id, "suspenso");
       } else if (acao === "reativar") {
         setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.ACTIVE, trial: false } } : c));
         setClienteSelecionado((c) => c && c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.ACTIVE, trial: false } } : c);
+        registrarEventoCliente(cliente.id, "reativado");
       } else if (acao === "renovar_trial") {
         const novaRenovacao = /* @__PURE__ */ new Date();
         novaRenovacao.setDate(novaRenovacao.getDate() + 7);
         setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.TRIAL, trial: true, renovacao: novaRenovacao } } : c));
         setClienteSelecionado((c) => c && c.id === cliente.id ? { ...c, subscription: { ...c.subscription, status: STATUS.TRIAL, trial: true, renovacao: novaRenovacao } } : c);
+        registrarEventoCliente(cliente.id, "trial_renovado");
       } else if (acao === "editar") {
         setClienteModalAberto({ modo: "editar", cliente });
       } else if (acao === "upgrade") {
@@ -6072,6 +6129,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const atualizar = (c) => ({ ...c, subscription: { ...c.subscription, plano_id: proximoPlano.id }, usage: { ...c.usage, avaliacoes_limite: novosLimites.avaliacoes, lotes_limite: novosLimites.lotes, pdfs_limite: novosLimites.pdfs, fotos_limite: novosLimites.fotos } });
         setAdminClientes((atual) => atual.map((c) => c.id === cliente.id ? atualizar(c) : c));
         setClienteSelecionado((c) => c && c.id === cliente.id ? atualizar(c) : c);
+        registrarEventoCliente(cliente.id, "plano_alterado");
       }
     }
     function handleSalvarCliente(dadosForm) {
@@ -6096,6 +6154,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           diasParaRenovar: dadosForm.diasTrial || 14, ultimoAcessoDias: 0, avaliacoesUsadas: 0, observacoes: dadosForm.observacoes
         });
         setAdminClientes((atual) => [...atual, novoCliente]);
+        setClienteSelecionado(novoCliente);
+        registrarEventoCliente(novoId, "criado");
       }
       setClienteModalAberto(null);
     }
