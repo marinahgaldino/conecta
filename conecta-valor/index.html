@@ -5926,7 +5926,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // localmente, mesmo padrão já usado pro template de PDF) =====
     const EMPRESA_PERFIL_PADRAO = { logoDataUrl: null, nome: "", responsavel: "", cargo: "", cidade: "", estado: "", telefone: "", email: "", site: "", cnpj: "" };
     const [empresaPerfil, setEmpresaPerfil] = (0, import_react.useState)(EMPRESA_PERFIL_PADRAO);
-    const RESPONSAVEL_TECNICO_PADRAO = { nome: "", cargo: "", crea: "", assinaturaDataUrl: null };
+    const RESPONSAVEL_TECNICO_PADRAO = { nome: "", cargo: "", crea: "", email: "", assinaturaDataUrl: null };
     const [responsavelTecnico, setResponsavelTecnico] = (0, import_react.useState)(RESPONSAVEL_TECNICO_PADRAO);
     (0, import_react.useEffect)(() => {
       if (!storageDisponivel()) return;
@@ -5954,6 +5954,36 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const organizationStore = (0, import_react.useMemo)(() => construirOrganizationStore(billingStore.currentOrganization, empresaPerfil), [billingStore, empresaPerfil]);
     const authStore = (0, import_react.useMemo)(() => construirAuthStore(session, isAdmin, organizationStore.organization.id, handleLogout), [session, isAdmin, organizationStore]);
     const [menuUsuarioAberto, setMenuUsuarioAberto] = (0, import_react.useState)(false);
+    const PREFERENCIAS_EMPRESA_PADRAO = { mostrarCidadePdf: true, mostrarResponsavelTecnicoPdf: true, mostrarCnpjPdf: false, mostrarTelefonePdf: false, mostrarEmailPdf: false, temaPadraoPdf: "branco" };
+    const [preferenciasEmpresa, setPreferenciasEmpresa] = (0, import_react.useState)(PREFERENCIAS_EMPRESA_PADRAO);
+    const [toastMensagem, setToastMensagem] = (0, import_react.useState)(null);
+    const [empresaDraft, setEmpresaDraft] = (0, import_react.useState)(empresaPerfil);
+    const [responsavelDraft, setResponsavelDraft] = (0, import_react.useState)(responsavelTecnico);
+    (0, import_react.useEffect)(() => { setEmpresaDraft(empresaPerfil); }, [empresaPerfil]);
+    (0, import_react.useEffect)(() => { setResponsavelDraft(responsavelTecnico); }, [responsavelTecnico]);
+    (0, import_react.useEffect)(() => {
+      if (!storageDisponivel()) return;
+      (async () => {
+        try {
+          const r = await appStorage.get("preferencias-empresa");
+          if (r && r.value) setPreferenciasEmpresa((p) => ({ ...p, ...JSON.parse(r.value) }));
+        } catch (e) { /* sem prefer\xEAncias salvas ainda */ }
+      })();
+    }, []);
+    async function salvarPreferenciasEmpresa(prefs) {
+      setPreferenciasEmpresa(prefs);
+      if (!storageDisponivel()) return;
+      try { await appStorage.set("preferencias-empresa", JSON.stringify(prefs)); } catch (e) { console.warn("N\xE3o foi poss\xEDvel salvar as prefer\xEAncias:", e.message); }
+    }
+    function mostrarToast(msg) {
+      setToastMensagem(msg);
+      setTimeout(() => setToastMensagem(null), 2600);
+    }
+    function iniciaisDoNome(nome) {
+      if (!nome) return "?";
+      const partes = nome.trim().split(/\s+/);
+      return partes.length === 1 ? partes[0].slice(0, 2).toUpperCase() : (partes[0][0] + partes[partes.length - 1][0]).toUpperCase();
+    }
     const planoAtual = billingStore.currentPlan;
     const PDF_CONFIG_PADRAO = {
       logoDataUrl: null,
@@ -5977,6 +6007,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       salvarComoPadrao: false
     };
     const [pdfConfig, setPdfConfig] = (0, import_react.useState)(PDF_CONFIG_PADRAO);
+    (0, import_react.useEffect)(() => {
+      if (!empresaPerfil.logoDataUrl && !empresaPerfil.nome) return;
+      setPdfConfig((c) => (c.logoDataUrl || c.nomeEmpresa) ? c : {
+        ...c,
+        logoDataUrl: empresaPerfil.logoDataUrl || c.logoDataUrl,
+        nomeEmpresa: empresaPerfil.nome || c.nomeEmpresa,
+        cidadeEstado: [empresaPerfil.cidade, empresaPerfil.estado].filter(Boolean).join("/") || c.cidadeEstado
+      });
+    }, [empresaPerfil]);
+    (0, import_react.useEffect)(() => {
+      if (!responsavelTecnico.nome) return;
+      setPdfConfig((c) => c.avaliadorNome ? c : { ...c, avaliadorNome: responsavelTecnico.nome, avaliadorCargo: responsavelTecnico.cargo || c.avaliadorCargo });
+    }, [responsavelTecnico]);
     (0, import_react.useEffect)(() => {
       if (!storageDisponivel()) return;
       (async () => {
@@ -8241,6 +8284,102 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .plano-limites li { font-size: 0.82rem; color: #4A5568; }
         .plano-card button { width: 100%; }
 
+        /* ===== v21.0a: Tela Empresa ===== */
+        .empresa-hero {
+          background: linear-gradient(160deg, #161616, #080808);
+          border-radius: 16px;
+          padding: 1.6rem 1.9rem;
+          margin: 0.5rem 1.5rem 1.4rem;
+          color: #EDECE6;
+          display: flex;
+          align-items: center;
+          gap: 1.4rem;
+          flex-wrap: wrap;
+        }
+        .empresa-hero-logo-wrap { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+        .empresa-hero-logo { width: 84px; height: 84px; border-radius: 14px; object-fit: cover; background: #FFFFFF; }
+        .empresa-hero-logo-vazio { width: 84px; height: 84px; border-radius: 14px; background: rgba(255,255,255,0.08); border: 1px dashed rgba(255,255,255,0.25); display: flex; align-items: center; justify-content: center; }
+        .empresa-hero-logo-vazio .nav-icon { width: 30px; height: 30px; color: #6B7280; }
+        .empresa-editar-logo-btn { font-size: 0.72rem; color: #D89A00; cursor: pointer; text-decoration: underline; text-align: center; }
+        .empresa-hero-nome { font-family: 'Manrope', sans-serif; font-size: 1.35rem; font-weight: 700; margin: 0; color: #FFFFFF; }
+        .empresa-hero-local { display: block; font-size: 0.85rem; color: #B9BCC2; margin-top: 0.3rem; }
+        .empresa-hero-meta { display: flex; align-items: center; gap: 0.9rem; margin-top: 0.8rem; flex-wrap: wrap; }
+        .empresa-hero-responsavel { font-size: 0.8rem; color: #B9BCC2; }
+        .empresa-card { background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 16px; padding: 1.4rem 1.5rem; margin: 0 1.5rem 1.2rem; box-shadow: 0 3px 12px rgba(20,20,20,0.05); }
+        .empresa-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-top: 0.9rem; }
+        .empresa-salvar-btn { margin-top: 1.1rem; }
+        .empresa-assinatura-row { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; flex-wrap: wrap; }
+        .empresa-assinatura-preview { height: 44px; border: 1px solid #E4E2DC; border-radius: 6px; background: #FAFAF8; padding: 0.3rem; }
+        .empresa-identidade-row { display: flex; align-items: center; gap: 1.3rem; margin-top: 0.9rem; flex-wrap: wrap; }
+        .empresa-identidade-preview { width: 90px; height: 90px; border-radius: 14px; object-fit: cover; border: 1px solid #E4E2DC; }
+        .empresa-identidade-vazia { display: flex; align-items: center; justify-content: center; background: #F7F6F2; color: #9CA0A6; font-size: 0.72rem; }
+        .empresa-identidade-botoes { display: flex; flex-direction: column; gap: 0.6rem; align-items: flex-start; }
+        .empresa-preferencias-lista { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 0.9rem; }
+        .empresa-tema-row { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid #F0EEE7; }
+        .empresa-tema-row select { width: auto; }
+
+        /* ===== v21.0a: Menu do usuário (header) ===== */
+        .user-menu-wrap { position: relative; }
+        .user-menu-trigger { display: flex; align-items: center; gap: 0.6rem; background: transparent; border: none; cursor: pointer; padding: 0.3rem 0.5rem; border-radius: 999px; }
+        .user-menu-trigger:hover { background: rgba(255,255,255,0.06); }
+        .user-avatar {
+          width: 32px; height: 32px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #D89A00, #B87F00);
+          color: #1B1D1F;
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'IBM Plex Mono', monospace;
+          font-size: 0.72rem;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+        .user-menu-texto { display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+        .user-menu-nome { font-size: 0.82rem; color: #EDECE6; font-weight: 600; }
+        .user-menu-empresa { font-size: 0.7rem; color: #9CA0A6; }
+        .user-menu-overlay { position: fixed; inset: 0; z-index: 90; }
+        .user-menu-dropdown {
+          position: absolute;
+          top: calc(100% + 8px);
+          right: 0;
+          background: #FFFFFF;
+          border: 1px solid #E4E2DC;
+          border-radius: 12px;
+          box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+          min-width: 200px;
+          z-index: 100;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+        .user-menu-dropdown button { text-align: left; background: transparent; border: none; padding: 0.7rem 1rem; font-size: 0.85rem; color: #1B1D1F; cursor: pointer; border-bottom: 1px solid #F0EEE7; }
+        .user-menu-dropdown button:last-child { border-bottom: none; }
+        .user-menu-dropdown button:hover { background: #FBF0DC; }
+        .user-menu-dropdown button.user-menu-sair { color: #C0524A; }
+
+        /* ===== v21.0a: Toast de confirmação ===== */
+        .toast-confirmacao {
+          position: fixed;
+          bottom: 1.5rem;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #1B1D1F;
+          color: #FFFFFF;
+          padding: 0.7rem 1.3rem;
+          border-radius: 999px;
+          font-size: 0.85rem;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+          z-index: 300;
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        @media (max-width: 900px) {
+          .empresa-form-grid { grid-template-columns: 1fr; }
+          .user-menu-texto { display: none; }
+        }
+        @media (max-width: 620px) {
+          .empresa-hero { flex-direction: column; align-items: flex-start; text-align: left; }
+        }
+
         @media (max-width: 1180px) {
           .consumo-grid, .planos-grid { grid-template-columns: repeat(2, 1fr); }
         }
@@ -9589,7 +9728,25 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           }
           .header-logo-col, .navbar-right .credit-badge { display: none; }
         }
-      `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")), /* @__PURE__ */ React.createElement(
+      `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, authStore.isAuthenticated && /* @__PURE__ */ React.createElement("div", { className: "user-menu-wrap" },
+      /* @__PURE__ */ React.createElement("button", { type: "button", className: "user-menu-trigger", onClick: () => setMenuUsuarioAberto((v) => !v) },
+        /* @__PURE__ */ React.createElement("span", { className: "user-avatar" }, iniciaisDoNome(authStore.currentUser.nome || authStore.currentUser.email)),
+        /* @__PURE__ */ React.createElement("span", { className: "user-menu-texto" },
+          /* @__PURE__ */ React.createElement("span", { className: "user-menu-nome" }, authStore.currentUser.nome || authStore.currentUser.email),
+          empresaPerfil.nome && /* @__PURE__ */ React.createElement("span", { className: "user-menu-empresa" }, empresaPerfil.nome)
+        )
+      ),
+      menuUsuarioAberto && /* @__PURE__ */ React.createElement(React.Fragment, null,
+        /* @__PURE__ */ React.createElement("div", { className: "user-menu-overlay", onClick: () => setMenuUsuarioAberto(false) }),
+        /* @__PURE__ */ React.createElement("div", { className: "user-menu-dropdown" },
+          /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => { setMenuUsuarioAberto(false); setTab("empresa"); } }, t("Meu Perfil", "My Profile")),
+          /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => { setMenuUsuarioAberto(false); setTab("empresa"); } }, t("Minha Empresa", "My Company")),
+          /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => { setMenuUsuarioAberto(false); setTab("assinatura"); } }, t("Minha Assinatura", "My Subscription")),
+          authStore.isAdmin && /* @__PURE__ */ React.createElement("button", { type: "button", onClick: () => { setMenuUsuarioAberto(false); setTab("admin_backoffice"); } }, t("Administra\xE7\xE3o", "Administration")),
+          /* @__PURE__ */ React.createElement("button", { type: "button", className: "user-menu-sair", onClick: () => { setMenuUsuarioAberto(false); authStore.signOut(); } }, t("Sair", "Sign out"))
+        )
+      )
+    ), saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "lang-toggle",
@@ -9922,7 +10079,120 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setAvisoPrecisaoAberto(false); handleSubmit(); } }, t("Continuar mesmo assim", "Continue anyway"))
           )
         );
-      })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: () => { const faltando = getCamposImportantesFaltando(form); if (faltando.length > 0 && !avisoPrecisaoAberto) { setAvisoPrecisaoAberto(true); return; } handleSubmit(); }, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }), /* @__PURE__ */ React.createElement(SkeletonResultCard, null)))))) : tab === "assinatura" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+      })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: () => { const faltando = getCamposImportantesFaltando(form); if (faltando.length > 0 && !avisoPrecisaoAberto) { setAvisoPrecisaoAberto(true); return; } handleSubmit(); }, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }), /* @__PURE__ */ React.createElement(SkeletonResultCard, null)))))) : tab === "empresa" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+      /* @__PURE__ */ React.createElement(PanelTitle, null, t("Empresa", "Company")),
+
+      // ---- Hero superior ----
+      /* @__PURE__ */ React.createElement("div", { className: "empresa-hero" },
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-hero-logo-wrap" },
+          empresaPerfil.logoDataUrl
+            ? /* @__PURE__ */ React.createElement("img", { src: empresaPerfil.logoDataUrl, alt: t("Logo da empresa", "Company logo"), className: "empresa-hero-logo" })
+            : /* @__PURE__ */ React.createElement("div", { className: "empresa-hero-logo-vazio" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_EMPRESA })),
+          /* @__PURE__ */ React.createElement("label", { className: "empresa-editar-logo-btn" }, t("Editar logo", "Edit logo"), /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml", style: { display: "none" }, onChange: (e) => {
+            const file = (e.target.files || [])[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => salvarEmpresaPerfil({ ...empresaPerfil, logoDataUrl: ev.target.result });
+            reader.readAsDataURL(file);
+          } }))
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-hero-info" },
+          /* @__PURE__ */ React.createElement("h3", { className: "empresa-hero-nome" }, empresaPerfil.nome || t("Empresa sem nome cadastrado", "No company name yet")),
+          /* @__PURE__ */ React.createElement("span", { className: "empresa-hero-local" }, [empresaPerfil.cidade, empresaPerfil.estado].filter(Boolean).join(" / ") || t("Cidade/Estado n\xE3o informados", "City/State not set")),
+          /* @__PURE__ */ React.createElement("div", { className: "empresa-hero-meta" },
+            /* @__PURE__ */ React.createElement(PlanBadge, { planId: billingStore.currentPlan.id, lang }),
+            empresaPerfil.responsavel && /* @__PURE__ */ React.createElement("span", { className: "empresa-hero-responsavel" }, t("Respons\xE1vel: ", "Contact: "), empresaPerfil.responsavel)
+          )
+        )
+      ),
+
+      // ---- Dados da Empresa ----
+      /* @__PURE__ */ React.createElement("div", { className: "empresa-card" },
+        /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Dados da Empresa", "Company Data")),
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-form-grid" },
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome da empresa", "Company name"), value: empresaDraft.nome, onChange: (e) => setEmpresaDraft({ ...empresaDraft, nome: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("CNPJ (opcional)", "Tax ID (optional)"), value: empresaDraft.cnpj, onChange: (e) => setEmpresaDraft({ ...empresaDraft, cnpj: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cidade", "City"), value: empresaDraft.cidade, onChange: (e) => setEmpresaDraft({ ...empresaDraft, cidade: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Estado", "State"), value: empresaDraft.estado, onChange: (e) => setEmpresaDraft({ ...empresaDraft, estado: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Telefone", "Phone"), value: empresaDraft.telefone, onChange: (e) => setEmpresaDraft({ ...empresaDraft, telefone: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "email", placeholder: t("E-mail", "Email"), value: empresaDraft.email, onChange: (e) => setEmpresaDraft({ ...empresaDraft, email: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Site (opcional)", "Website (optional)"), value: empresaDraft.site, onChange: (e) => setEmpresaDraft({ ...empresaDraft, site: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Respons\xE1vel principal", "Main contact"), value: empresaDraft.responsavel, onChange: (e) => setEmpresaDraft({ ...empresaDraft, responsavel: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cargo do respons\xE1vel", "Contact's role"), value: empresaDraft.cargo, onChange: (e) => setEmpresaDraft({ ...empresaDraft, cargo: e.target.value }) })
+        ),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary empresa-salvar-btn", onClick: () => { salvarEmpresaPerfil(empresaDraft); mostrarToast(t("Altera\xE7\xF5es salvas", "Changes saved")); } }, t("Salvar altera\xE7\xF5es", "Save changes"))
+      ),
+
+      // ---- Responsável Técnico ----
+      /* @__PURE__ */ React.createElement("div", { className: "empresa-card" },
+        /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Respons\xE1vel T\xE9cnico", "Technical Contact")),
+        /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("Esses dados ser\xE3o reaproveitados automaticamente no PDF White Label.", "This data will be automatically reused in the White Label PDF.")),
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-form-grid" },
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Nome", "Name"), value: responsavelDraft.nome, onChange: (e) => setResponsavelDraft({ ...responsavelDraft, nome: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("Cargo", "Role"), value: responsavelDraft.cargo, onChange: (e) => setResponsavelDraft({ ...responsavelDraft, cargo: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "text", placeholder: t("CREA/Registro (opcional)", "License number (optional)"), value: responsavelDraft.crea, onChange: (e) => setResponsavelDraft({ ...responsavelDraft, crea: e.target.value }) }),
+          /* @__PURE__ */ React.createElement("input", { type: "email", placeholder: t("E-mail profissional", "Professional email"), value: responsavelDraft.email, onChange: (e) => setResponsavelDraft({ ...responsavelDraft, email: e.target.value }) })
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-assinatura-row" },
+          /* @__PURE__ */ React.createElement("span", { className: "field-hint" }, t("Assinatura digital (opcional)", "Digital signature (optional)")),
+          responsavelDraft.assinaturaDataUrl && /* @__PURE__ */ React.createElement("img", { src: responsavelDraft.assinaturaDataUrl, alt: t("Preview da assinatura", "Signature preview"), className: "empresa-assinatura-preview" }),
+          /* @__PURE__ */ React.createElement("label", { className: "empresa-editar-logo-btn" }, t("Enviar assinatura", "Upload signature"), /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/png,image/jpeg", style: { display: "none" }, onChange: (e) => {
+            const file = (e.target.files || [])[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => setResponsavelDraft({ ...responsavelDraft, assinaturaDataUrl: ev.target.result });
+            reader.readAsDataURL(file);
+          } }))
+        ),
+        /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary empresa-salvar-btn", onClick: () => { salvarResponsavelTecnico(responsavelDraft); mostrarToast(t("Altera\xE7\xF5es salvas", "Changes saved")); } }, t("Salvar altera\xE7\xF5es", "Save changes"))
+      ),
+
+      // ---- Identidade Visual ----
+      /* @__PURE__ */ React.createElement("div", { className: "empresa-card" },
+        /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Identidade Visual", "Visual Identity")),
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-identidade-row" },
+          empresaPerfil.logoDataUrl
+            ? /* @__PURE__ */ React.createElement("img", { src: empresaPerfil.logoDataUrl, alt: "", className: "empresa-identidade-preview" })
+            : /* @__PURE__ */ React.createElement("div", { className: "empresa-identidade-preview empresa-identidade-vazia" }, t("Sem logo", "No logo")),
+          /* @__PURE__ */ React.createElement("div", { className: "empresa-identidade-botoes" },
+            /* @__PURE__ */ React.createElement("label", { className: "empresa-editar-logo-btn" }, t("Enviar logo", "Upload logo"), /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/png,image/jpeg,image/svg+xml", style: { display: "none" }, onChange: (e) => {
+              const file = (e.target.files || [])[0];
+              if (!file) return;
+              const reader = new FileReader();
+              reader.onload = (ev) => { salvarEmpresaPerfil({ ...empresaPerfil, logoDataUrl: ev.target.result }); mostrarToast(t("Altera\xE7\xF5es salvas", "Changes saved")); };
+              reader.readAsDataURL(file);
+            } })),
+            empresaPerfil.logoDataUrl && /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => { salvarEmpresaPerfil({ ...empresaPerfil, logoDataUrl: null }); mostrarToast(t("Logo removida", "Logo removed")); } }, t("Remover logo", "Remove logo")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => { salvarEmpresaPerfil({ ...empresaPerfil, logoDataUrl: null }); mostrarToast(t("Restaurado ao padr\xE3o", "Restored to default")); } }, t("Restaurar padr\xE3o", "Restore default"))
+          )
+        ),
+        /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("Essa logo alimenta automaticamente o PDF White Label quando dispon\xEDvel.", "This logo automatically feeds the White Label PDF when available."))
+      ),
+
+      // ---- Preferências da Empresa ----
+      /* @__PURE__ */ React.createElement("div", { className: "empresa-card" },
+        /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Prefer\xEAncias da Empresa", "Company Preferences")),
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-preferencias-lista" },
+          [
+            { chave: "mostrarCidadePdf", label: t("Mostrar cidade no PDF", "Show city in PDF") },
+            { chave: "mostrarResponsavelTecnicoPdf", label: t("Mostrar respons\xE1vel t\xE9cnico", "Show technical contact") },
+            { chave: "mostrarCnpjPdf", label: t("Mostrar CNPJ", "Show tax ID") },
+            { chave: "mostrarTelefonePdf", label: t("Mostrar telefone", "Show phone") },
+            { chave: "mostrarEmailPdf", label: t("Mostrar e-mail", "Show email") }
+          ].map((p, i) => /* @__PURE__ */ React.createElement("label", { key: i, className: "modal-pdf-check" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: preferenciasEmpresa[p.chave], onChange: (e) => salvarPreferenciasEmpresa({ ...preferenciasEmpresa, [p.chave]: e.target.checked }) }), p.label))
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "empresa-tema-row" },
+          /* @__PURE__ */ React.createElement("span", { className: "field-hint" }, t("Tema padr\xE3o do PDF", "Default PDF theme")),
+          /* @__PURE__ */ React.createElement("select", { value: preferenciasEmpresa.temaPadraoPdf, onChange: (e) => salvarPreferenciasEmpresa({ ...preferenciasEmpresa, temaPadraoPdf: e.target.value }) },
+            /* @__PURE__ */ React.createElement("option", { value: "branco" }, t("Executivo Branco", "Executive White")),
+            /* @__PURE__ */ React.createElement("option", { value: "preto_dourado" }, t("Premium Preto + Dourado", "Premium Black + Gold")),
+            /* @__PURE__ */ React.createElement("option", { value: "azul" }, t("Corporativo Azul", "Corporate Blue"))
+          )
+        )
+      ),
+
+      toastMensagem && /* @__PURE__ */ React.createElement("div", { className: "toast-confirmacao" }, "\u2713 ", toastMensagem)
+    ) : tab === "assinatura" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Minha Assinatura", "My Subscription")),
 
       /* @__PURE__ */ React.createElement(SubscriptionHero, { plan: planoAtual, subscription: billingStore.currentSubscription, t, lang }),
