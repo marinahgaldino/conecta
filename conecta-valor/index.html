@@ -10855,26 +10855,30 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("div", { className: "marketplace-hero" },
           /* @__PURE__ */ React.createElement("h1", { className: "marketplace-hero-titulo" }, t("Marketplace de Equipamentos Industriais", "Industrial Equipment Marketplace")),
           /* @__PURE__ */ React.createElement("p", { className: "marketplace-hero-subtitulo" }, t("Compra, venda e avalia\xE7\xE3o inteligente de ativos industriais.", "Smart buying, selling and valuation of industrial assets.")),
-          /* @__PURE__ */ React.createElement("div", { className: "marketplace-hero-botoes" },
-            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario", onClick: () => setMarketplacePage("busca") }, t("Explorar Equipamentos", "Explore Equipment")),
-            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario", onClick: () => setMarketplacePage("vender") }, t("Quero vender meu equipamento", "I want to sell my equipment"))
-          )
-        ),
+/* @__PURE__ */ React.createElement("div", { className: "marketplace-hero-botoes" },
 
-        // ---- Busca global (sticky) ----
-        /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-sticky" },
-          /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-row" },
-            /* @__PURE__ */ React.createElement("svg", { className: "marketplace-search-icone", width: "18", height: "18", viewBox: "0 0 24 24", fill: "none", stroke: "#6B7280", strokeWidth: "2" }, /* @__PURE__ */ React.createElement("circle", { cx: "11", cy: "11", r: "7" }), /* @__PURE__ */ React.createElement("path", { d: "M20 20l-3.5-3.5" })),
-            /* @__PURE__ */ React.createElement("input", {
-              type: "text",
-              className: "marketplace-search-input",
-              placeholder: t("Pesquisar fabricante, modelo ou equipamento\u2026", "Search manufacturer, model or equipment\u2026"),
-              value: ativosBusca,
-              onChange: (e) => { setAtivosBusca(e.target.value); setAtivosSugestoesAbertas(true); },
-              onFocus: () => setAtivosSugestoesAbertas(true),
-              onBlur: () => setTimeout(() => setAtivosSugestoesAbertas(false), 150)
-            })
-          ),
+  /* @__PURE__ */ React.createElement("button", {
+    type: "button",
+    className: "marketplace-btn-primario",
+    onClick: () => setMarketplacePage("busca")
+  }, t("Explorar Equipamentos", "Explore Equipment")),
+
+  /* @__PURE__ */ React.createElement("button", {
+    type: "button",
+    className: "marketplace-btn-secundario",
+    onClick: () => setMarketplacePage("vender")
+  }, t("Quero vender meu equipamento", "I want to sell my equipment")),
+
+  /* @__PURE__ */ React.createElement("button", {
+    type: "button",
+    className: "marketplace-btn-terciario",
+    onClick: () => {
+      setTab("dashboard");
+      setMarketplacePage("home");
+    }
+  }, t("Acessar Conecta Valor", "Access Conecta Valor"))
+
+),
           ativosSugestoesAbertas && ativosBusca.trim().length >= 2 && (() => {
             const sugestoes = ativosBuscarSugestoes(ativosBusca);
             return sugestoes.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-dropdown" }, sugestoes.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, type: "button", className: "marketplace-search-item", onMouseDown: () => { setMarketplaceCurrentListing(s); setMarketplacePage("detalhe"); setAtivosSugestoesAbertas(false); } },
