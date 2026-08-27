@@ -5080,24 +5080,26 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // ============================================================
 
   // MARKETPLACE_CATEGORIES: usa ICON_ENGRENAGEM como ícone genérico
-  // pra todas por enquanto (não temos 14 ícones desenhados ainda) -
-  // e image_url null (sem foto de capa própria ainda) - a UI trata
-  // esses dois casos com um estado visual padrão, não quebra.
+  // pra todas por enquanto (não temos ícones desenhados por
+  // categoria ainda) - e image_url null (sem foto de capa própria
+  // ainda) - a UI trata esses dois casos com um estado visual
+  // padrão, não quebra. Lista atualizada na V1.2 (pedido novo trocou
+  // parte das 14 categorias da V1.0).
   var MARKETPLACE_CATEGORIES = [
-    { slug: "motores", name: "Motores", icon: ICON_ENGRENAGEM, image_url: null },
+    { slug: "motores", name: "Motores El\xE9tricos", icon: ICON_ENGRENAGEM, image_url: null },
+    { slug: "motoredutores", name: "Motoredutores", icon: ICON_ENGRENAGEM, image_url: null },
     { slug: "bombas", name: "Bombas", icon: ICON_ENGRENAGEM, image_url: null },
     { slug: "compressores", name: "Compressores", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "transformadores", name: "Transformadores", icon: ICON_ENGRENAGEM, image_url: null },
     { slug: "tanques", name: "Tanques", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "linhas-pet", name: "Linhas PET", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "linhas-latas", name: "Linhas de Latas", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "transportadores", name: "Transportadores", icon: ICON_ENGRENAGEM, image_url: null },
     { slug: "trocadores-calor", name: "Trocadores de Calor", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "redutores", name: "Redutores", icon: ICON_ENGRENAGEM, image_url: null },
+    { slug: "linhas-industriais", name: "Linhas Industriais", icon: ICON_ENGRENAGEM, image_url: null },
+    { slug: "maquinas-embalagem", name: "M\xE1quinas de Embalagem", icon: ICON_ENGRENAGEM, image_url: null },
     { slug: "geradores", name: "Geradores", icon: ICON_ENGRENAGEM, image_url: null },
+    { slug: "transformadores", name: "Transformadores", icon: ICON_ENGRENAGEM, image_url: null },
     { slug: "valvulas", name: "V\xE1lvulas", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "tubulacoes", name: "Tubula\xE7\xF5es", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "misturadores", name: "Misturadores", icon: ICON_ENGRENAGEM, image_url: null }
+    { slug: "redutores", name: "Redutores", icon: ICON_ENGRENAGEM, image_url: null },
+    { slug: "transportadores", name: "Transportadores", icon: ICON_ENGRENAGEM, image_url: null },
+    { slug: "outros", name: "Outros", icon: ICON_ENGRENAGEM, image_url: null }
   ];
 
   // TECH_ATTRIBUTES_BY_CATEGORY: pras 7 categorias que já têm
@@ -5115,19 +5117,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   var ATRIBUTOS_GENERICOS = ["fabricante", "modelo", "ano", "estado", "capacidade", "material"];
   var TECH_ATTRIBUTES_BY_CATEGORY = {
     "motores": atributosDoSchema("motor_eletrico") || ATRIBUTOS_GENERICOS,
+    "motoredutores": atributosDoSchema("motorredutor") || ATRIBUTOS_GENERICOS,
     "bombas": atributosDoSchema("bomba") || ATRIBUTOS_GENERICOS,
     "compressores": atributosDoSchema("compressor") || ATRIBUTOS_GENERICOS,
     "redutores": atributosDoSchema("redutor") || ATRIBUTOS_GENERICOS,
     "geradores": atributosDoSchema("gerador") || ATRIBUTOS_GENERICOS,
     "transformadores": ["potencia_kva", "tensao_primaria", "tensao_secundaria", "tipo_isolamento", "peso_kg", "fabricante", "ano"],
     "tanques": ["volume_l", "material", "altura_mm", "diametro_mm", "espessura_mm", "pressao_projeto"],
-    "linhas-pet": ATRIBUTOS_GENERICOS,
-    "linhas-latas": ATRIBUTOS_GENERICOS,
+    "linhas-industriais": ATRIBUTOS_GENERICOS,
+    "maquinas-embalagem": ATRIBUTOS_GENERICOS,
     "transportadores": ATRIBUTOS_GENERICOS,
     "trocadores-calor": ATRIBUTOS_GENERICOS,
     "valvulas": ATRIBUTOS_GENERICOS,
-    "tubulacoes": ATRIBUTOS_GENERICOS,
-    "misturadores": ATRIBUTOS_GENERICOS
+    "outros": ATRIBUTOS_GENERICOS
   };
 
   // MARKETPLACE_BRANDS: MARCA_ALIASES só mapeia variações de
@@ -5160,6 +5162,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     { chave: "confianca_ia", tipo: "select", label: { pt: "Confian\xE7a IA", en: "AI Confidence" } },
     { chave: "verificados", tipo: "booleano", label: { pt: "Verificados", en: "Verified" } },
     { chave: "disponivel_visita", tipo: "booleano", label: { pt: "Dispon\xEDvel para visita t\xE9cnica", en: "Technical visit available" } }
+  ];
+
+  // MARKETPLACE_PARTNERS: PLACEHOLDER - os nomes de empresa são
+  // reais (já citados em outros projetos avaliados pela Marina),
+  // mas a contagem "ativos publicados" é dado de EXEMPLO, não uma
+  // métrica real medida - mesma lógica de transparência já usada em
+  // ATIVOS_SAMPLE_LISTINGS.
+  var MARKETPLACE_PARTNERS = [
+    { nome: "Hilco Industrial", cidade: "Campinas/SP", ativos: 324 },
+    { nome: "Superbid Exchange", cidade: "S\xE3o Paulo/SP", ativos: 198 },
+    { nome: "Milmaq Equipamentos", cidade: "Curitiba/PR", ativos: 142 },
+    { nome: "JR Materiais", cidade: "Belo Horizonte/MG", ativos: 86 },
+    { nome: "Horizonte Minerals", cidade: "Aragua\xEDa/PA", ativos: 61 },
+    { nome: "CBA", cidade: "Alum\xEDnio/SP", ativos: 54 },
+    { nome: "Arlanxeo", cidade: "Recife/PE", ativos: 39 },
+    { nome: "Alubar", cidade: "Barcarena/PA", ativos: 33 },
+    { nome: "Prysmian", cidade: "Sorocaba/SP", ativos: 25 },
+    { nome: "Biolab", cidade: "Jandira/SP", ativos: 18 }
   ];
 
   // MARKETPLACE_CONSTANTS: valores fixos reaproveitados em vários
@@ -6353,12 +6373,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // Supabase (V22.0 - migrations 013-020), mas o cliente Supabase
     // AINDA NÃO faz essa consulta aqui - até isso ser conectado, a
     // Home usa ATIVOS_SAMPLE_LISTINGS só pra não ficar em branco
-    // durante o desenvolvimento visual. Nenhuma dessas 3 linhas é
-    // dado real de anúncio.
+    // durante o desenvolvimento visual. Nenhuma dessas 8 linhas é
+    // dado real de anúncio. Expandido de 3 pra 8 itens na V1.2 pra
+    // cobrir "6 em destaque" + "8 últimos anúncios" sem repetir o
+    // mesmo item várias vezes na tela.
     const ATIVOS_SAMPLE_LISTINGS = [
-      { id: "sample-1", titulo: "Motor El\xE9trico WEG W22 40cv", categoria_slug: "motores", fabricante: "WEG", cidade: "S\xE3o Paulo", estado: "SP", preco: 11e3, faixa_min: 9e3, faixa_max: 13e3, liquidez: "Alta", confianca: "alta", verificado: true },
-      { id: "sample-2", titulo: "Compressor Atlas Copco GA75", categoria_slug: "compressores", fabricante: "Atlas Copco", cidade: "Campinas", estado: "SP", preco: 85e3, faixa_min: 78e3, faixa_max: 95e3, liquidez: "M\xE9dia", confianca: "alta", verificado: true },
-      { id: "sample-3", titulo: "Motorredutor SEW WA20", categoria_slug: "redutores", fabricante: "SEW-EURODRIVE", cidade: "Porto Alegre", estado: "RS", preco: 6500, faixa_min: 5500, faixa_max: 7200, liquidez: "M\xE9dia", confianca: "m\xE9dia", verificado: false }
+      { id: "sample-1", titulo: "Motor El\xE9trico WEG W22 40cv", categoria_slug: "motores", fabricante: "WEG", empresa: "Hilco Industrial", cidade: "S\xE3o Paulo", estado: "SP", ano: 2020, preco: 11e3, faixa_min: 9e3, faixa_max: 13e3, liquidez: "Alta", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 2 },
+      { id: "sample-2", titulo: "Compressor Atlas Copco GA75", categoria_slug: "compressores", fabricante: "Atlas Copco", empresa: "Milmaq", cidade: "Campinas", estado: "SP", ano: 2019, preco: 85e3, faixa_min: 78e3, faixa_max: 95e3, liquidez: "M\xE9dia", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 4 },
+      { id: "sample-3", titulo: "Motorredutor SEW WA20", categoria_slug: "motoredutores", fabricante: "SEW-EURODRIVE", empresa: "JR Materiais", cidade: "Porto Alegre", estado: "RS", ano: 2018, preco: 6500, faixa_min: 5500, faixa_max: 7200, liquidez: "M\xE9dia", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 6 },
+      { id: "sample-4", titulo: "Gerador a Diesel 150kVA", categoria_slug: "geradores", fabricante: "Caterpillar", empresa: "Superbid", cidade: "Curitiba", estado: "PR", ano: 2017, preco: 62e3, faixa_min: 55e3, faixa_max: 70e3, liquidez: "Alta", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 1 },
+      { id: "sample-5", titulo: "Bomba Centr\xEDfuga KSB 20cv", categoria_slug: "bombas", fabricante: "KSB", empresa: "CBA", cidade: "Belo Horizonte", estado: "MG", ano: 2021, preco: 8900, faixa_min: 7500, faixa_max: 10200, liquidez: "Alta", confianca: "alta", verificado: true, premium: false, publicadoHaDias: 3 },
+      { id: "sample-6", titulo: "Transformador 500kVA", categoria_slug: "transformadores", fabricante: "Siemens", empresa: "Alubar", cidade: "Bel\xE9m", estado: "PA", ano: 2016, preco: 145e3, faixa_min: 130e3, faixa_max: 165e3, liquidez: "M\xE9dia", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 8 },
+      { id: "sample-7", titulo: "Tanque de A\xE7o Inox 5000L", categoria_slug: "tanques", fabricante: null, empresa: "Biolab", cidade: "S\xE3o Paulo", estado: "SP", ano: 2015, preco: 22e3, faixa_min: 18e3, faixa_max: 26e3, liquidez: "Baixa", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 10 },
+      { id: "sample-8", titulo: "Redutor de Velocidade Voith", categoria_slug: "redutores", fabricante: "Voith", empresa: "Prysmian", cidade: "Sorocaba", estado: "SP", ano: 2019, preco: 15500, faixa_min: 13e3, faixa_max: 18e3, liquidez: "M\xE9dia", confianca: "alta", verificado: true, premium: false, publicadoHaDias: 5 }
     ];
     const [ativosListings] = (0, import_react.useState)(ATIVOS_SAMPLE_LISTINGS);
     const [ativosFavoritos, setAtivosFavoritos] = (0, import_react.useState)([]);
@@ -6366,6 +6393,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [ativosBusca, setAtivosBusca] = (0, import_react.useState)("");
     const [ativosSelecionado, setAtivosSelecionado] = (0, import_react.useState)(null);
     const [ativosView, setAtivosView] = (0, import_react.useState)("home");
+    const [ativosCategoriaFiltro, setAtivosCategoriaFiltro] = (0, import_react.useState)(null);
     const [ativosSugestoesAbertas, setAtivosSugestoesAbertas] = (0, import_react.useState)(false);
     function ativosBuscarSugestoes(texto) {
       const termo = texto.trim().toLowerCase();
@@ -8967,6 +8995,109 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .marketplace-search-item-local { font-size: 0.78rem; color: #6B7280; }
         .marketplace-search-vazio { padding: 1rem 1.1rem; font-size: 0.85rem; color: #9CA3AF; margin: 0; }
 
+        .marketplace-section { margin-top: 3rem; animation: fadeInUp 0.25s ease-out; }
+        @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .marketplace-section-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.4rem; gap: 1rem; flex-wrap: wrap; }
+        .marketplace-section-title { font-family: 'Manrope', sans-serif; font-size: 1.5rem; color: var(--mkt-grafite, #1F2937); margin: 0; }
+        .marketplace-link-btn { background: transparent; border: none; color: var(--mkt-azul, #3B6EA5); font-weight: 700; font-size: 0.85rem; cursor: pointer; }
+
+        /* ---- Categorias ---- */
+        .marketplace-category-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; }
+        .marketplace-category-card {
+          position: relative;
+          border-radius: 22px;
+          overflow: hidden;
+          cursor: pointer;
+          border: 1.5px solid #E5E7EB;
+          background: #FFFFFF;
+          padding: 0;
+          text-align: left;
+          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+          aspect-ratio: 16 / 10;
+          display: flex;
+          flex-direction: column;
+          justify-content: flex-end;
+        }
+        .marketplace-category-card:hover, .marketplace-category-card.active {
+          transform: translateY(-6px) scale(1.02);
+          border-color: var(--mkt-azul, #3B6EA5);
+          box-shadow: 0 16px 32px rgba(59,110,165,0.16);
+        }
+        .marketplace-category-visual { position: absolute; inset: 0; background: linear-gradient(160deg, #E8EEF5, #F5F7FA); display: flex; align-items: center; justify-content: center; }
+        .marketplace-category-visual .nav-icon { width: 34px; height: 34px; color: var(--mkt-azul, #3B6EA5); opacity: 0.5; }
+        .marketplace-category-overlay { position: relative; padding: 1rem 1.1rem; background: linear-gradient(0deg, rgba(31,41,55,0.85), transparent); color: #FFFFFF; }
+        .marketplace-category-overlay h3 { font-size: 1rem; margin: 0; font-family: 'Manrope', sans-serif; }
+        .marketplace-category-overlay p { font-size: 0.76rem; margin: 0.2rem 0 0; color: #E5E7EB; }
+        .marketplace-category-seta { position: absolute; top: 0.9rem; right: 1rem; font-size: 1.1rem; }
+
+        /* ---- Destaques ---- */
+        .marketplace-featured-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.4rem; }
+        .marketplace-listing-card { background: #FFFFFF; border-radius: 22px; overflow: hidden; box-shadow: 0 6px 20px rgba(31,41,55,0.07); transition: transform 0.25s ease; cursor: default; }
+        .marketplace-listing-card:hover { transform: translateY(-8px); }
+        .marketplace-image-wrapper { position: relative; aspect-ratio: 16 / 9; }
+        .marketplace-image-placeholder { width: 100%; height: 100%; background: linear-gradient(160deg, #E8EEF5, #F5F7FA); display: flex; align-items: center; justify-content: center; }
+        .marketplace-image-placeholder .nav-icon { width: 38px; height: 38px; color: var(--mkt-azul, #3B6EA5); opacity: 0.35; }
+        .marketplace-image-placeholder-sm { aspect-ratio: 4 / 3; }
+        .marketplace-badge { position: absolute; top: 0.9rem; left: 0.9rem; padding: 0.3rem 0.7rem; border-radius: 999px; color: #FFFFFF; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.03em; }
+        .marketplace-badge-premium { background: var(--mkt-dourado, #B68B2C); }
+        .marketplace-badge-verificado { background: var(--mkt-azul, #3B6EA5); left: auto; right: 0.9rem; }
+        .marketplace-card-body { padding: 1.3rem; }
+        .marketplace-company { display: flex; justify-content: space-between; font-size: 0.78rem; color: #6B7280; margin-bottom: 0.3rem; }
+        .marketplace-location { color: #9CA3AF; }
+        .marketplace-card-body h3 { font-size: 1.02rem; margin: 0 0 0.5rem; color: var(--mkt-grafite, #1F2937); }
+        .marketplace-spec-row { display: flex; gap: 0.8rem; font-size: 0.8rem; color: #6B7280; margin-bottom: 0.6rem; }
+        .marketplace-price { color: var(--mkt-azul, #3B6EA5); font-size: 1.4rem; font-weight: 800; margin-bottom: 0.8rem; }
+        .marketplace-score-row { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+        .marketplace-score-row .consumo-barra-track { width: 90px; margin-top: 0.25rem; }
+        .marketplace-chip { display: inline-block; background: var(--mkt-cinza-fundo, #F5F7FA); color: var(--mkt-grafite, #1F2937); font-size: 0.72rem; font-weight: 700; padding: 0.25rem 0.7rem; border-radius: 999px; }
+        .marketplace-card-actions { display: flex; gap: 0.7rem; }
+        .marketplace-card-actions .primary { flex: 1; border-radius: 20px; }
+        .marketplace-btn-whatsapp { flex: 1; display: flex; align-items: center; justify-content: center; background: #16A34A; color: #FFFFFF; border-radius: 20px; font-weight: 700; font-size: 0.85rem; text-decoration: none; padding: 0.7rem; }
+
+        /* ---- Parceiros ---- */
+        .marketplace-partners { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
+        .marketplace-partner-card { background: #FFFFFF; border: 1px solid #E5E7EB; border-radius: 18px; padding: 1.3rem 1rem; text-align: center; transition: border-color 0.2s ease; display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+        .marketplace-partner-card:hover { border-color: var(--mkt-azul, #3B6EA5); }
+        .marketplace-partner-logo { width: 56px; height: 56px; border-radius: 50%; background: var(--mkt-azul, #3B6EA5); color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 0.95rem; }
+        .marketplace-partner-card strong { font-size: 0.85rem; color: var(--mkt-grafite, #1F2937); }
+        .marketplace-partner-card small { font-size: 0.72rem; color: #9CA3AF; }
+
+        /* ---- Banner de venda ---- */
+        .marketplace-sell-banner { margin-top: 3rem; background: linear-gradient(135deg, #0B0F17, var(--mkt-azul, #3B6EA5)); border-radius: 28px; padding: 2.8rem; color: #FFFFFF; }
+        .marketplace-banner-content h2 { font-size: clamp(1.4rem, 2.6vw, 2rem); margin: 0.8rem 0; }
+        .marketplace-banner-content p { color: #D1D5DB; max-width: 520px; }
+        .marketplace-banner-checklist { list-style: none; padding: 0; margin: 1.4rem 0; display: grid; gap: 0.5rem; font-size: 0.9rem; }
+        .marketplace-banner-buttons { display: flex; gap: 0.9rem; flex-wrap: wrap; margin-top: 1rem; }
+        .marketplace-btn-secundario-claro { background: #FFFFFF; color: var(--mkt-grafite, #1F2937); border: none; font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 0.92rem; padding: 0.8rem 1.6rem; border-radius: 20px; cursor: pointer; }
+
+        /* ---- Últimos anúncios ---- */
+        .marketplace-recent-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem; }
+        .marketplace-recent-card { background: #FFFFFF; border-radius: 18px; overflow: hidden; border: 1px solid #E5E7EB; cursor: pointer; transition: transform 0.2s ease; }
+        .marketplace-recent-card:hover { transform: translateY(-4px); }
+        .marketplace-recent-body { padding: 1rem; }
+        .marketplace-recent-body h4 { font-size: 0.92rem; margin: 0.2rem 0 0.4rem; color: var(--mkt-grafite, #1F2937); }
+        .marketplace-recent-body .marketplace-price { font-size: 1.05rem; margin: 0.4rem 0 0.2rem; }
+
+        /* ---- CTA final ---- */
+        .marketplace-alert-banner { margin: 3.5rem 0 1rem; background: #0B0F17; color: #FFFFFF; border-radius: 28px; padding: 2.8rem; display: flex; justify-content: space-between; align-items: center; gap: 2rem; flex-wrap: wrap; }
+        .marketplace-alert-logo { width: 160px; margin-bottom: 1rem; }
+        .marketplace-alert-banner h2 { font-size: 1.5rem; margin: 0 0 0.6rem; }
+        .marketplace-alert-banner p { color: #D1D5DB; max-width: 420px; margin: 0; }
+
+        @media (max-width: 1100px) {
+          .marketplace-category-grid { grid-template-columns: repeat(3, 1fr); }
+          .marketplace-featured-grid { grid-template-columns: repeat(2, 1fr); }
+          .marketplace-partners { grid-template-columns: repeat(3, 1fr); }
+          .marketplace-recent-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 900px) {
+          .marketplace-sell-banner, .marketplace-alert-banner { flex-direction: column; text-align: center; }
+          .marketplace-banner-buttons { justify-content: center; }
+          .marketplace-category-grid, .marketplace-partners { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 0.9rem; padding-bottom: 0.5rem; }
+          .marketplace-category-card, .marketplace-partner-card { min-width: 200px; flex-shrink: 0; scroll-snap-align: start; }
+          .marketplace-featured-grid, .marketplace-recent-grid { grid-template-columns: 1fr; }
+        }
+
         @media (max-width: 900px) {
           .empresa-form-grid { grid-template-columns: 1fr; }
           .user-menu-texto { display: none; }
@@ -10715,6 +10846,137 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               /* @__PURE__ */ React.createElement("span", { className: "marketplace-search-item-local" }, s.cidade, "/", s.estado)
             ))) : /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-dropdown" }, /* @__PURE__ */ React.createElement("p", { className: "marketplace-search-vazio" }, t("Nenhum equipamento encontrado.", "No equipment found.")));
           })()
+        ),
+
+        // ---- 1. Grid de categorias ----
+        /* @__PURE__ */ React.createElement("section", { className: "marketplace-section" },
+          /* @__PURE__ */ React.createElement("div", { className: "marketplace-section-header" },
+            /* @__PURE__ */ React.createElement("h2", { className: "marketplace-section-title" }, t("Categorias Industriais", "Industrial Categories")),
+            ativosCategoriaFiltro && /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-link-btn", onClick: () => setAtivosCategoriaFiltro(null) }, t("Ver todas", "View all"))
+          ),
+          /* @__PURE__ */ React.createElement("div", { className: "marketplace-category-grid" }, MARKETPLACE_CATEGORIES.map((cat) => {
+            const contagem = ativosListings.filter((l) => l.categoria_slug === cat.slug).length;
+            return /* @__PURE__ */ React.createElement("button", {
+              key: cat.slug,
+              type: "button",
+              className: "marketplace-category-card" + (ativosCategoriaFiltro === cat.slug ? " active" : ""),
+              onClick: () => setAtivosCategoriaFiltro(ativosCategoriaFiltro === cat.slug ? null : cat.slug)
+            },
+              /* @__PURE__ */ React.createElement("div", { className: "marketplace-category-visual" }, /* @__PURE__ */ React.createElement(NavIcon, { d: cat.icon })),
+              /* @__PURE__ */ React.createElement("div", { className: "marketplace-category-overlay" },
+                /* @__PURE__ */ React.createElement("h3", null, cat.name),
+                /* @__PURE__ */ React.createElement("p", null, contagem, " ", t("equipamentos", "listings")),
+                /* @__PURE__ */ React.createElement("span", { className: "marketplace-category-seta" }, "\u2192")
+              )
+            );
+          }))
+        ),
+
+        // ---- 2. Equipamentos em destaque ----
+        (() => {
+          const destaques = ativosListings.filter((l) => l.premium && (!ativosCategoriaFiltro || l.categoria_slug === ativosCategoriaFiltro)).slice(0, 6);
+          return /* @__PURE__ */ React.createElement("section", { className: "marketplace-section" },
+            /* @__PURE__ */ React.createElement("div", { className: "marketplace-section-header" },
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("h2", { className: "marketplace-section-title" }, t("Equipamentos em Destaque", "Featured Equipment")),
+                /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("Selecionados pela equipe t\xE9cnica do Conecta Ativos.", "Selected by the Conecta Ativos technical team."))
+              )
+            ),
+            destaques.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("Nenhum destaque para esta categoria ainda.", "No featured listing for this category yet.")) : /* @__PURE__ */ React.createElement("div", { className: "marketplace-featured-grid" }, destaques.map((item) => {
+              const compat = BARRA_COMPAT_NOTA[(item.confianca || "").toLowerCase()] || null;
+              return /* @__PURE__ */ React.createElement("article", { key: item.id, className: "marketplace-listing-card" },
+                /* @__PURE__ */ React.createElement("div", { className: "marketplace-image-wrapper" },
+                  /* @__PURE__ */ React.createElement("div", { className: "marketplace-image-placeholder" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_EMPRESA })),
+                  /* @__PURE__ */ React.createElement("span", { className: "marketplace-badge marketplace-badge-premium" }, "PREMIUM"),
+                  item.verificado && /* @__PURE__ */ React.createElement("span", { className: "marketplace-badge marketplace-badge-verificado" }, t("VERIFICADO", "VERIFIED"))
+                ),
+                /* @__PURE__ */ React.createElement("div", { className: "marketplace-card-body" },
+                  /* @__PURE__ */ React.createElement("div", { className: "marketplace-company" },
+                    /* @__PURE__ */ React.createElement("span", null, item.empresa),
+                    /* @__PURE__ */ React.createElement("span", { className: "marketplace-location" }, item.cidade, "/", item.estado)
+                  ),
+                  /* @__PURE__ */ React.createElement("h3", null, item.titulo),
+                  /* @__PURE__ */ React.createElement("div", { className: "marketplace-spec-row" },
+                    item.fabricante && /* @__PURE__ */ React.createElement("span", null, item.fabricante),
+                    item.ano && /* @__PURE__ */ React.createElement("span", null, item.ano)
+                  ),
+                  /* @__PURE__ */ React.createElement("div", { className: "marketplace-price" }, item.preco.toLocaleString(lang === "en" ? "en-US" : "pt-BR", { style: "currency", currency: "BRL" })),
+                  compat !== null && /* @__PURE__ */ React.createElement("div", { className: "marketplace-score-row" },
+                    /* @__PURE__ */ React.createElement("div", null,
+                      /* @__PURE__ */ React.createElement("span", { className: "field-hint" }, t("Compatibilidade IA", "AI Compatibility")),
+                      /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-track" }, /* @__PURE__ */ React.createElement("div", { className: "consumo-barra-fill", style: { width: compat + "%" } }))
+                    ),
+                    /* @__PURE__ */ React.createElement("span", { className: "marketplace-chip" }, item.liquidez)
+                  ),
+                  /* @__PURE__ */ React.createElement("div", { className: "marketplace-card-actions" },
+                    /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setAtivosSelecionado(item); setAtivosView("detalhe"); } }, t("Ver detalhes", "View details")),
+                    /* @__PURE__ */ React.createElement("a", { className: "marketplace-btn-whatsapp", href: `https://wa.me/?text=${encodeURIComponent(MARKETPLACE_CONSTANTS.WHATSAPP_TEMPLATE(item.id, item.titulo))}`, target: "_blank", rel: "noreferrer" }, "WhatsApp")
+                  )
+                )
+              );
+            }))
+          );
+        })(),
+
+        // ---- 3. Empresas parceiras ----
+        /* @__PURE__ */ React.createElement("section", { className: "marketplace-section" },
+          /* @__PURE__ */ React.createElement("div", { className: "marketplace-section-header" }, /* @__PURE__ */ React.createElement("h2", { className: "marketplace-section-title" }, t("Empresas Parceiras", "Partner Companies"))),
+          /* @__PURE__ */ React.createElement("div", { className: "marketplace-partners" }, MARKETPLACE_PARTNERS.map((p, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "marketplace-partner-card" },
+            /* @__PURE__ */ React.createElement("span", { className: "marketplace-partner-logo" }, iniciaisDoNome(p.nome)),
+            /* @__PURE__ */ React.createElement("strong", null, p.nome),
+            /* @__PURE__ */ React.createElement("span", { className: "marketplace-location" }, p.cidade),
+            /* @__PURE__ */ React.createElement("small", null, p.ativos, " ", t("ativos publicados", "listed assets"))
+          )))
+        ),
+
+        // ---- 4. Banner "Quer vender seu equipamento?" ----
+        /* @__PURE__ */ React.createElement("section", { className: "marketplace-sell-banner" },
+          /* @__PURE__ */ React.createElement("div", { className: "marketplace-banner-content" },
+            /* @__PURE__ */ React.createElement("span", { className: "marketplace-chip" }, t("VENDA SEU EQUIPAMENTO", "SELL YOUR EQUIPMENT")),
+            /* @__PURE__ */ React.createElement("h2", null, t("Venda seu equipamento com especialistas.", "Sell your equipment with specialists.")),
+            /* @__PURE__ */ React.createElement("p", null, t("Publicamos seu ativo para compradores industriais qualificados em todo o Brasil.", "We publish your asset to qualified industrial buyers across Brazil.")),
+            /* @__PURE__ */ React.createElement("ul", { className: "marketplace-banner-checklist" },
+              /* @__PURE__ */ React.createElement("li", null, "\u2713 ", t("Avalia\xE7\xE3o t\xE9cnica.", "Technical evaluation.")),
+              /* @__PURE__ */ React.createElement("li", null, "\u2713 ", t("Fotos profissionais.", "Professional photos.")),
+              /* @__PURE__ */ React.createElement("li", null, "\u2713 ", t("Divulga\xE7\xE3o nacional.", "Nationwide reach.")),
+              /* @__PURE__ */ React.createElement("li", null, "\u2713 ", t("Compradores qualificados.", "Qualified buyers."))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "marketplace-banner-buttons" },
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario", onClick: () => setAtivosView("vender") }, t("Quero anunciar", "I want to list")),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario-claro" }, t("Falar no WhatsApp", "Chat on WhatsApp"))
+            )
+          )
+        ),
+
+        // ---- 5. Últimos anúncios ----
+        (() => {
+          const recentes = [...ativosListings].sort((a, b) => a.publicadoHaDias - b.publicadoHaDias).slice(0, 8);
+          return /* @__PURE__ */ React.createElement("section", { className: "marketplace-section" },
+            /* @__PURE__ */ React.createElement("div", { className: "marketplace-section-header" }, /* @__PURE__ */ React.createElement("h2", { className: "marketplace-section-title" }, t("\xDAltimos an\xFAncios publicados", "Latest published listings"))),
+            /* @__PURE__ */ React.createElement("div", { className: "marketplace-recent-grid" }, recentes.map((item) => /* @__PURE__ */ React.createElement("article", { key: item.id, className: "marketplace-recent-card", onClick: () => { setAtivosSelecionado(item); setAtivosView("detalhe"); } },
+              /* @__PURE__ */ React.createElement("div", { className: "marketplace-image-placeholder marketplace-image-placeholder-sm" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_EMPRESA })),
+              /* @__PURE__ */ React.createElement("div", { className: "marketplace-recent-body" },
+                /* @__PURE__ */ React.createElement("small", null, item.empresa),
+                /* @__PURE__ */ React.createElement("h4", null, item.titulo),
+                /* @__PURE__ */ React.createElement("span", { className: "marketplace-location" }, item.cidade, "/", item.estado),
+                /* @__PURE__ */ React.createElement("strong", { className: "marketplace-price" }, item.preco.toLocaleString(lang === "en" ? "en-US" : "pt-BR", { style: "currency", currency: "BRL" })),
+                /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t(`Publicado h\xE1 ${item.publicadoHaDias} dias`, `Published ${item.publicadoHaDias} days ago`))
+              )
+            )))
+          );
+        })(),
+
+        // ---- 6. CTA final ----
+        /* @__PURE__ */ React.createElement("section", { className: "marketplace-alert-banner" },
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, className: "marketplace-alert-logo", alt: "Conecta" }),
+            /* @__PURE__ */ React.createElement("h2", null, t("N\xE3o encontrou o equipamento que procura?", "Didn't find the equipment you're looking for?")),
+            /* @__PURE__ */ React.createElement("p", null, t("Receba alertas quando um equipamento compat\xEDvel entrar na plataforma.", "Get alerts when a matching equipment joins the platform."))
+          ),
+          /* @__PURE__ */ React.createElement("div", { className: "marketplace-banner-buttons" },
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario" }, t("Criar alerta", "Create alert")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario-claro", onClick: () => setAtivosView("vender") }, t("Anunciar equipamento", "List equipment"))
+          )
         )
       )
     ) : tab === "empresa" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
