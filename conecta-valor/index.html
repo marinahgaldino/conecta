@@ -6378,21 +6378,21 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // cobrir "6 em destaque" + "8 últimos anúncios" sem repetir o
     // mesmo item várias vezes na tela.
     const ATIVOS_SAMPLE_LISTINGS = [
-      { id: "sample-1", titulo: "Motor El\xE9trico WEG W22 40cv", categoria_slug: "motores", fabricante: "WEG", empresa: "Hilco Industrial", cidade: "S\xE3o Paulo", estado: "SP", ano: 2020, preco: 11e3, faixa_min: 9e3, faixa_max: 13e3, liquidez: "Alta", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 2 },
-      { id: "sample-2", titulo: "Compressor Atlas Copco GA75", categoria_slug: "compressores", fabricante: "Atlas Copco", empresa: "Milmaq", cidade: "Campinas", estado: "SP", ano: 2019, preco: 85e3, faixa_min: 78e3, faixa_max: 95e3, liquidez: "M\xE9dia", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 4 },
-      { id: "sample-3", titulo: "Motorredutor SEW WA20", categoria_slug: "motoredutores", fabricante: "SEW-EURODRIVE", empresa: "JR Materiais", cidade: "Porto Alegre", estado: "RS", ano: 2018, preco: 6500, faixa_min: 5500, faixa_max: 7200, liquidez: "M\xE9dia", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 6 },
-      { id: "sample-4", titulo: "Gerador a Diesel 150kVA", categoria_slug: "geradores", fabricante: "Caterpillar", empresa: "Superbid", cidade: "Curitiba", estado: "PR", ano: 2017, preco: 62e3, faixa_min: 55e3, faixa_max: 70e3, liquidez: "Alta", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 1 },
-      { id: "sample-5", titulo: "Bomba Centr\xEDfuga KSB 20cv", categoria_slug: "bombas", fabricante: "KSB", empresa: "CBA", cidade: "Belo Horizonte", estado: "MG", ano: 2021, preco: 8900, faixa_min: 7500, faixa_max: 10200, liquidez: "Alta", confianca: "alta", verificado: true, premium: false, publicadoHaDias: 3 },
-      { id: "sample-6", titulo: "Transformador 500kVA", categoria_slug: "transformadores", fabricante: "Siemens", empresa: "Alubar", cidade: "Bel\xE9m", estado: "PA", ano: 2016, preco: 145e3, faixa_min: 130e3, faixa_max: 165e3, liquidez: "M\xE9dia", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 8 },
-      { id: "sample-7", titulo: "Tanque de A\xE7o Inox 5000L", categoria_slug: "tanques", fabricante: null, empresa: "Biolab", cidade: "S\xE3o Paulo", estado: "SP", ano: 2015, preco: 22e3, faixa_min: 18e3, faixa_max: 26e3, liquidez: "Baixa", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 10 },
-      { id: "sample-8", titulo: "Redutor de Velocidade Voith", categoria_slug: "redutores", fabricante: "Voith", empresa: "Prysmian", cidade: "Sorocaba", estado: "SP", ano: 2019, preco: 15500, faixa_min: 13e3, faixa_max: 18e3, liquidez: "M\xE9dia", confianca: "alta", verificado: true, premium: false, publicadoHaDias: 5 }
+      { id: "sample-1", titulo: "Motor El\xE9trico WEG W22 40cv", categoria_slug: "motores", fabricante: "WEG", empresa: "Hilco Industrial", cidade: "S\xE3o Paulo", estado: "SP", ano: 2020, preco: 11e3, faixa_min: 9e3, faixa_max: 13e3, liquidez: "Alta", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 2 , descricao: "Motor el\xE9trico trif\xE1sico, baixa rota\xE7\xE3o de uso, revisado recentemente.", itensInclusos: ["Manual t\xE9cnico", "Nota fiscal de compra"], horas: 4200, qtdImagens: 6, empresaTempoPlataforma: "3 anos", empresaQtdPublicados: 47, empresaVerificada: true, atributos: { potencia_cv: "40", fabricante: "WEG", estado: "Usado - bom estado", ano: "2020", rpm: "1750", tensao_v: "380/660", carcaca: "200L" } },
+      { id: "sample-2", titulo: "Compressor Atlas Copco GA75", categoria_slug: "compressores", fabricante: "Atlas Copco", empresa: "Milmaq", cidade: "Campinas", estado: "SP", ano: 2019, preco: 85e3, faixa_min: 78e3, faixa_max: 95e3, liquidez: "M\xE9dia", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 4 , descricao: "Compressor de parafuso rotativo, revisado, com relat\xF3rio de manuten\xE7\xE3o em dia.", itensInclusos: ["Manual t\xE9cnico", "Relat\xF3rio de manuten\xE7\xE3o"], horas: 8100, qtdImagens: 8, empresaTempoPlataforma: "1 ano", empresaQtdPublicados: 22, empresaVerificada: true, atributos: { tipo: "Parafuso rotativo", vazao_m3h: "780", fabricante: "Atlas Copco", estado: "Usado - revisado", pressao_mca: "8.5", potencia_motor_cv: "75", material: null, ano: "2019" } },
+      { id: "sample-3", titulo: "Motorredutor SEW WA20", categoria_slug: "motoredutores", fabricante: "SEW-EURODRIVE", empresa: "JR Materiais", cidade: "Porto Alegre", estado: "RS", ano: 2018, preco: 6500, faixa_min: 5500, faixa_max: 7200, liquidez: "M\xE9dia", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 6 , descricao: "Motorredutor de uso industrial, funcionamento normal, sem reparos recentes.", itensInclusos: ["Nota fiscal de compra"], horas: null, qtdImagens: 3, empresaTempoPlataforma: "8 meses", empresaQtdPublicados: 9, empresaVerificada: false},
+      { id: "sample-4", titulo: "Gerador a Diesel 150kVA", categoria_slug: "geradores", fabricante: "Caterpillar", empresa: "Superbid", cidade: "Curitiba", estado: "PR", ano: 2017, preco: 62e3, faixa_min: 55e3, faixa_max: 70e3, liquidez: "Alta", confianca: "alta", verificado: true, premium: true, publicadoHaDias: 1 , descricao: "Grupo gerador a diesel, cabine silenciada, baixa utiliza\xE7\xE3o.", itensInclusos: ["Manual t\xE9cnico", "Nota fiscal de compra", "Certificado de revis\xE3o"], horas: 1800, qtdImagens: 10, empresaTempoPlataforma: "4 anos", empresaQtdPublicados: 63, empresaVerificada: true},
+      { id: "sample-5", titulo: "Bomba Centr\xEDfuga KSB 20cv", categoria_slug: "bombas", fabricante: "KSB", empresa: "CBA", cidade: "Belo Horizonte", estado: "MG", ano: 2021, preco: 8900, faixa_min: 7500, faixa_max: 10200, liquidez: "Alta", confianca: "alta", verificado: true, premium: false, publicadoHaDias: 3 , descricao: "Bomba centr\xEDfuga para \xE1gua limpa, uso industrial leve.", itensInclusos: ["Manual t\xE9cnico"], horas: null, qtdImagens: 4, empresaTempoPlataforma: "2 anos", empresaQtdPublicados: 15, empresaVerificada: true},
+      { id: "sample-6", titulo: "Transformador 500kVA", categoria_slug: "transformadores", fabricante: "Siemens", empresa: "Alubar", cidade: "Bel\xE9m", estado: "PA", ano: 2016, preco: 145e3, faixa_min: 130e3, faixa_max: 165e3, liquidez: "M\xE9dia", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 8 , descricao: "Transformador a \xF3leo, uso interno, sem hist\xF3rico de falhas registrado.", itensInclusos: ["Diagrama el\xE9trico"], horas: null, qtdImagens: 5, empresaTempoPlataforma: "6 meses", empresaQtdPublicados: 6, empresaVerificada: false},
+      { id: "sample-7", titulo: "Tanque de A\xE7o Inox 5000L", categoria_slug: "tanques", fabricante: null, empresa: "Biolab", cidade: "S\xE3o Paulo", estado: "SP", ano: 2015, preco: 22e3, faixa_min: 18e3, faixa_max: 26e3, liquidez: "Baixa", confianca: "m\xE9dia", verificado: false, premium: false, publicadoHaDias: 10 , descricao: "Tanque de armazenamento em a\xE7o inox 304, sem uso em produtos corrosivos.", itensInclusos: [], horas: null, qtdImagens: 3, empresaTempoPlataforma: "1 ano", empresaQtdPublicados: 11, empresaVerificada: false},
+      { id: "sample-8", titulo: "Redutor de Velocidade Voith", categoria_slug: "redutores", fabricante: "Voith", empresa: "Prysmian", cidade: "Sorocaba", estado: "SP", ano: 2019, preco: 15500, faixa_min: 13e3, faixa_max: 18e3, liquidez: "M\xE9dia", confianca: "alta", verificado: true, premium: false, publicadoHaDias: 5 , descricao: "Redutor de velocidade, revisado, aplica\xE7\xE3o em transportador.", itensInclusos: ["Manual t\xE9cnico", "Nota fiscal de compra"], horas: 3200, qtdImagens: 5, empresaTempoPlataforma: "5 anos", empresaQtdPublicados: 58, empresaVerificada: true}
     ];
     const [ativosListings] = (0, import_react.useState)(ATIVOS_SAMPLE_LISTINGS);
-    const [ativosFavoritos, setAtivosFavoritos] = (0, import_react.useState)([]);
+    const [favoriteListings, setFavoriteListings] = (0, import_react.useState)([]);
     const [ativosFiltros, setAtivosFiltros] = (0, import_react.useState)({});
     const [ativosBusca, setAtivosBusca] = (0, import_react.useState)("");
-    const [ativosSelecionado, setAtivosSelecionado] = (0, import_react.useState)(null);
-    const [ativosView, setAtivosView] = (0, import_react.useState)("home");
+    const [marketplaceCurrentListing, setMarketplaceCurrentListing] = (0, import_react.useState)(null);
+    const [marketplacePage, setMarketplacePage] = (0, import_react.useState)("home");
     const [categoriaFiltroAtivos, setCategoriaFiltroAtivos] = (0, import_react.useState)(null);
     // ativosFiltrados: base compartilhada (filtrada só por categoria) -
     // Destaques aplica premium por cima, Recentes aplica ordenação por
@@ -6406,9 +6406,39 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       if (termo.length < 2) return [];
       return ativosListings.filter((l) => [l.titulo, l.fabricante, l.cidade, l.estado].filter(Boolean).join(" ").toLowerCase().includes(termo)).slice(0, 8);
     }
-    function ativosToggleFavorito(listingId) {
-      setAtivosFavoritos((atual) => atual.includes(listingId) ? atual.filter((id) => id !== listingId) : [...atual, listingId]);
+    const [galeriaIndiceAtivo, setGaleriaIndiceAtivo] = (0, import_react.useState)(0);
+    (0, import_react.useEffect)(() => { setGaleriaIndiceAtivo(0); }, [marketplaceCurrentListing]);
+    const [questionModalAberto, setQuestionModalAberto] = (0, import_react.useState)(false);
+    const MARKETPLACE_QUESTION_DRAFT_PADRAO = { nome: "", empresa: "", email: "", telefone: "", pergunta: "" };
+    const [marketplaceQuestionsDraft, setMarketplaceQuestionsDraft] = (0, import_react.useState)(MARKETPLACE_QUESTION_DRAFT_PADRAO);
+    const [questionToastMsg, setQuestionToastMsg] = (0, import_react.useState)(null);
+    function handleEnviarPerguntaTecnica() {
+      // PLACEHOLDER: listing_questions já existe no Supabase (V22.0),
+      // mas o cliente ainda não grava lá - por enquanto só fecha o
+      // modal e mostra confirmação, sem persistir de verdade.
+      setQuestionModalAberto(false);
+      setMarketplaceQuestionsDraft(MARKETPLACE_QUESTION_DRAFT_PADRAO);
+      setQuestionToastMsg(t("Pergunta enviada! A empresa vai te responder em breve.", "Question sent! The company will reply soon."));
+      setTimeout(() => setQuestionToastMsg(null), 3200);
     }
+    function toggleFavoriteListing(listingId) {
+      setFavoriteListings((atual) => {
+        const novo = atual.includes(listingId) ? atual.filter((id) => id !== listingId) : [...atual, listingId];
+        if (storageDisponivel()) {
+          appStorage.set("marketplace-favoritos", JSON.stringify(novo)).catch(() => {});
+        }
+        return novo;
+      });
+    }
+    (0, import_react.useEffect)(() => {
+      if (!storageDisponivel()) return;
+      (async () => {
+        try {
+          const r = await appStorage.get("marketplace-favoritos");
+          if (r && r.value) setFavoriteListings(JSON.parse(r.value));
+        } catch (e) { /* sem favoritos salvos ainda */ }
+      })();
+    }, []);
     const PREFERENCIAS_EMPRESA_PADRAO = { mostrarCidadePdf: true, mostrarResponsavelTecnicoPdf: true, mostrarCnpjPdf: false, mostrarTelefonePdf: false, mostrarEmailPdf: false, temaPadraoPdf: "branco" };
     const [preferenciasEmpresa, setPreferenciasEmpresa] = (0, import_react.useState)(PREFERENCIAS_EMPRESA_PADRAO);
     const [toastMensagem, setToastMensagem] = (0, import_react.useState)(null);
@@ -10820,14 +10850,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           )
         );
       })(), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { className: "primary", type: "button", onClick: () => { const faltando = getCamposImportantesFaltando(form); if (faltando.length > 0 && !avisoPrecisaoAberto) { setAvisoPrecisaoAberto(true); return; } handleSubmit(); }, disabled: loading }, loading ? t("Buscando no mercado\u2026", "Searching the market\u2026") : t("Avaliar no mercado", "Evaluate in the market")), loading && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement(LoadingPremium, { elapsed, t }), /* @__PURE__ */ React.createElement(SkeletonResultCard, null)))))) : tab === "ativos" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open marketplace-home" },
-      ativosView === "home" && /* @__PURE__ */ React.createElement(React.Fragment, null,
+      marketplacePage === "home" && /* @__PURE__ */ React.createElement(React.Fragment, null,
         // ---- Hero ----
         /* @__PURE__ */ React.createElement("div", { className: "marketplace-hero" },
           /* @__PURE__ */ React.createElement("h1", { className: "marketplace-hero-titulo" }, t("Marketplace de Equipamentos Industriais", "Industrial Equipment Marketplace")),
           /* @__PURE__ */ React.createElement("p", { className: "marketplace-hero-subtitulo" }, t("Compra, venda e avalia\xE7\xE3o inteligente de ativos industriais.", "Smart buying, selling and valuation of industrial assets.")),
           /* @__PURE__ */ React.createElement("div", { className: "marketplace-hero-botoes" },
-            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario", onClick: () => setAtivosView("busca") }, t("Explorar Equipamentos", "Explore Equipment")),
-            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario", onClick: () => setAtivosView("vender") }, t("Quero vender meu equipamento", "I want to sell my equipment"))
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario", onClick: () => setMarketplacePage("busca") }, t("Explorar Equipamentos", "Explore Equipment")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario", onClick: () => setMarketplacePage("vender") }, t("Quero vender meu equipamento", "I want to sell my equipment"))
           )
         ),
 
@@ -10847,7 +10877,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           ),
           ativosSugestoesAbertas && ativosBusca.trim().length >= 2 && (() => {
             const sugestoes = ativosBuscarSugestoes(ativosBusca);
-            return sugestoes.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-dropdown" }, sugestoes.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, type: "button", className: "marketplace-search-item", onMouseDown: () => { setAtivosSelecionado(s); setAtivosView("detalhe"); setAtivosSugestoesAbertas(false); } },
+            return sugestoes.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-dropdown" }, sugestoes.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, type: "button", className: "marketplace-search-item", onMouseDown: () => { setMarketplaceCurrentListing(s); setMarketplacePage("detalhe"); setAtivosSugestoesAbertas(false); } },
               /* @__PURE__ */ React.createElement("span", { className: "marketplace-search-item-titulo" }, s.titulo),
               /* @__PURE__ */ React.createElement("span", { className: "marketplace-search-item-local" }, s.cidade, "/", s.estado)
             ))) : /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-dropdown" }, /* @__PURE__ */ React.createElement("p", { className: "marketplace-search-vazio" }, t("Nenhum equipamento encontrado.", "No equipment found.")));
@@ -10915,7 +10945,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
                     /* @__PURE__ */ React.createElement("span", { className: "marketplace-chip" }, item.liquidez)
                   ),
                   /* @__PURE__ */ React.createElement("div", { className: "marketplace-card-actions" },
-                    /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setAtivosSelecionado(item); setAtivosView("detalhe"); } }, t("Ver detalhes", "View details")),
+                    /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setMarketplaceCurrentListing(item); setMarketplacePage("detalhe"); } }, t("Ver detalhes", "View details")),
                     /* @__PURE__ */ React.createElement("a", { className: "marketplace-btn-whatsapp", href: `https://wa.me/?text=${encodeURIComponent(MARKETPLACE_CONSTANTS.WHATSAPP_TEMPLATE(item.id, item.titulo))}`, target: "_blank", rel: "noreferrer" }, "WhatsApp")
                   )
                 )
@@ -10948,7 +10978,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               /* @__PURE__ */ React.createElement("li", null, "\u2713 ", t("Compradores qualificados.", "Qualified buyers."))
             ),
             /* @__PURE__ */ React.createElement("div", { className: "marketplace-banner-buttons" },
-              /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario", onClick: () => setAtivosView("vender") }, t("Quero anunciar", "I want to list")),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario", onClick: () => setMarketplacePage("vender") }, t("Quero anunciar", "I want to list")),
               /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario-claro" }, t("Falar no WhatsApp", "Chat on WhatsApp"))
             )
           )
@@ -10959,7 +10989,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           const recentes = [...ativosFiltrados].sort((a, b) => a.publicadoHaDias - b.publicadoHaDias).slice(0, 8);
           return /* @__PURE__ */ React.createElement("section", { className: "marketplace-section" },
             /* @__PURE__ */ React.createElement("div", { className: "marketplace-section-header" }, /* @__PURE__ */ React.createElement("h2", { className: "marketplace-section-title" }, t("\xDAltimos an\xFAncios publicados", "Latest published listings"))),
-            /* @__PURE__ */ React.createElement("div", { className: "marketplace-recent-grid" }, recentes.map((item) => /* @__PURE__ */ React.createElement("article", { key: item.id, className: "marketplace-recent-card", onClick: () => { setAtivosSelecionado(item); setAtivosView("detalhe"); } },
+            /* @__PURE__ */ React.createElement("div", { className: "marketplace-recent-grid" }, recentes.map((item) => /* @__PURE__ */ React.createElement("article", { key: item.id, className: "marketplace-recent-card", onClick: () => { setMarketplaceCurrentListing(item); setMarketplacePage("detalhe"); } },
               /* @__PURE__ */ React.createElement("div", { className: "marketplace-image-placeholder marketplace-image-placeholder-sm" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_EMPRESA })),
               /* @__PURE__ */ React.createElement("div", { className: "marketplace-recent-body" },
                 /* @__PURE__ */ React.createElement("small", null, item.empresa),
@@ -10981,7 +11011,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           ),
           /* @__PURE__ */ React.createElement("div", { className: "marketplace-banner-buttons" },
             /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-primario" }, t("Criar alerta", "Create alert")),
-            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario-claro", onClick: () => setAtivosView("vender") }, t("Anunciar equipamento", "List equipment"))
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "marketplace-btn-secundario-claro", onClick: () => setMarketplacePage("vender") }, t("Anunciar equipamento", "List equipment"))
           )
         )
       )
