@@ -6201,7 +6201,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     );
   }
   function AvaliadorMercado() {
-    const [tab, setTab] = (0, import_react.useState)("dashboard");
+    const [tab, setTab] = (0, import_react.useState)(() => {
+      try {
+        return window.location.hash === "#ativos" ? "ativos" : "dashboard";
+      } catch (e) {
+        return "dashboard";
+      }
+    });
     const [lang, setLang] = (0, import_react.useState)("pt");
     const t = (pt, en) => lang === "en" ? en : pt;
     const [form, setForm] = (0, import_react.useState)(EMPTY_FORM);
