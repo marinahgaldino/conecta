@@ -5085,21 +5085,35 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // ainda) - a UI trata esses dois casos com um estado visual
   // padrão, não quebra. Lista atualizada na V1.2 (pedido novo trocou
   // parte das 14 categorias da V1.0).
+  var ICON_MOTOR = "M3 9h4v6H3zM7 8h9a2 2 0 012 2v4a2 2 0 01-2 2H7zM18 10h2v4h-2zM9 6v2M12 6v2M9 16v2M12 16v2";
+  var ICON_BOMBA = "M12 3a5 5 0 015 5c0 3-5 8-5 8s-5-5-5-8a5 5 0 015-5zM12 12v9M8 21h8";
+  var ICON_COMPRESSOR = "M4 10h6v10H4zM10 13h6a4 4 0 004-4V6M14 6h4v3h-4z";
+  var ICON_TANQUE = "M6 5a6 2 0 0012 0M6 5v13a6 2 0 0012 0V5M6 5v0";
+  var ICON_TROCADOR = "M3 8c2 0 2 3 4 3s2-3 4-3 2 3 4 3 2-3 4-3M3 16c2 0 2 3 4 3s2-3 4-3 2 3 4 3 2-3 4-3";
+  var ICON_LINHA = "M3 6h18M3 12h18M3 18h12M17 15l3 3-3 3";
+  var ICON_EMBALAGEM = "M12 3l8 4-8 4-8-4 8-4ZM4 7v10l8 4 8-4V7M12 11v10";
+  var ICON_GERADOR = "M13 2L4 14h6l-1 8 9-12h-6l1-8Z";
+  var ICON_TRANSFORMADOR = "M8 4a4 4 0 000 8 4 4 0 000 8M16 4a4 4 0 010 8 4 4 0 010 8";
+  var ICON_VALVULA = "M12 2v6M8 8h8l-2 4h2l-6 10 2-8H8l2-6Z";
+  var ICON_REDUTOR = "M9 4a5 5 0 100 10 5 5 0 000-10ZM17 12a3 3 0 100 6 3 3 0 000-6ZM13.5 8.5L15 10";
+  var ICON_TRANSPORTADOR = "M4 17h16M4 17a2 2 0 100 4 2 2 0 000-4ZM18 17a2 2 0 100 4 2 2 0 000-4ZM6 17V9a2 2 0 012-2h8a2 2 0 012 2v8";
+  var ICON_OUTROS = "M5 12a1 1 0 102 0 1 1 0 00-2 0ZM11 12a1 1 0 102 0 1 1 0 00-2 0ZM17 12a1 1 0 102 0 1 1 0 00-2 0Z";
+
   var MARKETPLACE_CATEGORIES = [
-    { slug: "motores", name: "Motores El\xE9tricos", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "motoredutores", name: "Motoredutores", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "bombas", name: "Bombas", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "compressores", name: "Compressores", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "tanques", name: "Tanques", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "trocadores-calor", name: "Trocadores de Calor", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "linhas-industriais", name: "Linhas Industriais", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "maquinas-embalagem", name: "M\xE1quinas de Embalagem", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "geradores", name: "Geradores", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "transformadores", name: "Transformadores", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "valvulas", name: "V\xE1lvulas", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "redutores", name: "Redutores", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "transportadores", name: "Transportadores", icon: ICON_ENGRENAGEM, image_url: null },
-    { slug: "outros", name: "Outros", icon: ICON_ENGRENAGEM, image_url: null }
+    { slug: "motores", name: "Motores El\xE9tricos", icon: ICON_MOTOR, image_url: null },
+    { slug: "motoredutores", name: "Motoredutores", icon: ICON_REDUTOR, image_url: null },
+    { slug: "bombas", name: "Bombas", icon: ICON_BOMBA, image_url: null },
+    { slug: "compressores", name: "Compressores", icon: ICON_COMPRESSOR, image_url: null },
+    { slug: "tanques", name: "Tanques", icon: ICON_TANQUE, image_url: null },
+    { slug: "trocadores-calor", name: "Trocadores de Calor", icon: ICON_TROCADOR, image_url: null },
+    { slug: "linhas-industriais", name: "Linhas Industriais", icon: ICON_LINHA, image_url: null },
+    { slug: "maquinas-embalagem", name: "M\xE1quinas de Embalagem", icon: ICON_EMBALAGEM, image_url: null },
+    { slug: "geradores", name: "Geradores", icon: ICON_GERADOR, image_url: null },
+    { slug: "transformadores", name: "Transformadores", icon: ICON_TRANSFORMADOR, image_url: null },
+    { slug: "valvulas", name: "V\xE1lvulas", icon: ICON_VALVULA, image_url: null },
+    { slug: "redutores", name: "Redutores", icon: ICON_REDUTOR, image_url: null },
+    { slug: "transportadores", name: "Transportadores", icon: ICON_TRANSPORTADOR, image_url: null },
+    { slug: "outros", name: "Outros", icon: ICON_OUTROS, image_url: null }
   ];
 
   // TECH_ATTRIBUTES_BY_CATEGORY: pras 7 categorias que já têm
@@ -6237,6 +6251,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     return /* @__PURE__ */ React.createElement(React.Fragment, null,
       /* @__PURE__ */ React.createElement("style", null, `
         .ativos-full { min-height: 100vh; background: #F5F7FA; font-family: 'Inter', sans-serif; color: #1F2430; }
+        .app.app-ativos-tela-cheia { max-width: none !important; margin: 0 !important; box-shadow: none !important; padding-left: 0 !important; }
         .ativos-navbar { background: #0F1C33; padding: 0 1.5rem; position: sticky; top: 0; z-index: 40; }
         .ativos-navbar-inner { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 1.5rem; }
         .ativos-navbar-logo { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
@@ -8343,7 +8358,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         "S\xF3 quero ver a interface (modo teste, sem salvar nada)"
       )))));
     }
-    return /* @__PURE__ */ React.createElement(BillingContext.Provider, { value: billingStore }, /* @__PURE__ */ React.createElement(OrganizationContext.Provider, { value: organizationStore }, /* @__PURE__ */ React.createElement(AuthContext.Provider, { value: authStore }, /* @__PURE__ */ React.createElement("div", { className: "app" }, /* @__PURE__ */ React.createElement("style", null, `
+    return /* @__PURE__ */ React.createElement(BillingContext.Provider, { value: billingStore }, /* @__PURE__ */ React.createElement(OrganizationContext.Provider, { value: organizationStore }, /* @__PURE__ */ React.createElement(AuthContext.Provider, { value: authStore }, /* @__PURE__ */ React.createElement("div", { className: "app" + (tab === "ativos" ? " app-ativos-tela-cheia" : "") }, /* @__PURE__ */ React.createElement("style", null, `
         @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
         * { box-sizing: border-box; }
@@ -10750,6 +10765,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .panel, .tag-card { margin-top: 1.5rem; margin-bottom: 1.5rem; }
           .stats-grid { grid-template-columns: repeat(4, 1fr); }
           .app { padding-left: 210px; }
+          .app.app-ativos-tela-cheia { padding-left: 0 !important; }
           .hero { min-height: 145px; padding: 1.2rem 2.2rem; }
           .tabs-row {
             position: fixed;
