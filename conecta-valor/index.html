@@ -6200,6 +6200,315 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       /* @__PURE__ */ React.createElement("p", { className: "disclaimer" }, t("Estimativa com base em observa\xE7\xF5es de mercado p\xFAblicas. Use como refer\xEAncia, n\xE3o como laudo de avalia\xE7\xE3o.", "Estimate based on public market observations. Use as a reference, not as a formal appraisal report."))
     );
   }
+  function MarketplaceAtivosFullScreen(props) {
+    const {
+      t, lang, setLang, setTab,
+      marketplacePage, setMarketplacePage,
+      ativosListings, ativosFiltrados, ativosBusca, setAtivosBusca,
+      ativosSugestoesAbertas, setAtivosSugestoesAbertas, ativosBuscarSugestoes,
+      categoriaFiltroAtivos, setCategoriaFiltroAtivos,
+      favoriteListings, toggleFavoriteListing,
+      marketplaceCurrentListing, setMarketplaceCurrentListing
+    } = props;
+
+    const [categoriaSelectBusca, setCategoriaSelectBusca] = React.useState("");
+    const [localizacaoSelectBusca, setLocalizacaoSelectBusca] = React.useState("");
+
+    const localizacoesUnicas = React.useMemo(() => {
+      const set = new Set();
+      ativosListings.forEach((l) => set.add(l.cidade + "/" + l.estado));
+      return Array.from(set).sort();
+    }, [ativosListings]);
+
+    const empresasUnicas = React.useMemo(() => new Set(ativosListings.map((l) => l.empresa)).size, [ativosListings]);
+    const estadosUnicos = React.useMemo(() => new Set(ativosListings.map((l) => l.estado)).size, [ativosListings]);
+    const verificadosCount = React.useMemo(() => ativosListings.filter((l) => l.verificado).length, [ativosListings]);
+
+    function irParaDetalhe(item) {
+      setMarketplaceCurrentListing(item);
+      setMarketplacePage("detalhe");
+    }
+
+    function executarBusca() {
+      setCategoriaFiltroAtivos(categoriaSelectBusca || null);
+      setMarketplacePage("busca");
+    }
+
+    return /* @__PURE__ */ React.createElement(React.Fragment, null,
+      /* @__PURE__ */ React.createElement("style", null, `
+        .ativos-full { min-height: 100vh; background: #F5F7FA; font-family: 'Inter', sans-serif; color: #1F2430; }
+        .ativos-navbar { background: #0F1C33; padding: 0 1.5rem; position: sticky; top: 0; z-index: 40; }
+        .ativos-navbar-inner { max-width: 1320px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 1.5rem; }
+        .ativos-navbar-logo { display: flex; align-items: center; gap: 0.6rem; flex-shrink: 0; }
+        .ativos-logo-icone { font-size: 1.5rem; color: #4C8DF5; }
+        .ativos-logo-titulo { font-family: 'Manrope', sans-serif; font-weight: 800; color: #fff; font-size: 1.05rem; letter-spacing: 0.02em; }
+        .ativos-logo-titulo span { color: #4C8DF5; }
+        .ativos-logo-sub { font-size: 0.62rem; color: #8894AB; letter-spacing: 0.03em; }
+        .ativos-navbar-links { display: flex; gap: 1.6rem; flex: 1; justify-content: center; flex-wrap: wrap; }
+        .ativos-nav-link { background: none; border: none; color: #C4CBDA; font-size: 0.88rem; font-weight: 500; cursor: pointer; padding: 0.4rem 0; border-bottom: 2px solid transparent; }
+        .ativos-nav-link:hover { color: #fff; }
+        .ativos-nav-link.active { color: #4C8DF5; border-bottom-color: #4C8DF5; }
+        .ativos-navbar-acoes { display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0; }
+        .ativos-icon-btn { position: relative; background: none; border: none; color: #C4CBDA; cursor: pointer; padding: 0.3rem; display: flex; }
+        .ativos-icon-btn:hover { color: #fff; }
+        .ativos-badge-contagem { position: absolute; top: -4px; right: -4px; background: #2159B7; color: #fff; font-size: 0.62rem; font-weight: 700; border-radius: 999px; padding: 0.05rem 0.35rem; }
+        .ativos-btn-outline { background: transparent; border: 1px solid #3A4A66; color: #fff; padding: 0.45rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
+        .ativos-btn-outline:hover { background: #1A2A47; }
+
+        .ativos-hero { background: #fff; padding: 2.5rem 1.5rem; }
+        .ativos-hero-inner { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 2.5rem; align-items: center; }
+        .ativos-hero-eyebrow { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em; color: #6B7280; margin: 0 0 0.6rem; }
+        .ativos-hero-titulo { font-family: 'Manrope', sans-serif; font-size: clamp(1.7rem, 3vw, 2.5rem); font-weight: 800; line-height: 1.15; margin: 0; color: #12151C; }
+        .ativos-hero-titulo span { color: #2159B7; }
+        .ativos-hero-sub { color: #4B5563; font-size: 1rem; margin: 1rem 0 1.4rem; max-width: 480px; }
+        .ativos-hero-selos { display: flex; flex-wrap: wrap; gap: 1.4rem; }
+        .ativos-hero-selo { display: flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: #374151; font-weight: 500; }
+        .ativos-hero-selo svg { color: #2159B7; flex-shrink: 0; }
+        .ativos-hero-visual { position: relative; }
+        .ativos-hero-grafico { background: linear-gradient(135deg, #1B2C4A 0%, #0F1C33 100%); border-radius: 20px; height: 260px; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+        .ativos-hero-grafico svg { opacity: 0.85; }
+        .ativos-hero-card-flutuante { background: #12151C; border-radius: 16px; padding: 1.2rem; margin-top: -2.5rem; margin-left: 1.5rem; margin-right: 1.5rem; position: relative; box-shadow: 0 12px 30px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 0.7rem; }
+        .ativos-hero-card-topo { display: flex; gap: 0.8rem; align-items: flex-start; }
+        .ativos-hero-card-icone { background: #2159B7; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .ativos-hero-card-flutuante strong { color: #fff; font-size: 0.92rem; display: block; margin-bottom: 0.15rem; }
+        .ativos-hero-card-flutuante p { color: #A6ADBD; font-size: 0.8rem; margin: 0; }
+        .ativos-btn-primario-sm { background: #2159B7; color: #fff; border: none; padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer; align-self: flex-start; }
+        .ativos-btn-primario-sm:hover { background: #1B4A99; }
+
+        .ativos-search-bar { max-width: 1320px; margin: 0 auto; padding: 0 1.5rem; margin-top: 1.4rem; position: relative; }
+        .ativos-search-row { background: #fff; border-radius: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 0.7rem; display: grid; grid-template-columns: 1fr auto auto auto; gap: 0.6rem; align-items: center; }
+        .ativos-search-input-wrap { display: flex; align-items: center; gap: 0.5rem; padding: 0 0.6rem; }
+        .ativos-search-input-wrap input { border: none; outline: none; font-size: 0.9rem; width: 100%; padding: 0.5rem 0; }
+        .ativos-search-select { border: 1px solid #E5E7EB; border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.85rem; color: #374151; background: #fff; min-width: 150px; }
+        .ativos-btn-buscar { background: #2159B7; color: #fff; border: none; padding: 0.65rem 1.6rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
+        .ativos-btn-buscar:hover { background: #1B4A99; }
+        @media (max-width: 900px) { .ativos-search-row { grid-template-columns: 1fr; } .ativos-search-select { min-width: 0; width: 100%; } }
+
+        .ativos-secao { max-width: 1320px; margin: 0 auto; padding: 2.2rem 1.5rem 0; }
+        .ativos-secao-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .ativos-secao-header h2 { font-family: 'Manrope', sans-serif; font-size: 1.2rem; font-weight: 700; margin: 0; }
+        .ativos-link-ver-todas { background: none; border: none; color: #2159B7; font-weight: 600; font-size: 0.85rem; cursor: pointer; }
+
+        .ativos-categorias-scroll { display: flex; gap: 0.8rem; overflow-x: auto; padding-bottom: 0.4rem; }
+        .ativos-pill-categoria { flex-shrink: 0; width: 108px; background: #fff; border: 1px solid #E5E7EB; border-radius: 14px; padding: 0.9rem 0.5rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; cursor: pointer; text-align: center; }
+        .ativos-pill-categoria.active { border-color: #2159B7; background: #EEF3FC; }
+        .ativos-pill-categoria svg { color: #2159B7; }
+        .ativos-pill-categoria span { font-size: 0.74rem; font-weight: 600; color: #374151; line-height: 1.2; }
+
+        .ativos-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 1.1rem; }
+        .ativos-card { background: #fff; border-radius: 16px; border: 1px solid #EEF0F3; overflow: hidden; display: flex; flex-direction: column; }
+        .ativos-card-img { height: 130px; background: linear-gradient(135deg, #E9EDF3, #DCE3ED); display: flex; align-items: center; justify-content: center; position: relative; }
+        .ativos-card-img svg { color: #9AA5B8; }
+        .ativos-card-badge { position: absolute; top: 0.6rem; left: 0.6rem; background: #2159B7; color: #fff; font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.55rem; border-radius: 6px; text-transform: uppercase; }
+        .ativos-card-badge.novo { background: #16A34A; }
+        .ativos-card-fav { position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(255,255,255,0.9); border: none; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .ativos-card-fav svg { color: #6B7280; }
+        .ativos-card-fav.ativo svg { color: #DC2626; fill: #DC2626; }
+        .ativos-card-body { padding: 0.9rem 1rem 1rem; display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+        .ativos-card-titulo { font-weight: 700; font-size: 0.92rem; color: #12151C; margin: 0; }
+        .ativos-card-empresa { font-size: 0.78rem; color: #6B7280; }
+        .ativos-card-local { font-size: 0.76rem; color: #6B7280; display: flex; align-items: center; gap: 0.3rem; margin-top: 0.1rem; }
+        .ativos-card-status { display: flex; align-items: center; gap: 0.3rem; font-size: 0.76rem; color: #16A34A; font-weight: 600; }
+        .ativos-card-status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #16A34A; }
+        .ativos-card-preco { font-family: 'Manrope', sans-serif; font-weight: 800; font-size: 1.05rem; color: #12151C; margin-top: 0.4rem; }
+        .ativos-card-btn { margin-top: 0.6rem; background: #fff; border: 1px solid #2159B7; color: #2159B7; padding: 0.45rem 0; border-radius: 8px; font-weight: 700; font-size: 0.82rem; cursor: pointer; }
+        .ativos-card-btn:hover { background: #EEF3FC; }
+        .ativos-vazio { color: #6B7280; font-size: 0.9rem; padding: 1rem 0; }
+
+        .ativos-apoio-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; margin-top: 1.2rem; }
+        .ativos-apoio-card { background: #12151C; border-radius: 16px; padding: 1.3rem; color: #fff; }
+        .ativos-apoio-card.claro { background: #fff; border: 1px solid #EEF0F3; color: #12151C; }
+        .ativos-apoio-card-topo { display: flex; gap: 0.8rem; align-items: flex-start; margin-bottom: 0.8rem; }
+        .ativos-apoio-icone { background: #2159B7; border-radius: 50%; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; }
+        .ativos-apoio-card h3 { margin: 0 0 0.2rem; font-size: 0.95rem; }
+        .ativos-apoio-card p { margin: 0; font-size: 0.82rem; color: #A6ADBD; }
+        .ativos-apoio-card.claro p { color: #6B7280; }
+        .ativos-apoio-lista { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+        .ativos-apoio-lista li { font-size: 0.83rem; color: #374151; display: flex; align-items: center; gap: 0.5rem; }
+        .ativos-apoio-lista svg { color: #16A34A; flex-shrink: 0; }
+
+        .ativos-stats { max-width: 1320px; margin: 2.2rem auto 0; padding: 1.4rem 1.5rem; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; border-top: 1px solid #E5E7EB; }
+        .ativos-stat { display: flex; align-items: center; gap: 0.6rem; }
+        .ativos-stat svg { color: #2159B7; flex-shrink: 0; }
+        .ativos-stat strong { display: block; font-family: 'Manrope', sans-serif; font-size: 1.05rem; }
+        .ativos-stat span { display: block; font-size: 0.74rem; color: #6B7280; }
+        .ativos-rodape-espaco { height: 3rem; }
+        @media (max-width: 900px) {
+          .ativos-hero-inner { grid-template-columns: 1fr; }
+          .ativos-navbar-links { display: none; }
+          .ativos-apoio-grid { grid-template-columns: 1fr; }
+          .ativos-stats { grid-template-columns: repeat(2, 1fr); }
+        }
+      `),
+      /* @__PURE__ */ React.createElement("div", { className: "ativos-full" },
+        /* @__PURE__ */ React.createElement("header", { className: "ativos-navbar" },
+          /* @__PURE__ */ React.createElement("div", { className: "ativos-navbar-inner" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-navbar-logo" },
+              /* @__PURE__ */ React.createElement("span", { className: "ativos-logo-icone" }, "\u25C8"),
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-logo-titulo" }, "CONECTA ", /* @__PURE__ */ React.createElement("span", null, "ATIVOS")),
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-logo-sub" }, t("Intermedia\xE7\xE3o de ativos industriais", "Industrial asset brokerage"))
+              )
+            ),
+            /* @__PURE__ */ React.createElement("nav", { className: "ativos-navbar-links" },
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-nav-link" + (marketplacePage === "home" ? " active" : ""), onClick: () => setMarketplacePage("home") }, t("Marketplace", "Marketplace")),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-nav-link", onClick: () => setMarketplacePage("home") }, t("Categorias", "Categories")),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-nav-link", onClick: () => setMarketplacePage("vender") }, t("Para vendedores", "For sellers"))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-navbar-acoes" },
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-icon-btn", title: t("Favoritos", "Favorites") },
+                /* @__PURE__ */ React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z" })),
+                favoriteListings.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "ativos-badge-contagem" }, favoriteListings.length)
+              ),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-btn-outline", onClick: () => { setTab("dashboard"); setMarketplacePage("home"); } }, t("Conecta Valor", "Conecta Valor"))
+            )
+          )
+        ),
+
+        marketplacePage === "home" ? /* @__PURE__ */ React.createElement(React.Fragment, null,
+          /* @__PURE__ */ React.createElement("section", { className: "ativos-hero" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-inner" },
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("p", { className: "ativos-hero-eyebrow" }, t("MARKETPLACE DE ATIVOS INDUSTRIAIS", "INDUSTRIAL ASSET MARKETPLACE")),
+                /* @__PURE__ */ React.createElement("h1", { className: "ativos-hero-titulo" }, t("Conectamos o seu equipamento ao ", "We connect your equipment to the "), /* @__PURE__ */ React.createElement("span", null, t("potencial comprador.", "potential buyer."))),
+                /* @__PURE__ */ React.createElement("p", { className: "ativos-hero-sub" }, t("O lugar certo para comprar e vender equipamentos industriais com seguran\xE7a, transpar\xEAncia e intelig\xEAncia de mercado.", "The right place to buy and sell industrial equipment with security, transparency and market intelligence.")),
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-selos" },
+                  /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-selo" }, /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z" })), t("Transa\xE7\xF5es seguras", "Secure transactions")),
+                  /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-selo" }, /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20 6L9 17l-5-5" })), t("Vendedores verificados", "Verified sellers")),
+                  /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-selo" }, /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M4 15v-3a8 8 0 0116 0v3M4 15a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zm16 0a2 2 0 00-2-2h-1v5h1a2 2 0 002-2z" })), t("Suporte especializado", "Specialized support"))
+                )
+              ),
+              /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-visual" },
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-grafico" },
+                  /* @__PURE__ */ React.createElement("svg", { width: 90, height: 90, viewBox: "0 0 24 24", fill: "none", stroke: "#4C8DF5", strokeWidth: 1.4 }, /* @__PURE__ */ React.createElement("path", { d: ICON_BOXES }))
+                ),
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-card-flutuante" },
+                  /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-card-topo" },
+                    /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-card-icone" }, /* @__PURE__ */ React.createElement("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20.6 12.6L12 21.2 2.8 12 11.4 3.4a2 2 0 011.4-.6H19a2 2 0 012 2v6.4a2 2 0 01-.6 1.4z" }), /* @__PURE__ */ React.createElement("circle", { cx: "15.5", cy: "7.5", r: "1.2" }))),
+                    /* @__PURE__ */ React.createElement("div", null,
+                      /* @__PURE__ */ React.createElement("strong", null, t("Quer vender seu equipamento?", "Want to sell your equipment?")),
+                      /* @__PURE__ */ React.createElement("p", null, t("Anuncie gratuitamente e conecte-se com compradores qualificados.", "List for free and connect with qualified buyers."))
+                    )
+                  ),
+                  /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-btn-primario-sm", onClick: () => setMarketplacePage("vender") }, t("Quero vender meu equipamento \u2192", "I want to sell my equipment \u2192"))
+                )
+              )
+            )
+          ),
+
+          /* @__PURE__ */ React.createElement("div", { className: "ativos-search-bar" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-search-row" },
+              /* @__PURE__ */ React.createElement("div", { className: "ativos-search-input-wrap" },
+                /* @__PURE__ */ React.createElement("svg", { width: 16, height: 16, viewBox: "0 0 24 24", fill: "none", stroke: "#6B7280", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("circle", { cx: "11", cy: "11", r: "7" }), /* @__PURE__ */ React.createElement("path", { d: "M20 20l-3.5-3.5" })),
+                /* @__PURE__ */ React.createElement("input", {
+                  type: "text",
+                  placeholder: t("Buscar equipamentos, marcas, modelos\u2026", "Search equipment, brands, models\u2026"),
+                  value: ativosBusca,
+                  onChange: (e) => { setAtivosBusca(e.target.value); setAtivosSugestoesAbertas(true); },
+                  onFocus: () => setAtivosSugestoesAbertas(true),
+                  onBlur: () => setTimeout(() => setAtivosSugestoesAbertas(false), 150)
+                })
+              ),
+              /* @__PURE__ */ React.createElement("select", { className: "ativos-search-select", value: categoriaSelectBusca, onChange: (e) => setCategoriaSelectBusca(e.target.value) },
+                /* @__PURE__ */ React.createElement("option", { value: "" }, t("Todas as categorias", "All categories")),
+                MARKETPLACE_CATEGORIES.map((cat) => /* @__PURE__ */ React.createElement("option", { key: cat.slug, value: cat.slug }, cat.name))
+              ),
+              /* @__PURE__ */ React.createElement("select", { className: "ativos-search-select", value: localizacaoSelectBusca, onChange: (e) => setLocalizacaoSelectBusca(e.target.value) },
+                /* @__PURE__ */ React.createElement("option", { value: "" }, t("Localiza\xE7\xE3o", "Location")),
+                localizacoesUnicas.map((loc) => /* @__PURE__ */ React.createElement("option", { key: loc, value: loc }, loc))
+              ),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-btn-buscar", onClick: executarBusca }, t("Buscar", "Search"))
+            ),
+            ativosSugestoesAbertas && ativosBusca.trim().length >= 2 && (() => {
+              const sugestoes = ativosBuscarSugestoes(ativosBusca);
+              return sugestoes.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-dropdown" }, sugestoes.map((s) => /* @__PURE__ */ React.createElement("button", { key: s.id, type: "button", className: "marketplace-search-item", onMouseDown: () => irParaDetalhe(s) },
+                /* @__PURE__ */ React.createElement("span", { className: "marketplace-search-item-titulo" }, s.titulo),
+                /* @__PURE__ */ React.createElement("span", { className: "marketplace-search-item-local" }, s.cidade, "/", s.estado)
+              ))) : /* @__PURE__ */ React.createElement("div", { className: "marketplace-search-dropdown" }, /* @__PURE__ */ React.createElement("p", { className: "marketplace-search-vazio" }, t("Nenhum equipamento encontrado.", "No equipment found.")));
+            })()
+          ),
+
+          /* @__PURE__ */ React.createElement("section", { className: "ativos-secao", id: "ativos-categorias" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-secao-header" },
+              /* @__PURE__ */ React.createElement("h2", null, t("Categorias populares", "Popular categories")),
+              categoriaFiltroAtivos && /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-link-ver-todas", onClick: () => setCategoriaFiltroAtivos(null) }, t("Ver todas", "View all"))
+            ),
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-categorias-scroll" },
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-pill-categoria" + (categoriaFiltroAtivos === null ? " active" : ""), onClick: () => setCategoriaFiltroAtivos(null) },
+                /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "3", width: "7", height: "7" }), /* @__PURE__ */ React.createElement("rect", { x: "14", y: "3", width: "7", height: "7" }), /* @__PURE__ */ React.createElement("rect", { x: "3", y: "14", width: "7", height: "7" }), /* @__PURE__ */ React.createElement("rect", { x: "14", y: "14", width: "7", height: "7" })),
+                /* @__PURE__ */ React.createElement("span", null, t("Todos os equipamentos", "All equipment"))
+              ),
+              MARKETPLACE_CATEGORIES.map((cat) => /* @__PURE__ */ React.createElement("button", { key: cat.slug, type: "button", className: "ativos-pill-categoria" + (categoriaFiltroAtivos === cat.slug ? " active" : ""), onClick: () => setCategoriaFiltroAtivos(cat.slug) },
+                /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: cat.icon })),
+                /* @__PURE__ */ React.createElement("span", null, cat.name)
+              ))
+            )
+          ),
+
+          /* @__PURE__ */ React.createElement("section", { className: "ativos-secao" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-secao-header" },
+              /* @__PURE__ */ React.createElement("h2", null, t("Equipamentos em destaque", "Featured equipment")),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-link-ver-todas", onClick: () => setMarketplacePage("busca") }, t("Ver todos", "View all"))
+            ),
+            (() => {
+              const destaques = ativosFiltrados.filter((l) => l.premium).slice(0, 4);
+              if (destaques.length === 0) return /* @__PURE__ */ React.createElement("p", { className: "ativos-vazio" }, t("Nenhum equipamento em destaque nesta categoria.", "No featured equipment in this category."));
+              return /* @__PURE__ */ React.createElement("div", { className: "ativos-cards-grid" }, destaques.map((item) => /* @__PURE__ */ React.createElement("div", { key: item.id, className: "ativos-card" },
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-card-img" },
+                  /* @__PURE__ */ React.createElement("span", { className: "ativos-card-badge" + (item.publicadoHaDias <= 3 ? " novo" : "") }, item.publicadoHaDias <= 3 ? t("Novo", "New") : t("Destaque", "Featured")),
+                  /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-card-fav" + (favoriteListings.includes(item.id) ? " ativo" : ""), onClick: () => toggleFavoriteListing(item.id) },
+                    /* @__PURE__ */ React.createElement("svg", { width: 15, height: 15, viewBox: "0 0 24 24", fill: favoriteListings.includes(item.id) ? "currentColor" : "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z" }))
+                  ),
+                  /* @__PURE__ */ React.createElement("svg", { width: 44, height: 44, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5 }, /* @__PURE__ */ React.createElement("path", { d: ICON_BOXES }))
+                ),
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-card-body" },
+                  /* @__PURE__ */ React.createElement("p", { className: "ativos-card-titulo" }, item.titulo),
+                  /* @__PURE__ */ React.createElement("p", { className: "ativos-card-empresa" }, item.fabricante),
+                  /* @__PURE__ */ React.createElement("p", { className: "ativos-card-local" }, item.cidade, ", ", item.estado),
+                  /* @__PURE__ */ React.createElement("p", { className: "ativos-card-status" }, t("Dispon\xEDvel", "Available")),
+                  /* @__PURE__ */ React.createElement("p", { className: "ativos-card-preco" }, formatBRL(item.preco)),
+                  /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-card-btn", onClick: () => irParaDetalhe(item) }, t("Ver detalhes", "View details"))
+                )
+              )));
+            })()
+          ),
+
+          /* @__PURE__ */ React.createElement("section", { className: "ativos-secao" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-apoio-grid" },
+              /* @__PURE__ */ React.createElement("div", { className: "ativos-apoio-card" },
+                /* @__PURE__ */ React.createElement("div", { className: "ativos-apoio-card-topo" },
+                  /* @__PURE__ */ React.createElement("div", { className: "ativos-apoio-icone" }, /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "#fff", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M4 15v-3a8 8 0 0116 0v3M4 15a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zm16 0a2 2 0 00-2-2h-1v5h1a2 2 0 002-2z" }))),
+                  /* @__PURE__ */ React.createElement("div", null,
+                    /* @__PURE__ */ React.createElement("h3", null, t("Precisa de ajuda?", "Need help?")),
+                    /* @__PURE__ */ React.createElement("p", null, t("Nossa equipe pode te ajudar a encontrar o equipamento ideal para o seu neg\xF3cio.", "Our team can help you find the right equipment for your business."))
+                  )
+                )
+              ),
+              /* @__PURE__ */ React.createElement("div", { className: "ativos-apoio-card claro" },
+                /* @__PURE__ */ React.createElement("h3", null, t("Por que usar o Conecta Ativos?", "Why use Conecta Ativos?")),
+                /* @__PURE__ */ React.createElement("ul", { className: "ativos-apoio-lista" },
+                  /* @__PURE__ */ React.createElement("li", null, /* @__PURE__ */ React.createElement("svg", { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20 6L9 17l-5-5" })), t("Equipamentos verificados", "Verified equipment")),
+                  /* @__PURE__ */ React.createElement("li", null, /* @__PURE__ */ React.createElement("svg", { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20 6L9 17l-5-5" })), t("Refer\xEAncia de mercado por IA", "AI-based market reference")),
+                  /* @__PURE__ */ React.createElement("li", null, /* @__PURE__ */ React.createElement("svg", { width: 15, height: 15, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20 6L9 17l-5-5" })), t("Contato direto com o vendedor", "Direct contact with the seller"))
+                )
+              )
+            )
+          ),
+
+          /* @__PURE__ */ React.createElement("div", { className: "ativos-stats" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-stat" }, /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6 }, /* @__PURE__ */ React.createElement("path", { d: ICON_BOXES })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, ativosListings.length), /* @__PURE__ */ React.createElement("span", null, t("Equipamentos cadastrados", "Equipment listed")))),
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-stat" }, /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6 }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "8", r: "4" }), /* @__PURE__ */ React.createElement("path", { d: "M4 21v-1a8 8 0 0116 0v1" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, empresasUnicas), /* @__PURE__ */ React.createElement("span", null, t("Empresas vendedoras", "Selling companies")))),
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-stat" }, /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6 }, /* @__PURE__ */ React.createElement("path", { d: "M20 6L9 17l-5-5" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, verificadosCount), /* @__PURE__ */ React.createElement("span", null, t("Equipamentos verificados", "Verified equipment")))),
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-stat" }, /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.6 }, /* @__PURE__ */ React.createElement("path", { d: "M4 15v-3a8 8 0 0116 0v3M4 15a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zm16 0a2 2 0 00-2-2h-1v5h1a2 2 0 002-2z" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, estadosUnicos), /* @__PURE__ */ React.createElement("span", null, t("Estados atendidos", "States covered"))))
+          ),
+          /* @__PURE__ */ React.createElement("div", { className: "ativos-rodape-espaco" })
+        ) : /* @__PURE__ */ React.createElement("section", { className: "ativos-secao" },
+          /* @__PURE__ */ React.createElement("p", { className: "ativos-vazio" }, t("Esta p\xE1gina ainda est\xE1 em constru\xE7\xE3o.", "This page is still under construction."), " ", /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-link-ver-todas", onClick: () => setMarketplacePage("home") }, t("Voltar para o in\xEDcio", "Back to home")))
+        )
+      )
+    );
+  }
+
   function AvaliadorMercado() {
     const [tab, setTab] = (0, import_react.useState)(() => {
       try {
@@ -6435,6 +6744,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         return novo;
       });
     }
+    const ativosScreenProps = {
+      t, lang, setLang, setTab,
+      marketplacePage, setMarketplacePage,
+      ativosListings, ativosFiltrados, ativosBusca, setAtivosBusca,
+      ativosSugestoesAbertas, setAtivosSugestoesAbertas, ativosBuscarSugestoes,
+      categoriaFiltroAtivos, setCategoriaFiltroAtivos,
+      favoriteListings, toggleFavoriteListing,
+      marketplaceCurrentListing, setMarketplaceCurrentListing
+    };
     (0, import_react.useEffect)(() => {
       if (!storageDisponivel()) return;
       (async () => {
@@ -10496,7 +10814,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           }
           .header-logo-col, .navbar-right .credit-badge { display: none; }
         }
-      `), /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, authStore.isAuthenticated && /* @__PURE__ */ React.createElement("div", { className: "user-menu-wrap" },
+      `), tab === "ativos" ? React.createElement(MarketplaceAtivosFullScreen, ativosScreenProps) : React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, authStore.isAuthenticated && /* @__PURE__ */ React.createElement("div", { className: "user-menu-wrap" },
       /* @__PURE__ */ React.createElement("button", { type: "button", className: "user-menu-trigger", onClick: () => setMenuUsuarioAberto((v) => !v) },
         /* @__PURE__ */ React.createElement("span", { className: "user-avatar" }, iniciaisDoNome(authStore.currentUser.nome || authStore.currentUser.email)),
         /* @__PURE__ */ React.createElement("span", { className: "user-menu-texto" },
@@ -11714,7 +12032,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("span", { className: "history-preco" }, formatBRL(h.result.faixa_min), " \u2013 ", formatBRL(h.result.faixa_max)),
         h.data && /* @__PURE__ */ React.createElement("span", { className: "history-date" }, new Date(h.data).toLocaleDateString("pt-BR"))
       )
-    )))), /* @__PURE__ */ React.createElement("footer", { className: "app-footer" }, /* @__PURE__ */ React.createElement("p", { className: "footer-brand" }, /* @__PURE__ */ React.createElement(BrandWordmark, { text: config.titulo })), /* @__PURE__ */ React.createElement("button", { type: "button", className: "footer-link", onClick: () => setShowTermos((v) => !v) }, "Termos de Uso"), showTermos && /* @__PURE__ */ React.createElement("div", { className: "termos-box" }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Termos de Uso \u2014 ", config.titulo)), /* @__PURE__ */ React.createElement("p", null, "Esta ferramenta oferece estimativas de valor de mercado para ativos industriais, com apoio de intelig\xEAncia artificial, com finalidade exclusivamente informativa e consultiva."), /* @__PURE__ */ React.createElement("p", null, "As estimativas N\xC3O constituem laudo t\xE9cnico certificado, parecer de valor oficial, nem garantia de venda \u2014 n\xE3o substituem avalia\xE7\xE3o por profissional habilitado quando exigida por lei ou norma t\xE9cnica."), /* @__PURE__ */ React.createElement("p", null, 'As estimativas s\xE3o fornecidas "no estado em que se encontram", sem garantia de precis\xE3o ou atualidade. O usu\xE1rio \xE9 o \xFAnico respons\xE1vel por decis\xF5es comerciais tomadas com base nelas.'), /* @__PURE__ */ React.createElement("p", null, "Os dados usados nas estimativas v\xEAm de observa\xE7\xF5es de mercado p\xFAblicas \u2014 n\xE3o reproduzimos an\xFAncios, descri\xE7\xF5es ou fotos de terceiros, apenas fatos objetivos (categoria, marca, pre\xE7o, localiza\xE7\xE3o)."), /* @__PURE__ */ React.createElement("p", null, "Dados inseridos podem ser armazenados para composi\xE7\xE3o de hist\xF3rico e aprimoramento de estimativas futuras."), /* @__PURE__ */ React.createElement("p", { style: { fontStyle: "italic", color: "#8A8D91" } }, "\xDAltima atualiza\xE7\xE3o: 24/07/2026.")))))));
+    )))), /* @__PURE__ */ React.createElement("footer", { className: "app-footer" }, /* @__PURE__ */ React.createElement("p", { className: "footer-brand" }, /* @__PURE__ */ React.createElement(BrandWordmark, { text: config.titulo })), /* @__PURE__ */ React.createElement("button", { type: "button", className: "footer-link", onClick: () => setShowTermos((v) => !v) }, "Termos de Uso"), showTermos && /* @__PURE__ */ React.createElement("div", { className: "termos-box" }, /* @__PURE__ */ React.createElement("p", null, /* @__PURE__ */ React.createElement("strong", null, "Termos de Uso \u2014 ", config.titulo)), /* @__PURE__ */ React.createElement("p", null, "Esta ferramenta oferece estimativas de valor de mercado para ativos industriais, com apoio de intelig\xEAncia artificial, com finalidade exclusivamente informativa e consultiva."), /* @__PURE__ */ React.createElement("p", null, "As estimativas N\xC3O constituem laudo t\xE9cnico certificado, parecer de valor oficial, nem garantia de venda \u2014 n\xE3o substituem avalia\xE7\xE3o por profissional habilitado quando exigida por lei ou norma t\xE9cnica."), /* @__PURE__ */ React.createElement("p", null, 'As estimativas s\xE3o fornecidas "no estado em que se encontram", sem garantia de precis\xE3o ou atualidade. O usu\xE1rio \xE9 o \xFAnico respons\xE1vel por decis\xF5es comerciais tomadas com base nelas.'), /* @__PURE__ */ React.createElement("p", null, "Os dados usados nas estimativas v\xEAm de observa\xE7\xF5es de mercado p\xFAblicas \u2014 n\xE3o reproduzimos an\xFAncios, descri\xE7\xF5es ou fotos de terceiros, apenas fatos objetivos (categoria, marca, pre\xE7o, localiza\xE7\xE3o)."), /* @__PURE__ */ React.createElement("p", null, "Dados inseridos podem ser armazenados para composi\xE7\xE3o de hist\xF3rico e aprimoramento de estimativas futuras."), /* @__PURE__ */ React.createElement("p", { style: { fontStyle: "italic", color: "#8A8D91" } }, "\xDAltima atualiza\xE7\xE3o: 24/07/2026."))))))));
   }
 
   // entry.jsx
