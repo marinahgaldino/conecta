@@ -6227,6 +6227,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
     const [categoriaSelectBusca, setCategoriaSelectBusca] = React.useState("");
     const [localizacaoSelectBusca, setLocalizacaoSelectBusca] = React.useState("");
+    const [menuMobileAberto, setMenuMobileAberto] = React.useState(false);
+    const [categoriasExpandidasMobile, setCategoriasExpandidasMobile] = React.useState(false);
 
     const localizacoesUnicas = React.useMemo(() => {
       const set = new Set();
@@ -6297,7 +6299,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .ativos-search-select { border: 1px solid #E5E7EB; border-radius: 8px; padding: 0.6rem 0.8rem; font-size: 0.85rem; color: #374151; background: #fff; min-width: 150px; }
         .ativos-btn-buscar { background: #2159B7; color: #fff; border: none; padding: 0.65rem 1.6rem; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; }
         .ativos-btn-buscar:hover { background: #1B4A99; }
-        @media (max-width: 900px) { .ativos-search-row { grid-template-columns: 1fr; } .ativos-search-select { min-width: 0; width: 100%; } }
+        @media (max-width: 1024px) { .ativos-hero-inner { gap: 1.6rem; } }
 
         .ativos-secao { max-width: 1320px; margin: 0 auto; padding: 2.2rem 1.5rem 0; }
         .ativos-secao-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
@@ -6348,11 +6350,78 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .ativos-stat strong { display: block; font-family: 'Manrope', sans-serif; font-size: 1.05rem; }
         .ativos-stat span { display: block; font-size: 0.74rem; color: #6B7280; }
         .ativos-rodape-espaco { height: 3rem; }
-        @media (max-width: 900px) {
-          .ativos-hero-inner { grid-template-columns: 1fr; }
-          .ativos-navbar-links { display: none; }
-          .ativos-apoio-grid { grid-template-columns: 1fr; }
-          .ativos-stats { grid-template-columns: repeat(2, 1fr); }
+        .ativos-hero-cta-mobile { display: none; }
+        .ativos-hamburguer { display: none; background: none; border: none; color: #fff; cursor: pointer; padding: 0.3rem; }
+        .ativos-avatar-mobile { display: none; background: #1A2A47; border: none; color: #C4CBDA; border-radius: 50%; width: 32px; height: 32px; align-items: center; justify-content: center; cursor: pointer; }
+        .ativos-drawer-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 60; animation: ativosFadeIn 0.2s ease; }
+        .ativos-drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 78%; max-width: 300px; background: #0F1C33; z-index: 61; padding: 1.4rem 1.2rem; display: flex; flex-direction: column; gap: 0.3rem; animation: ativosSlideInDireita 0.25s ease; }
+        .ativos-drawer-fechar { align-self: flex-end; background: none; border: none; color: #C4CBDA; cursor: pointer; margin-bottom: 0.8rem; padding: 0.3rem; }
+        .ativos-drawer-link { background: none; border: none; text-align: left; color: #E5E9F0; font-size: 0.95rem; font-weight: 600; padding: 0.85rem 0.4rem; border-bottom: 1px solid #1E2E4D; cursor: pointer; }
+        .ativos-drawer-link-destaque { color: #4C8DF5; }
+        .ativos-pill-vertodas { display: none; }
+        .ativos-card-badge-verificado { position: absolute; bottom: 0.5rem; left: 0.5rem; background: rgba(18,21,28,0.85); color: #4ADE80; font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 5px; display: flex; align-items: center; gap: 0.2rem; }
+        @keyframes ativosFadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes ativosSlideInDireita { from { transform: translateX(100%); } to { transform: translateX(0); } }
+        @keyframes ativosFadeSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        @media (max-width: 1024px) {
+          .ativos-navbar-links { gap: 1rem; }
+        }
+
+        @media (max-width: 768px) {
+          .ativos-navbar-inner { padding: 0 20px; }
+          .ativos-navbar-links, .ativos-btn-outline { display: none; }
+          .ativos-hamburguer, .ativos-avatar-mobile { display: flex; }
+          .ativos-logo-sub { display: none; }
+
+          .ativos-hero { padding: 20px; }
+          .ativos-hero-inner { display: flex; flex-direction: column; align-items: stretch; gap: 0.9rem; }
+          .ativos-hero-texto { display: flex; flex-direction: column; }
+          .ativos-hero-eyebrow { display: none; }
+          .ativos-hero-titulo { order: 1; font-size: 34px; line-height: 1.2; }
+          .ativos-hero-sub { order: 2; font-size: 15px; margin: 0.5rem 0 0; }
+          .ativos-hero-selos { order: 3; gap: 0.8rem 1.1rem; }
+          .ativos-hero-selo { font-size: 13px; }
+          .ativos-hero-cta-mobile { order: 4; display: block; width: 100%; background: #2159B7; color: #fff; border: none; padding: 0.85rem; border-radius: 16px; font-weight: 700; font-size: 0.92rem; cursor: pointer; margin-top: 0.3rem; }
+          .ativos-hero-visual { display: contents; }
+          .ativos-hero-grafico { order: 5; height: 170px; border-radius: 16px; margin: 0; }
+          .ativos-hero-grafico svg { width: 60px; height: 60px; }
+          .ativos-hero-card-flutuante { order: 6; margin: 0; border-radius: 16px; }
+          .ativos-hero-inner, .ativos-hero-texto, .ativos-hero-grafico, .ativos-hero-card-flutuante { animation: ativosFadeSlideUp 0.35s ease; }
+
+          .ativos-search-bar { padding: 0 20px; margin-top: 1rem; }
+          .ativos-search-row { grid-template-columns: 1fr 1fr; gap: 0.6rem; padding: 0.6rem; border-radius: 16px; }
+          .ativos-search-input-wrap { grid-column: 1 / -1; border: 1px solid #E5E7EB; border-radius: 16px; }
+          .ativos-search-select { border-radius: 16px; min-width: 0; width: 100%; font-size: 0.82rem; }
+          .ativos-btn-buscar { grid-column: 1 / -1; border-radius: 16px; padding: 0.8rem; }
+
+          .ativos-secao { padding: 28px 20px 0; }
+          .ativos-secao-header h2 { font-size: 1.05rem; }
+          .ativos-secao, .ativos-search-bar { animation: ativosFadeSlideUp 0.35s ease; }
+
+          .ativos-categorias-scroll { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; overflow: visible; }
+          .ativos-pill-categoria { width: auto; aspect-ratio: 1 / 1; justify-content: center; border-radius: 18px; }
+          .ativos-pill-categoria svg { width: 28px; height: 28px; }
+          .ativos-categorias-scroll:not(.expandido) .ativos-pill-categoria:nth-child(n+9) { display: none; }
+          .ativos-pill-vertodas { display: flex; aspect-ratio: 1 / 1; width: auto; background: #EEF3FC; border: 1px dashed #2159B7; border-radius: 18px; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; cursor: pointer; color: #2159B7; }
+          .ativos-pill-vertodas span { font-size: 0.72rem; font-weight: 700; text-align: center; }
+
+          .ativos-cards-grid { grid-template-columns: 1fr; gap: 1rem; }
+          .ativos-card { max-height: 360px; }
+          .ativos-card-img { height: 160px; }
+          .ativos-card-btn { width: 100%; }
+
+          .ativos-apoio-grid { grid-template-columns: 1fr; gap: 1rem; }
+          .ativos-stats { grid-template-columns: repeat(2, 1fr); padding: 20px; }
+          .ativos-full * { max-width: 100%; }
+          .ativos-full { overflow-x: hidden; }
+        }
+
+        @media (max-width: 480px) {
+          .ativos-hero-titulo { font-size: 30px; }
+          .ativos-hero-sub { font-size: 14px; }
+          .ativos-card-titulo { font-size: 0.86rem; }
+          .ativos-stats { grid-template-columns: 1fr 1fr; gap: 0.7rem; }
         }
       `),
       /* @__PURE__ */ React.createElement("div", { className: "ativos-full" },
@@ -6375,15 +6444,34 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
                 /* @__PURE__ */ React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z" })),
                 favoriteListings.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "ativos-badge-contagem" }, favoriteListings.length)
               ),
-              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-btn-outline", onClick: () => { setTab("dashboard"); setMarketplacePage("home"); } }, t("Conecta Valor", "Conecta Valor"))
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-avatar-mobile", title: t("Minha conta", "My account") },
+                /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("circle", { cx: "12", cy: "8", r: "4" }), /* @__PURE__ */ React.createElement("path", { d: "M4 20a8 8 0 0116 0" }))
+              ),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-btn-outline", onClick: () => { setTab("dashboard"); setMarketplacePage("home"); } }, t("Conecta Valor", "Conecta Valor")),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-hamburguer", title: t("Menu", "Menu"), onClick: () => setMenuMobileAberto(true) },
+                /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M3 6h18M3 12h18M3 18h18" }))
+              )
             )
+          )
+        ),
+        menuMobileAberto && /* @__PURE__ */ React.createElement(React.Fragment, null,
+          /* @__PURE__ */ React.createElement("div", { className: "ativos-drawer-overlay", onClick: () => setMenuMobileAberto(false) }),
+          /* @__PURE__ */ React.createElement("div", { className: "ativos-drawer" },
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-drawer-fechar", onClick: () => setMenuMobileAberto(false) },
+              /* @__PURE__ */ React.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M18 6L6 18M6 6l12 12" }))
+            ),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-drawer-link", onClick: () => { setMarketplacePage("home"); setMenuMobileAberto(false); } }, t("Marketplace", "Marketplace")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-drawer-link", onClick: () => { setMarketplacePage("home"); setMenuMobileAberto(false); } }, t("Categorias", "Categories")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-drawer-link", onClick: () => { setMarketplacePage("vender"); setMenuMobileAberto(false); } }, t("Para vendedores", "For sellers")),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-drawer-link", onClick: () => setMenuMobileAberto(false) }, t("Favoritos", "Favorites"), " (", favoriteListings.length, ")"),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-drawer-link ativos-drawer-link-destaque", onClick: () => { setTab("dashboard"); setMarketplacePage("home"); setMenuMobileAberto(false); } }, t("Acessar Conecta Valor", "Access Conecta Valor"))
           )
         ),
 
         marketplacePage === "home" ? /* @__PURE__ */ React.createElement(React.Fragment, null,
           /* @__PURE__ */ React.createElement("section", { className: "ativos-hero" },
             /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-inner" },
-              /* @__PURE__ */ React.createElement("div", null,
+              /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-texto" },
                 /* @__PURE__ */ React.createElement("p", { className: "ativos-hero-eyebrow" }, t("MARKETPLACE DE ATIVOS INDUSTRIAIS", "INDUSTRIAL ASSET MARKETPLACE")),
                 /* @__PURE__ */ React.createElement("h1", { className: "ativos-hero-titulo" }, t("Conectamos o seu equipamento ao ", "We connect your equipment to the "), /* @__PURE__ */ React.createElement("span", null, t("potencial comprador.", "potential buyer."))),
                 /* @__PURE__ */ React.createElement("p", { className: "ativos-hero-sub" }, t("O lugar certo para comprar e vender equipamentos industriais com seguran\xE7a, transpar\xEAncia e intelig\xEAncia de mercado.", "The right place to buy and sell industrial equipment with security, transparency and market intelligence.")),
@@ -6391,7 +6479,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
                   /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-selo" }, /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z" })), t("Transa\xE7\xF5es seguras", "Secure transactions")),
                   /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-selo" }, /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20 6L9 17l-5-5" })), t("Vendedores verificados", "Verified sellers")),
                   /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-selo" }, /* @__PURE__ */ React.createElement("svg", { width: 18, height: 18, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M4 15v-3a8 8 0 0116 0v3M4 15a2 2 0 002 2h1v-5H6a2 2 0 00-2 2zm16 0a2 2 0 00-2-2h-1v5h1a2 2 0 002-2z" })), t("Suporte especializado", "Specialized support"))
-                )
+                ),
+                /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-hero-cta-mobile", onClick: () => setMarketplacePage("busca") }, t("Explorar Equipamentos", "Explore Equipment"))
               ),
               /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-visual" },
                 /* @__PURE__ */ React.createElement("div", { className: "ativos-hero-grafico" },
@@ -6448,7 +6537,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               /* @__PURE__ */ React.createElement("h2", null, t("Categorias populares", "Popular categories")),
               categoriaFiltroAtivos && /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-link-ver-todas", onClick: () => setCategoriaFiltroAtivos(null) }, t("Ver todas", "View all"))
             ),
-            /* @__PURE__ */ React.createElement("div", { className: "ativos-categorias-scroll" },
+            /* @__PURE__ */ React.createElement("div", { className: "ativos-categorias-scroll" + (categoriasExpandidasMobile ? " expandido" : "") },
               /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-pill-categoria" + (categoriaFiltroAtivos === null ? " active" : ""), onClick: () => setCategoriaFiltroAtivos(null) },
                 /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "3", width: "7", height: "7" }), /* @__PURE__ */ React.createElement("rect", { x: "14", y: "3", width: "7", height: "7" }), /* @__PURE__ */ React.createElement("rect", { x: "3", y: "14", width: "7", height: "7" }), /* @__PURE__ */ React.createElement("rect", { x: "14", y: "14", width: "7", height: "7" })),
                 /* @__PURE__ */ React.createElement("span", null, t("Todos os equipamentos", "All equipment"))
@@ -6456,7 +6545,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               MARKETPLACE_CATEGORIES.map((cat) => /* @__PURE__ */ React.createElement("button", { key: cat.slug, type: "button", className: "ativos-pill-categoria" + (categoriaFiltroAtivos === cat.slug ? " active" : ""), onClick: () => setCategoriaFiltroAtivos(cat.slug) },
                 /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: cat.icon })),
                 /* @__PURE__ */ React.createElement("span", null, cat.name)
-              ))
+              )),
+              /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-pill-vertodas", onClick: () => setCategoriasExpandidasMobile((v) => !v) },
+                /* @__PURE__ */ React.createElement("svg", { width: 22, height: 22, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: categoriasExpandidasMobile ? "M18 15l-6-6-6 6" : "M6 9l6 6 6-6" })),
+                /* @__PURE__ */ React.createElement("span", null, categoriasExpandidasMobile ? t("Ver menos", "View less") : t("Ver todas as categorias", "View all categories"))
+              )
             )
           ),
 
@@ -6474,7 +6567,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
                   /* @__PURE__ */ React.createElement("button", { type: "button", className: "ativos-card-fav" + (favoriteListings.includes(item.id) ? " ativo" : ""), onClick: () => toggleFavoriteListing(item.id) },
                     /* @__PURE__ */ React.createElement("svg", { width: 15, height: 15, viewBox: "0 0 24 24", fill: favoriteListings.includes(item.id) ? "currentColor" : "none", stroke: "currentColor", strokeWidth: 2 }, /* @__PURE__ */ React.createElement("path", { d: "M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.6z" }))
                   ),
-                  /* @__PURE__ */ React.createElement("svg", { width: 44, height: 44, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5 }, /* @__PURE__ */ React.createElement("path", { d: ICON_BOXES }))
+                  /* @__PURE__ */ React.createElement("svg", { width: 44, height: 44, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5 }, /* @__PURE__ */ React.createElement("path", { d: ICON_BOXES })),
+                  item.verificado && /* @__PURE__ */ React.createElement("span", { className: "ativos-card-badge-verificado" }, /* @__PURE__ */ React.createElement("svg", { width: 10, height: 10, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 3 }, /* @__PURE__ */ React.createElement("path", { d: "M20 6L9 17l-5-5" })), t("Verificado", "Verified"))
                 ),
                 /* @__PURE__ */ React.createElement("div", { className: "ativos-card-body" },
                   /* @__PURE__ */ React.createElement("p", { className: "ativos-card-titulo" }, item.titulo),
