@@ -2224,7 +2224,7 @@
           canal: "Revenda/Terceiro",
           tipo_mercado: "Venda Direta"
         };
-      }).filter((item) => item.preco === null || item.preco > 1); // exclui preço simbólico (R$1 ou menos) - ver comentário em parseMFRuralLocal
+      }).filter((item) => item.preco === null || item.preco > 10); // exclui preço simbólico (R$10 ou menos) - ver comentário em parseMFRuralLocal
     }
     const precoMatch = texto.match(/R\$\s*([\d.,]+)\s*(Unidade|Kilo|Peça|Kg|Litro|Outra|Tonelada|Metro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote)/i);
     const capacidadeRotuloMatch = texto.match(/Capacidade:\s*\n?\s*([\d.,]+\s*(?:l|litros?|kg|ton(?:elada)?s?|m[³3])\s*\/?\s*h(?:ora)?)/i);
@@ -2249,7 +2249,7 @@
     }
     if (!titulo || !precoMatch) return [];
     const precoUnico = parsePrecoBR(precoMatch[1]);
-    if (precoUnico !== null && precoUnico <= 1) return []; // preço simbólico (R$1 ou menos) - ver comentário em parseMFRuralLocal
+    if (precoUnico !== null && precoUnico <= 10) return []; // preço simbólico (R$10 ou menos) - ver comentário em parseMFRuralLocal
     const detalhesPartes = [];
     if (capacidadeMatch) {
       detalhesPartes.push(`Capacidade: at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}`);
@@ -2335,11 +2335,13 @@
       else if (/metro/i.test(unidadePreco)) notaPreco = "Pre\xE7o por metro, n\xE3o \xE9 valor fixo total";
       else if (/partir de/i.test(unidadePreco)) notaPreco = 'Pre\xE7o "a partir de" \u2014 pode variar conforme especifica\xE7\xE3o';
       const precoFinal = parsePrecoBR(m[1]);
-      // Preço simbólico (R$1 ou menos) no MF Rural normalmente significa que
+      // Preço simbólico (R$10 ou menos) no MF Rural normalmente significa que
       // o anunciante colocou um valor qualquer só pra conseguir publicar sem
       // preço real definido - não é dado de mercado de verdade, então não
-      // entra na base (senão distorce médias/faixas de valor).
-      if (precoFinal !== null && precoFinal <= 1) continue;
+      // entra na base (senão distorce médias/faixas de valor). Limite
+      // ajustado de R$1 pra R$10 depois de achar um caso real de R$10,00
+      // que passava despercebido com o limite anterior.
+      if (precoFinal !== null && precoFinal <= 10) continue;
       itens.push({
         ...fatos,
         modelo: tituloLimpo,
