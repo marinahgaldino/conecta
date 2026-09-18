@@ -2028,7 +2028,14 @@
     const idx = modelo.toLowerCase().lastIndexOf(marca.toLowerCase());
     if (idx === -1) return modelo;
     const depois = modelo.slice(idx + marca.length).trim().replace(/^[-–—:]\s*/, "");
-    return depois.length > 0 ? depois : modelo;
+    if (depois.length > 0) return depois;
+    // Marca no FINAL do modelo (nada sobra depois dela) - antes a funcao
+    // desistia aqui e devolvia o modelo original, causando duplicacao tipo
+    // "KRONES FILLING LINE KRONES" quando a marca foi extraida do proprio
+    // modelo (ex: fabricante de origem invalido, marca recuperada do fim
+    // do texto do modelo). Agora tenta usar o que vem ANTES da marca.
+    const antes = modelo.slice(0, idx).trim().replace(/[-–—:]\s*$/, "");
+    return antes.length > 0 ? antes : modelo;
   }
   function limparModeloAposExtracao(modelo) {
     if (!modelo) return modelo;
