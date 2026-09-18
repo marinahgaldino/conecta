@@ -2224,7 +2224,7 @@
           canal: "Revenda/Terceiro",
           tipo_mercado: "Venda Direta"
         };
-      });
+      }).filter((item) => item.preco === null || item.preco > 1); // exclui preço simbólico (R$1 ou menos) - ver comentário em parseMFRuralLocal
     }
     const precoMatch = texto.match(/R\$\s*([\d.,]+)\s*(Unidade|Kilo|Peça|Kg|Litro|Outra|Tonelada|Metro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote)/i);
     const capacidadeRotuloMatch = texto.match(/Capacidade:\s*\n?\s*([\d.,]+\s*(?:l|litros?|kg|ton(?:elada)?s?|m[³3])\s*\/?\s*h(?:ora)?)/i);
@@ -2248,6 +2248,8 @@
       if (encontrada) marcaFinal = encontrada;
     }
     if (!titulo || !precoMatch) return [];
+    const precoUnico = parsePrecoBR(precoMatch[1]);
+    if (precoUnico !== null && precoUnico <= 1) return []; // preço simbólico (R$1 ou menos) - ver comentário em parseMFRuralLocal
     const detalhesPartes = [];
     if (capacidadeMatch) {
       detalhesPartes.push(`Capacidade: at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}`);
@@ -2332,11 +2334,17 @@
       else if (/kilo|^kg/i.test(unidadePreco)) notaPreco = "Pre\xE7o por kg, n\xE3o \xE9 valor fixo total";
       else if (/metro/i.test(unidadePreco)) notaPreco = "Pre\xE7o por metro, n\xE3o \xE9 valor fixo total";
       else if (/partir de/i.test(unidadePreco)) notaPreco = 'Pre\xE7o "a partir de" \u2014 pode variar conforme especifica\xE7\xE3o';
+      const precoFinal = parsePrecoBR(m[1]);
+      // Preço simbólico (R$1 ou menos) no MF Rural normalmente significa que
+      // o anunciante colocou um valor qualquer só pra conseguir publicar sem
+      // preço real definido - não é dado de mercado de verdade, então não
+      // entra na base (senão distorce médias/faixas de valor).
+      if (precoFinal !== null && precoFinal <= 1) continue;
       itens.push({
         ...fatos,
         modelo: tituloLimpo,
         localizacao: lines[i],
-        preco: parsePrecoBR(m[1]),
+        preco: precoFinal,
         detalhes: notaPreco ? [fatos.detalhes, notaPreco].filter(Boolean).join("; ") : fatos.detalhes
       });
     }
