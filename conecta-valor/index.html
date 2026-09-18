@@ -2279,7 +2279,13 @@
     const lines = (rawText || "").split("\n").map((l) => l.trim());
     const itens = [];
     const priceRe = /R\$\s*([\d.,]+)\s*(Unidade|Kilo|Peça|Kg|Litro|Outra|Tonelada|Metro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote|[Aa]\s*partir\s*de)?/i;
-    const localRe = /^[A-Za-zÀ-ÿ\s.'()]+\s*[\/\-]\s*[A-Z]{2}$/;
+    // Regex de local restrito a no maximo 5 "palavras" antes do separador -
+    // uma frase de descricao que so por acaso termina mencionando o estado
+    // (ex: "Producao rapida e precisa em Monte Belo do Sul - RS") tem muito
+    // mais palavras que um nome de cidade real, e sem esse limite ela era
+    // reconhecida por engano como se fosse a linha de localizacao, derrubando
+    // titulo e local do primeiro item de cada bloco.
+    const localRe = /^(?:[A-Za-zÀ-ÿ.'()]+\s+){0,4}[A-Za-zÀ-ÿ.'()]+\s*[\/\-]\s*[A-Z]{2}$/;
     let blockStart = 0;
     function acharPrecoNoIndice(idx) {
       if (idx < 0 || idx >= lines.length || !lines[idx]) return null;
@@ -2290,6 +2296,14 @@
       return { match: m, linhasConsumidas: unidadeNaMesmaLinha ? 1 : 2 };
     }
     for (let i = 0; i < lines.length; i++) {
+      // Reset: "Anúncios" e "Banner destacado" marcam o inicio da secao real
+      // de resultados nas paginas do MF Rural - tudo antes disso (menu,
+      // MF Magazine, filtros de categoria/estado, destaques) e "lixo" de
+      // navegacao que nao deve virar titulo do primeiro item da lista.
+      if (lines[i] === "Anúncios" || lines[i] === "Banner destacado") {
+        blockStart = i + 1;
+        continue;
+      }
       if (!lines[i] || !localRe.test(lines[i])) continue;
       const blockLines = lines.slice(blockStart, i).filter((l) => l && l !== "An\xFAncio sem imagem/foto");
       let achado = null;
