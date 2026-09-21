@@ -3194,14 +3194,48 @@
       });
     }
     const blocosRelacionados = texto.split(/Anúncio classificado/i).slice(1);
-    const pareceLocalCurta = (l) => /^\p{Lu}\p{Ll}*(\s\p{Lu}[\p{Ll}.']*){0,3}$/u.test(l) && !/\b(de|da|do|para|com|em|e|à)\b/i.test(l);
+    // Reescrita (era baseada em regex com \b, que quebra em nomes de lugar com
+    // acento - "Klaipėda" virava "Klaip" + "da", e "da" batia por engano com a
+    // palavra de parada "da"). Nova versão exige que a primeira palavra seja um
+    // pais de verdade (lista fechada) - versao anterior aceitava qualquer
+    // sequencia de 1-5 palavras maiusculas, o que confundia categoria de 1
+    // palavra ("Empilhadeira") ou marca+modelo de 2 palavras ("Messer
+    // PlasmaX") com nome de lugar. Reconhece tambem conectores geograficos
+    // minusculos comuns em varias linguas (im/an der/am alemão, en holandês,
+    // di italiano) que antes faziam o nome do lugar inteiro ficar preso no
+    // titulo (ex: "Alemanha Leutkirch im Allgäu Centro de usinagem").
+    const PAISES_CONHECIDOS = ["Países Baixos", "República Checa", "Reino Unido", "Estados Unidos", "Alemanha", "Áustria", "Polónia", "Polônia", "Itália", "Croácia", "Lituânia", "Suíça", "França", "Espanha", "Bélgica", "Eslováquia", "Hungria", "Romênia", "Bulgária", "Grécia", "Portugal", "Irlanda", "Dinamarca", "Suécia", "Noruega", "Finlândia", "Sérvia", "Eslovênia", "Turquia", "Rússia", "Ucrânia", "Canadá", "China", "Brasil", "Luxemburgo", "Letônia", "Estônia", "Bósnia"].sort((a, b) => b.length - a.length);
+    const CONECTORES_GEOGRAFICOS = /* @__PURE__ */ new Set(["im", "an", "der", "am", "en", "di", "zu", "auf", "bei", "van", "von", "del", "della"]);
+    const STOPWORDS_FRASE = /* @__PURE__ */ new Set(["de", "da", "do", "para", "com", "em", "e", "à"]);
+    const pareceLocalCurta = (l) => {
+      if (!l || l.length > 60) return false;
+      const paisEncontrado = PAISES_CONHECIDOS.find((p) => l.toLowerCase() === p.toLowerCase() || l.toLowerCase().startsWith(p.toLowerCase() + " "));
+      if (!paisEncontrado) return false;
+      const resto = l.slice(paisEncontrado.length).trim();
+      if (!resto) return true; // só o país mesmo (ex: página que repete "Áustria Áustria")
+      const palavrasResto = resto.split(/\s+/);
+      if (palavrasResto.length > 4) return false;
+      return palavrasResto.every((p) => {
+        if (!/^[\p{L}.'-]+$/u.test(p)) return false;
+        const pLower = p.toLowerCase();
+        if (STOPWORDS_FRASE.has(pLower)) return false;
+        return /^\p{Lu}/u.test(p) || CONECTORES_GEOGRAFICOS.has(pLower);
+      });
+    };
+    // Remove preco embutido na mesma linha do produto (ex: "Combilift C5000
+    // SL-R € 74.000" -> "Combilift C5000 SL-R") - achado real: nem todo card
+    // do Machineseeker tem o preco em linha separada.
+    const limparPrecoEmbutido = (l) => l.replace(/\s*€\s*[\d.,]+.*$/i, "").trim();
     blocosRelacionados.forEach((bloco) => {
       const precoMatch = bloco.match(/€\s*([\d.,]+)(?!\s*\*)/);
       if (!precoMatch) return;
       const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
-      const linhasUteis = linhas.filter(
-        (l) => !/^\d+\s*\/\s*\d+$/.test(l) && !/^\d[\d.,]*\s*km$/i.test(l) && !pareceLocalCurta(l)
-      );
+      const linhasUteis = linhas
+        .filter(
+          (l) => !/^\d+\s*\/\s*\d+$/.test(l) && !/^\d[\d.,]*\s*km$/i.test(l) && !/^comerciante verificado$/i.test(l) && !/^more images$/i.test(l) && !pareceLocalCurta(l)
+        )
+        .map(limparPrecoEmbutido)
+        .filter(Boolean);
       const idxKm = linhas.findIndex((l) => /^\d[\d.,]*\s*km$/i.test(l));
       const localizacaoRel = idxKm > 0 && pareceLocalCurta(linhas[idxKm - 1]) ? linhas[idxKm - 1] : null;
       const titulo = linhasUteis.slice(0, 2).join(" ").trim();
