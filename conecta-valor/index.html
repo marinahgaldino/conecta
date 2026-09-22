@@ -3255,13 +3255,20 @@
       const potenciaRelMatch = bloco.match(/Pot[êe]ncia instalada:\s*([\d.,]+\s*kW)/i);
       const ehLeilaoRel = /leil[ãa]o|auktion|\bauction\b|lance atual|gebot/i.test(bloco);
       const detalhesRel = [];
-      if (capacidadeRelMatch) detalhesRel.push(`Capacidade: ${capacidadeRelMatch[1].trim()}`);
       itens.push({
         categoria: classificarCategoriaGenerica(bloco),
         marca: fabricanteRelMatch ? fabricanteRelMatch[1].trim() : null,
         modelo: titulo || null,
         ano: anoRelMatch ? anoRelMatch[1] : null,
-        capacidade: potenciaRelMatch ? potenciaRelMatch[1].trim() : null,
+        // Bug real corrigido: antes o valor de "Potência instalada" (ex:
+        // "150 kW") ia parar dentro do campo capacidade como texto cru,
+        // e a captura de capacidade de verdade (capacidadeRelMatch) so era
+        // usada dentro de "detalhes" (nota solta), nunca num campo proprio.
+        // Agora capacidade usa o valor certo, e potencia_kw vira numero de
+        // verdade - o mesmo campo que ja e enviado pro banco em outros
+        // parsers, sem precisar mudar nada no restante do fluxo de salvar.
+        capacidade: capacidadeRelMatch ? capacidadeRelMatch[1].trim() : null,
+        potencia_kw: potenciaRelMatch ? parsePrecoBR(potenciaRelMatch[1].replace(/\s*kW/i, "")) : null,
         detalhes: detalhesRel.length ? detalhesRel.join("; ") : null,
         estado: condRelMatch && /usad/i.test(condRelMatch[1]) ? "Usado" : condRelMatch && /nov[oa]/i.test(condRelMatch[1]) ? "Novo" : null,
         localizacao: localizacaoRel,
