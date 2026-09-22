@@ -1792,7 +1792,11 @@
     "HITACHI",
     "MITSUBISHI ELECTRIC",
     "FUJI ELECTRIC",
-    "TECO-WESTINGHOUSE"
+    "TECO-WESTINGHOUSE",
+    "BAUMANN",
+    "BULMOR",
+    "COMBILIFT",
+    "JUMBO"
   ];
   function removerAcentos(s) {
     return (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -2093,7 +2097,12 @@
     if (r.marca && pareceTextoInvalido(r.marca)) r.marca = null;
     if (r.marca && pareceMarcaInvalida(r.marca)) r.marca = null;
     if (!r.marca && r.modelo) {
-      const marcaNoModelo = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m}\\b`, "i").test(r.modelo));
+      // Além do \b\b normal, aceita a marca colada direto no código do
+      // modelo sem espaço (padrão comum em catálogos europeus, ex:
+      // "BaumannGX50/14/40" ou "CombiliftC3000ST") - detecta pela letra
+      // maiúscula ou dígito logo em seguida, já que \b sozinho não vê
+      // fronteira nenhuma quando as duas palavras estão coladas.
+      const marcaNoModelo = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m}(?=\\b|[A-Z0-9])`, "i").test(r.modelo));
       if (marcaNoModelo) r.marca = marcaNoModelo;
     }
     if (r.modelo) r.modelo = dedupeSeDobrado(r.modelo);
