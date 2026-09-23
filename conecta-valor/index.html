@@ -1406,7 +1406,7 @@
     var tUpper = texto.toUpperCase();
     for (var i = 0; i < MARCAS_CONHECIDAS.length; i++) {
       var marca = MARCAS_CONHECIDAS[i];
-      if (new RegExp("\\b" + marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\b", "i").test(tUpper)) {
+      if (new RegExp("\\b" + marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=\\b|[A-Z0-9])", "i").test(tUpper)) {
         return { valor: normalizarMarca(marca), confianca: 0.95, original: marca };
       }
     }
@@ -2260,7 +2260,7 @@
     const categoriaFinal = classificarCategoriaGenerica(titulo) || (blocoDescricao ? classificarCategoriaGenerica(blocoDescricao[1]) : null);
     let marcaFinal = marcaMatch ? marcaMatch[1].trim() : null;
     if (!marcaFinal && blocoDescricao) {
-      const encontrada = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(blocoDescricao[1]));
+      const encontrada = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(blocoDescricao[1]));
       if (encontrada) marcaFinal = encontrada;
     }
     if (!titulo || !precoMatch) return [];
@@ -3379,7 +3379,7 @@
       const pesoMatch = textoCompleto.match(/(\d+(?:[.,]\d+)?)\s*KGS/i);
       const localizacaoMatch = textoCompleto.match(/Localiza[çc][ãa]o:\s*([^\n]+)/i);
       const precoMatch = textoCompleto.match(/(R\$|[€$£])\s*([\d.,]+)\s*([A-Z]{3})?/);
-      const marcaConhecidaMatch = !fabricanteMatch ? MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(tituloPrincipal)) || MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(textoCompleto)) : null;
+      const marcaConhecidaMatch = !fabricanteMatch ? MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(tituloPrincipal)) || MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(textoCompleto)) : null;
       const modeloSolto = !modeloMatch && marcaConhecidaMatch ? textoCompleto.match(new RegExp(`${marcaConhecidaMatch}\\s+([A-Z]{1,4}\\d+\\s*(?:[A-Z]\\d+\\s*)*(?:\\/\\d+)?)`, "i")) : null;
       const bpmMatch = textoCompleto.match(/(?:approximately\s*)?(?:(\d+)\s*to\s*)?(\d+)\s*BPM/i);
       const embalagensMatch = textoCompleto.match(/\((\d+(?:[\d,\s]*(?:and|e)\s*\d+)?)\s*(CL|mL|ml|L)\)/i);
