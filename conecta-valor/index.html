@@ -2410,25 +2410,42 @@
     const precoMatch = texto.match(/Lance inicial:\s*R\$\s*([\d.,]+)/i) || texto.match(/Valor de venda(?: por unidade)?\s*\n?\s*R\$\s*([\d.,]+)/i);
     if (!titulo || !precoMatch) return [];
     const fabrInlineMatch = texto.match(/Fabr:?\s*([^\n]+?)\s*Mod:/i);
-    const fabricanteMatch = texto.match(/Fabricante:?\s*\n?\s*([^\n]+)/i);
+    // Corrigido: Superbid usa "Marca:" na Descricao (nao "Fabricante:" -
+    // esse rotulo nunca aparecia no texto real, entao marca ficava sempre
+    // null). Mantido "Fabricante:" tambem, caso apareca em outro layout.
+    const fabricanteMatch = texto.match(/(?:Marca|Fabricante):?\s*\n?\s*([^\n]+)/i);
     const modeloRotuloMatch = texto.match(/Modelo:?\s*\n?\s*([^\n]+)/i);
     const marca = fabrInlineMatch ? fabrInlineMatch[1].trim() : fabricanteMatch ? fabricanteMatch[1].trim() : null;
+    // Corrigido: so aceitava potencia em CV; a Descricao real usa kW dentro
+    // de "Dados do motor" ("Potencia: 0,55 kW") - antes isso nao ia pra
+    // lugar nenhum.
     const potenciaMatch = texto.match(/Pot[êe]ncia:?\s*\n?\s*([\d.,]+)\s*CV/i);
+    const potenciaKwMatch = texto.match(/Pot[êe]ncia:?\s*\n?\s*([\d.,]+)\s*kW/i);
+    const anoMatch = texto.match(/\bAno:?\s*\n?\s*(\d{4})\b/i);
     const rpmMatch = texto.match(/Rota[çc][ãa]o:?\s*\n?\s*([\d.,]+)\s*RPM/i);
     const detalhesPartes = [];
     if (identificador) detalhesPartes.push(identificador);
-    if (modeloRotuloMatch && !fabrInlineMatch) detalhesPartes.push(`Modelo: ${modeloRotuloMatch[1].trim()}`);
-    const serieMatch = texto.match(/N[uú]mero de S[ée]rie:?\s*\n?\s*([^\n]+)/i);
+    // Corrigido: antes so guardava "Modelo: X" como nota em detalhes e
+    // nunca usava como o campo modelo de verdade - o titulo completo (com
+    // marca+ano+serie+capacidade tudo junto) sempre virava o modelo. Agora
+    // usa o valor limpo quando existe, e guarda o titulo completo original
+    // como referencia em detalhes (sem perder a informacao, so tirando ela
+    // do campo que devia ser so o modelo).
+    const modeloLimpo = modeloRotuloMatch ? modeloRotuloMatch[1].trim() : null;
+    if (modeloLimpo) detalhesPartes.push(`T\xEDtulo original: ${titulo}`);
+    const serieMatch = texto.match(/N[uú]mero de S[ée]rie:?\s*\n?\s*([^\n]+)/i) || texto.match(/\bS[ée]rie\.?:?\s*\n?\s*([\w\-\/]+)/i);
     if (serieMatch) detalhesPartes.push(`N\xBA de s\xE9rie: ${serieMatch[1].trim()}`);
-    const capacidadeMatch = texto.match(/Capacidade(?:\s+estimada)?:?\s*\n?\s*([\d.,]+\s*(?:litros?|l|m[³3]|kg|ton(?:elada)?s?))/i);
+    const capacidadeMatch = texto.match(/Capacidade(?:\s+estimada)?:?\s*\n?\s*([\d.,]+\s*(?:litros?|l|m[³3](?:\/h)?|kg|ton(?:elada)?s?))/i);
     const dimensoesMatch = texto.match(/Dimens(?:ão|ões)(?:\s+do\s+\w+)?:?\s*\n?\s*([^\n]+)/i);
     if (dimensoesMatch) detalhesPartes.push(`Dimens\xF5es: ${dimensoesMatch[1].trim()}`);
     return [{
       categoria: classificarCategoriaGenerica(titulo),
       marca,
-      modelo: titulo,
+      modelo: modeloLimpo || titulo,
+      ano: anoMatch ? anoMatch[1] : null,
       capacidade: capacidadeMatch ? capacidadeMatch[1].trim() : null,
       potencia_cv: potenciaMatch ? Number(potenciaMatch[1].replace(",", ".")) : null,
+      potencia_kw: potenciaKwMatch ? Number(potenciaKwMatch[1].replace(",", ".")) : null,
       rpm: rpmMatch ? Number(rpmMatch[1].replace(/\./g, "")) : null,
       detalhes: detalhesPartes.length ? detalhesPartes.join("; ") : null,
       localizacao,
@@ -2454,17 +2471,40 @@
       if (locIdx !== -1 && blockLines[locIdx + 1]) {
         const locLine = blockLines[locIdx + 1];
         const locMatch = locLine.match(/^([A-Za-zÀ-ÿ\s.'-]+)\s*-\s*([A-Z]{2})$/);
+        // Corrigido: essa pagina de lista as vezes mostra so a cidade, sem
+        // "- UF" (ex: "Rio de Janeiro" sozinho) - o formato antigo exigia
+        // sempre "Cidade - UF" e ficava null nesses casos.
         if (locMatch) localizacao = `${locMatch[1].trim()}/${locMatch[2]}`;
+        else if (/^[A-Za-zÀ-ÿ\s.'-]+$/.test(locLine) && locLine.length > 2 && locLine.length < 40) localizacao = locLine;
       }
       const loteMatch = [...new Set(blockLines)].join(" ").match(/Lote\s+(\d+)/i);
       const tituloLimpo = blockLines.find(
         (l) => l && !/^Hoje|^\d{2}\/\d{2}|^Lote|Ícone|^Icon\b|Industrial, M[áa]quinas|^Motores El[ée]tricos$/i.test(l)
       ) || null;
       const fatos = extrairFatosDeTexto(textoBloco);
+      // Corrigido: antes o modelo era sempre o titulo inteiro (marca+
+      // modelo+ano+serie+capacidade tudo junto, ex: "MOTOBOMBA ... ALLWEILER
+      // GMBH NB20-160 ..., ANO 2013, SÉRIE.: ..., CAP. ..."). Agora separa
+      // ano/serie/capacidade do texto, e tira a marca (quando reconhecida)
+      // do inicio do titulo pra sobrar so o codigo do modelo.
+      const anoLoteMatch = tituloLimpo ? tituloLimpo.match(/,?\s*ANO\s+(\d{4})/i) : null;
+      const serieLoteMatch = tituloLimpo ? tituloLimpo.match(/S[ÉE]RIE\.?:?\s*([\w\-\/]+)/i) : null;
+      const capacidadeLoteMatch = tituloLimpo ? tituloLimpo.match(/CAP\.?\s*([\d.,]+\s*(?:M[³3]\/H|M[³3]|L\/MIN|KW))/i) : null;
+      const potLoteMatch = tituloLimpo ? tituloLimpo.match(/POT\.?:?\s*([\d.,]+)\s*KW/i) : null;
+      let modeloLimpo = tituloLimpo ? tituloLimpo.split(/,\s*ANO\s+\d{4}/i)[0].trim() : tituloLimpo;
+      if (fatos.marca && modeloLimpo) {
+        const idxMarca = modeloLimpo.toUpperCase().indexOf(fatos.marca.toUpperCase());
+        if (idxMarca !== -1) {
+          modeloLimpo = modeloLimpo.slice(idxMarca + fatos.marca.length).replace(/^\s*\.?\s*(GMBH|AG)\b\.?,?\s*/i, "").trim();
+        }
+      }
       itens.push({
         ...fatos,
-        modelo: tituloLimpo || null,
-        detalhes: loteMatch ? [fatos.detalhes, `Lote ${loteMatch[1]}`].filter(Boolean).join("; ") : fatos.detalhes,
+        modelo: modeloLimpo || tituloLimpo || null,
+        ano: anoLoteMatch ? anoLoteMatch[1] : fatos.ano,
+        capacidade: capacidadeLoteMatch ? capacidadeLoteMatch[1].trim() : fatos.capacidade,
+        potencia_kw: potLoteMatch ? Number(potLoteMatch[1].replace(",", ".")) : fatos.potencia_kw,
+        detalhes: [fatos.detalhes, loteMatch ? `Lote ${loteMatch[1]}` : null, serieLoteMatch ? `N\xBA de s\xE9rie: ${serieLoteMatch[1]}` : null, tituloLimpo && modeloLimpo !== tituloLimpo ? `T\xEDtulo original: ${tituloLimpo}` : null].filter(Boolean).join("; ") || null,
         localizacao,
         preco: parsePrecoBR(m[1])
       });
