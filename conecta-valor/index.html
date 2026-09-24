@@ -2142,6 +2142,21 @@
       const capacidadeGeral = extrairCapacidadeGeral(textoBusca);
       if (capacidadeGeral) r.capacidade = capacidadeGeral;
     }
+    // Reconhece o "tipo" (subclassificação dentro da categoria, ex: um
+    // Compressor pode ser Parafuso/Pistão/Centrífugo) quando o schema da
+    // categoria já prevê esse atributo como obrigatório pra avaliação -
+    // em vez de descartar essa palavra junto com a categoria, guarda em
+    // "detalhes" (nao existe coluna "tipo" separada confirmada no banco).
+    // Vocabulário mínimo, só com evidência real de uso - não é lista
+    // exaustiva de todos os tipos possíveis por categoria.
+    var TIPOS_CONHECIDOS_POR_CATEGORIA = { "Compressor": ["Parafuso", "Pist\xE3o", "Centr\xEDfugo", "Palhetas", "Scroll"] };
+    if (r.categoria && r.modelo && TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria]) {
+      const tipoEncontrado = TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria].find((tp) => new RegExp(`\\b${tp}\\b`, "i").test(r.modelo));
+      if (tipoEncontrado) {
+        r.detalhes = [r.detalhes, `Tipo: ${tipoEncontrado}`].filter(Boolean).join("; ");
+        r.modelo = r.modelo.replace(new RegExp(`\\b${tipoEncontrado}\\b`, "i"), " ").trim();
+      }
+    }
     // Remove a categoria do texto do modelo quando ela aparece repetida ali
     // (ex: categoria="Compressor", modelo="Compressor Parafuso 240 pés
     // Ga37" -> "Parafuso 240 pés Ga37") - a categoria ja esta no campo
