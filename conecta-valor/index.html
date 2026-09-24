@@ -2164,8 +2164,8 @@
     // "inox"/"aco carbono" ali), entao o termo original ficava duplicado.
     if (r.detalhes && /Material:/i.test(r.detalhes) && r.modelo) {
       r.modelo = r.modelo
-        .replace(/a[çc]o\s*inox(?:id[áa]vel)?\s*\d{0,3}/gi, " ")
-        .replace(/\binox\s*\d{0,3}/gi, " ")
+        .replace(/a[çc]o\s*inox(?:id[áa]vel)?\s*(\d{3}\b)?/gi, " ")
+        .replace(/\binox\s*(\d{3}\b)?/gi, " ")
         .replace(/a[çc]o\s*carbono/gi, " ")
         .trim();
     }
