@@ -2250,15 +2250,17 @@
     if (r.categoria && r.modelo && TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria]) {
       const tiposEncontrados = TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria].filter((tp) => tp.re.test(r.modelo));
       if (tiposEncontrados.length) {
-        r.tipo = tiposEncontrados.map((t) => t.label).join(", ");
+        if (!r.tipo) r.tipo = tiposEncontrados.map((t) => t.label).join(", ");
         tiposEncontrados.forEach((tp) => { r.modelo = r.modelo.replace(tp.re, " ").trim(); });
       }
     }
     if (r.categoria && r.modelo && APLICACOES_CONHECIDAS_POR_CATEGORIA[r.categoria]) {
       const aplicacoesEncontradas = APLICACOES_CONHECIDAS_POR_CATEGORIA[r.categoria].filter((ap) => ap.re.test(r.modelo));
       if (aplicacoesEncontradas.length) {
-        const labelsUnicos = [...new Set(aplicacoesEncontradas.map((a) => a.label))];
-        r.aplicacao = labelsUnicos.join(", ");
+        if (!r.aplicacao) {
+          const labelsUnicos = [...new Set(aplicacoesEncontradas.map((a) => a.label))];
+          r.aplicacao = labelsUnicos.join(", ");
+        }
         aplicacoesEncontradas.forEach((ap) => { r.modelo = r.modelo.replace(ap.re, " ").trim(); });
       }
     }
