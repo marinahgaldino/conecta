@@ -1854,7 +1854,6 @@
     else if (/a[çc]o\s*carbono/i.test(t)) materialMatch = "A\xE7o Carbono";
     const capacidadeProdMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(unidades?|un\.?|garrafas?|frascos?|latas?|pe[çc]as?|embalagens?)\s*\/\s*h(ora)?/i);
     const detalhesPartes = [];
-    if (materialMatch) detalhesPartes.push(`Material: ${materialMatch}`);
     if (combustivel) detalhesPartes.push(`Combust\xEDvel: ${combustivel}`);
     if (capacidadeMatch) {
       const num = capacidadeMatch[1] + (capacidadeMatch[2] || "");
@@ -1881,6 +1880,7 @@
       categoria,
       categoria_id: nova.category_id,
       marca,
+      material: materialMatch,
       capacidade,
       finalidade,
       potencia_cv: potenciaCvFinal,
@@ -2147,6 +2147,7 @@
       if (!r.estado && extra.estado) r.estado = extra.estado;
       if (!r.marca && extra.marca) r.marca = extra.marca;
       if (!r.finalidade && extra.finalidade) r.finalidade = extra.finalidade;
+      if (!r.material && extra.material) r.material = extra.material;
     }
     if (!r.capacidade) {
       const textoBusca = [r.modelo, r.detalhes].filter(Boolean).join(" ").replace(/Peso:?\s*[\d.,]+\s*(kg|ton(?:elada)?s?)\b/gi, "");
@@ -2159,6 +2160,16 @@
     if (r.capacidade && r.detalhes) {
       r.detalhes = r.detalhes
         .replace(/(?:^|;\s*)Capacidade(?:\s+m[áa]xima|\s+estimada)?:?\s*[^;]+/i, "")
+        .replace(/^;\s*|;\s*$/g, "")
+        .replace(/;\s*;/g, ";")
+        .trim() || null;
+    }
+    // Mesma logica pra material - agora vira campo proprio (r.material),
+    // entao qualquer nota "Material: X" que ainda sobre em detalhes (de
+    // algum parser especifico que ainda gera assim) fica redundante.
+    if (r.material && r.detalhes) {
+      r.detalhes = r.detalhes
+        .replace(/(?:^|;\s*)Material:?\s*[^;]+/i, "")
         .replace(/^;\s*|;\s*$/g, "")
         .replace(/;\s*;/g, ";")
         .trim() || null;
@@ -2239,7 +2250,7 @@
     if (r.categoria && r.modelo && TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria]) {
       const tiposEncontrados = TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria].filter((tp) => tp.re.test(r.modelo));
       if (tiposEncontrados.length) {
-        r.detalhes = [r.detalhes, `Tipo: ${tiposEncontrados.map((t) => t.label).join(", ")}`].filter(Boolean).join("; ");
+        r.tipo = tiposEncontrados.map((t) => t.label).join(", ");
         tiposEncontrados.forEach((tp) => { r.modelo = r.modelo.replace(tp.re, " ").trim(); });
       }
     }
@@ -2247,7 +2258,7 @@
       const aplicacoesEncontradas = APLICACOES_CONHECIDAS_POR_CATEGORIA[r.categoria].filter((ap) => ap.re.test(r.modelo));
       if (aplicacoesEncontradas.length) {
         const labelsUnicos = [...new Set(aplicacoesEncontradas.map((a) => a.label))];
-        r.detalhes = [r.detalhes, `Aplica\xE7\xE3o: ${labelsUnicos.join(", ")}`].filter(Boolean).join("; ");
+        r.aplicacao = labelsUnicos.join(", ");
         aplicacoesEncontradas.forEach((ap) => { r.modelo = r.modelo.replace(ap.re, " ").trim(); });
       }
     }
@@ -8026,6 +8037,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           estado: it.estado || null,
           detalhes: it.detalhes || null,
           finalidade: it.finalidade || null,
+          material: it.material || null,
+          tipo: it.tipo || null,
+          aplicacao: it.aplicacao || null,
           tipo_mercado: it.tipo_mercado || null,
           fonte: it.fonte || null,
           data_observacao: it.data_observacao || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
@@ -8158,6 +8172,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           estado: it.estado || null,
           detalhes: it.detalhes || null,
           finalidade: it.finalidade || null,
+          material: it.material || null,
+          tipo: it.tipo || null,
+          aplicacao: it.aplicacao || null,
           fonte: it.fonte || null,
           tipo_mercado: manualTipoMercado,
           data_observacao: it.data_observacao || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
@@ -8209,6 +8226,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           estado: entryEstado,
           detalhes: entryForm.detalhes || null,
           finalidade: null,
+          material: null,
+          tipo: null,
+          aplicacao: null,
           tipo_mercado: entryTipoMercado,
           canal: entryCanal,
           moeda: entryMoeda,
