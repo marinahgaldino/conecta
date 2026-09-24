@@ -2070,6 +2070,17 @@
     m = m.replace(/^\s*[-–—,;:]+\s*/, "").replace(/\s*[-–—,;:]+\s*$/, "");
     m = m.replace(/\(\s*\)/g, "");
     m = m.replace(/\s{2,}/g, " ").trim();
+    // Corta preposicao/conjuncao solta que sobrou no FINAL da frase (nao so
+    // quando e a frase inteira) - ex: "Engarrafadora... e Tanque de 100L"
+    // virava "Engarrafadora... e de" depois de tirar categoria+capacidade,
+    // uma frase truncada sem sentido. Roda em loop pra pegar mais de uma
+    // preposicao solta seguida (o caso real tinha duas: "e" e "de").
+    const stopwordFinal = /\s+(de|da|do|das|dos|e|a|o|em|com|para|por|sem)$/i;
+    let anteriorBorda;
+    do {
+      anteriorBorda = m;
+      m = m.replace(stopwordFinal, "").trim();
+    } while (m !== anteriorBorda && m.length > 0);
     // Se so sobrou uma preposicao/stopword solta (ex: "de", depois de tirar
     // categoria/local/material/tipo), trata como se nao tivesse modelo
     // nenhum - uma preposicao sozinha nao e um modelo de verdade.
