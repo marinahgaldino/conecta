@@ -2043,7 +2043,7 @@
     return antes.length > 0 ? antes : modelo;
   }
   function limparModeloAposExtracao(modelo) {
-    if (!modelo) return modelo;
+    if (modelo == null) return modelo;
     let m = modelo;
     m = m.replace(/\d+(?:[.,]\d+)?\s*cv\b/gi, " ");
     m = m.replace(/\d+(?:[.,]\d+)?\s*kw\b/gi, " ");
@@ -2070,6 +2070,10 @@
     m = m.replace(/^\s*[-–—,;:]+\s*/, "").replace(/\s*[-–—,;:]+\s*$/, "");
     m = m.replace(/\(\s*\)/g, "");
     m = m.replace(/\s{2,}/g, " ").trim();
+    // Se so sobrou uma preposicao/stopword solta (ex: "de", depois de tirar
+    // categoria/local/material/tipo), trata como se nao tivesse modelo
+    // nenhum - uma preposicao sozinha nao e um modelo de verdade.
+    if (/^(de|da|do|das|dos|e|a|o|em|com|para)$/i.test(m)) return null;
     return m.length > 0 ? m : null;
   }
   function extrairCapacidadeGeral(texto) {
@@ -2142,19 +2146,61 @@
       const capacidadeGeral = extrairCapacidadeGeral(textoBusca);
       if (capacidadeGeral) r.capacidade = capacidadeGeral;
     }
+    // Remove localizacao duplicada dentro do modelo (ex: modelo="Tanque de
+    // Água Agrosis, 2021 - Tupã, SP" com localizacao="Tupã/SP" -> tira
+    // ", Tupã, SP" do modelo) - a localizacao ja esta no campo proprio.
+    if (r.localizacao && r.modelo) {
+      const partesLoc = r.localizacao.split("/");
+      const cidadeLoc = partesLoc[0] && partesLoc[0].trim();
+      const ufLoc = partesLoc[1] && partesLoc[1].trim();
+      if (cidadeLoc && ufLoc) {
+        const cidadeEscapada = cidadeLoc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const reLoc = new RegExp(`[\\s,\\-|]+${cidadeEscapada}\\s*[,\\-/]\\s*${ufLoc}\\b`, "i");
+        if (reLoc.test(r.modelo)) r.modelo = r.modelo.replace(reLoc, "").trim();
+      }
+    }
+    // Remove material do modelo quando ja foi capturado em "Material: X" -
+    // a deteccao usa o mesmo texto do modelo (extrairFatosDeTexto reconhece
+    // "inox"/"aco carbono" ali), entao o termo original ficava duplicado.
+    if (r.detalhes && /Material:/i.test(r.detalhes) && r.modelo) {
+      r.modelo = r.modelo
+        .replace(/a[çc]o\s*inox(?:id[áa]vel)?\s*\d{0,3}/gi, " ")
+        .replace(/\binox\s*\d{0,3}/gi, " ")
+        .replace(/a[çc]o\s*carbono/gi, " ")
+        .trim();
+    }
     // Reconhece o "tipo" (subclassificação dentro da categoria, ex: um
-    // Compressor pode ser Parafuso/Pistão/Centrífugo) quando o schema da
-    // categoria já prevê esse atributo como obrigatório pra avaliação -
-    // em vez de descartar essa palavra junto com a categoria, guarda em
-    // "detalhes" (nao existe coluna "tipo" separada confirmada no banco).
-    // Vocabulário mínimo, só com evidência real de uso - não é lista
-    // exaustiva de todos os tipos possíveis por categoria.
-    var TIPOS_CONHECIDOS_POR_CATEGORIA = { "Compressor": ["Parafuso", "Pist\xE3o", "Centr\xEDfugo", "Palhetas", "Scroll"] };
+    // Compressor pode ser Parafuso/Pistão/Centrífugo, um Tanque pode ser
+    // Pipa/Pulverizador/Combate a Incêndio) quando isso ajuda a separar o
+    // texto do modelo do que é so classificação. Vocabulário mínimo, só com
+    // evidência real de uso (visto nos dados dela) - não é lista exaustiva.
+    // "detalhes" guarda o tipo (nao existe coluna "tipo" separada
+    // confirmada no banco).
+    var TIPOS_CONHECIDOS_POR_CATEGORIA = {
+      "Compressor": [{ re: /\bParafuso\b/i, label: "Parafuso" }, { re: /\bPist[ãa]o\b/i, label: "Pist\xE3o" }, { re: /\bCentr[íi]fugo\b/i, label: "Centr\xEDfugo" }, { re: /\bPalhetas\b/i, label: "Palhetas" }, { re: /\bScroll\b/i, label: "Scroll" }],
+      "Tanque": [
+        { re: /\bSuc[çc][ãa]o\s*(a|e)?\s*V[áa]cuo\b/i, label: "Suc\xE7\xE3o a V\xE1cuo" },
+        { re: /\bResfriador(?:\s+de\s+\w+)?\b/i, label: "Resfriador" },
+        { re: /\bPulverizador\b/i, label: "Pulverizador" },
+        { re: /\bPipa\b/i, label: "Pipa" },
+        { re: /\bIsot[ée]rmico\b/i, label: "Isot\xE9rmico" },
+        { re: /\bMisturador\b/i, label: "Misturador" },
+        { re: /\bCombate\s*(a)?\s*Inc[êe]ndio\b/i, label: "Combate a Inc\xEAndio" },
+        { re: /\bPress[ãa]o\b/i, label: "Press\xE3o" },
+        { re: /\bCombust[íi]vel\b/i, label: "Combust\xEDvel" },
+        { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" }
+      ],
+      "Carreta": [
+        { re: /\bCombate\s*(a)?\s*Inc[êe]ndio\b/i, label: "Combate a Inc\xEAndio" },
+        { re: /\bPulverizador\b/i, label: "Pulverizador" },
+        { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" }
+      ]
+    };
     if (r.categoria && r.modelo && TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria]) {
-      const tipoEncontrado = TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria].find((tp) => new RegExp(`\\b${tp}\\b`, "i").test(r.modelo));
+      const tipoEncontrado = TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria].find((tp) => tp.re.test(r.modelo));
       if (tipoEncontrado) {
-        r.detalhes = [r.detalhes, `Tipo: ${tipoEncontrado}`].filter(Boolean).join("; ");
-        r.modelo = r.modelo.replace(new RegExp(`\\b${tipoEncontrado}\\b`, "i"), " ").trim();
+        r.detalhes = [r.detalhes, `Tipo: ${tipoEncontrado.label}`].filter(Boolean).join("; ");
+        r.modelo = r.modelo.replace(tipoEncontrado.re, " ").trim();
       }
     }
     // Remove a categoria do texto do modelo quando ela aparece repetida ali
@@ -2168,7 +2214,7 @@
         r.modelo = r.modelo.replace(reCategoria, " ").trim();
       }
     }
-    if (r.modelo) r.modelo = limparModeloAposExtracao(r.modelo);
+    if (r.modelo != null) r.modelo = limparModeloAposExtracao(r.modelo);
     const textoParaConfig = [r.modelo, r.detalhes].filter(Boolean).join(" ");
     const configMatch = textoParaConfig.match(/\b(mono|bi|tri|quadri)\s*bloco\b|\bmonoblock\b/i);
     if (configMatch && !/configura[çc][ãa]o:/i.test(r.detalhes || "")) {
