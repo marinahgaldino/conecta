@@ -2074,6 +2074,13 @@
     // categoria/local/material/tipo), trata como se nao tivesse modelo
     // nenhum - uma preposicao sozinha nao e um modelo de verdade.
     if (/^(de|da|do|das|dos|e|a|o|em|com|para)$/i.test(m)) return null;
+    // Regra mais ampla (pedida por ela apos ver varios "modelos" que na
+    // verdade eram so texto generico sobrando): sem NENHUM digito, quase
+    // sempre nao e um codigo de modelo de verdade (modelo real quase
+    // sempre tem numero - "RD 4200", "Ga37", "M3P-15"). Efeito colateral
+    // avisado: um nome de marca sem numero (ex: "Sibravac") tambem vira
+    // null por essa regra - aceito como troca, pedido explicito dela.
+    if (m.length > 0 && !/\d/.test(m)) return null;
     return m.length > 0 ? m : null;
   }
   function extrairCapacidadeGeral(texto) {
