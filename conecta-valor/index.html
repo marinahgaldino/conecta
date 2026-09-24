@@ -2050,6 +2050,11 @@
     m = m.replace(/\d{2,3}(?:\s*\/\s*\d{2,3}){1,3}\s*v\b/gi, " ");
     m = m.replace(/[\d.]{3,6}\s*rpm\b/gi, " ");
     m = m.replace(/\d\s*p[oó]los?\b/gi, " ");
+    // "bph" (garrafas/hora) e "pes" (comum em compressores) - unidades reais
+    // que ficavam presas no texto do modelo depois de ja terem sido
+    // extraidas pra capacidade.
+    m = m.replace(/[\d.,]+\s*bph\b/gi, " ");
+    m = m.replace(/[\d.,]+\s*p[ée]s\b/gi, " ");
     m = m.replace(/\b(novo|recondicionad[oa]|seminovo|semi[\s-]novo|usado)\b/gi, " ");
     m = m.replace(/\d+(?:[.,]\d+)?\s*(mil\s*)?kg\s*[.\s]*\/?\s*v?\.?\s*\/?\s*h(?:ora)?\b/gi, " ");
     m = m.replace(/\d+(?:[.,]\d+)?\s*ton(?:elada)?s?\s*[\/\s]*h(?:ora)?\b/gi, " ");
@@ -2070,6 +2075,13 @@
   function extrairCapacidadeGeral(texto) {
     if (!texto) return null;
     const t = texto;
+    // "bph" (bottles per hour / garrafas por hora) e "pes"/"pés" (comum em
+    // compressores de ar, ex: "240 pés") - unidades reais que apareciam sem
+    // reconhecimento nenhum, ficando presas dentro do texto do modelo.
+    const bphMatch = t.match(/([\d.,]+)\s*bph\b/i);
+    if (bphMatch) return `${bphMatch[1]} bph`;
+    const pesMatch = t.match(/([\d.,]+)\s*p[ée]s\b/i);
+    if (pesMatch) return `${pesMatch[1]} p\xE9s`;
     const rotulo = t.match(/Capacidade(?:\s+(?:m[áa]xima|estimada|nominal|de produ[çc][ãa]o))?:?\s*\n?\s*(at[ée]\s*)?([\d.,]+)\s*(kg|l|litros?|ton(?:elada)?s?|m[³3]|unidades?|frascos?|garrafas?|sach[êe]s?|pe[çc]as?|t)\s*[\/\s]*(?:por\s*)?(h(?:ora)?|min(?:uto)?)?/i);
     if (rotulo) {
       const unidade = rotulo[3].toLowerCase();
@@ -2129,6 +2141,17 @@
       const textoBusca = [r.modelo, r.detalhes].filter(Boolean).join(" ").replace(/Peso:?\s*[\d.,]+\s*(kg|ton(?:elada)?s?)\b/gi, "");
       const capacidadeGeral = extrairCapacidadeGeral(textoBusca);
       if (capacidadeGeral) r.capacidade = capacidadeGeral;
+    }
+    // Remove a categoria do texto do modelo quando ela aparece repetida ali
+    // (ex: categoria="Compressor", modelo="Compressor Parafuso 240 pés
+    // Ga37" -> "Parafuso 240 pés Ga37") - a categoria ja esta no campo
+    // proprio, nao precisa estar duplicada dentro do modelo tambem.
+    if (r.categoria && r.modelo) {
+      const catEscapada = r.categoria.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const reCategoria = new RegExp(`\\b${catEscapada}\\b`, "i");
+      if (reCategoria.test(r.modelo)) {
+        r.modelo = r.modelo.replace(reCategoria, " ").trim();
+      }
     }
     if (r.modelo) r.modelo = limparModeloAposExtracao(r.modelo);
     const textoParaConfig = [r.modelo, r.detalhes].filter(Boolean).join(" ");
