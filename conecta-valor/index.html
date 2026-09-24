@@ -2236,7 +2236,7 @@
         { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" },
         { re: /\b(Combust[íi]vel|Diesel|[ÓO]leo)\b/i, label: "Combust\xEDvel" },
         { re: /\bLeite\b/i, label: "Leite" },
-        { re: /\b[ÁA]gua\b/i, label: "\xC1gua" }
+        { re: /(^|[^A-Za-zÀ-ÿ])[Áá]gua($|[^A-Za-zÀ-ÿ])/i, label: "\xC1gua" }
       ],
       "Carreta": [
         { re: /\bCombate\s*(a)?\s*Inc[êe]ndio\b/i, label: "Combate a Inc\xEAndio" },
@@ -2244,7 +2244,7 @@
         { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" },
         { re: /\b(Combust[íi]vel|Diesel|[ÓO]leo)\b/i, label: "Combust\xEDvel" },
         { re: /\bLeite\b/i, label: "Leite" },
-        { re: /\b[ÁA]gua\b/i, label: "\xC1gua" }
+        { re: /(^|[^A-Za-zÀ-ÿ])[Áá]gua($|[^A-Za-zÀ-ÿ])/i, label: "\xC1gua" }
       ]
     };
     if (r.categoria && r.modelo && TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria]) {
