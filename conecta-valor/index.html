@@ -2153,6 +2153,16 @@
       const capacidadeGeral = extrairCapacidadeGeral(textoBusca);
       if (capacidadeGeral) r.capacidade = capacidadeGeral;
     }
+    // Remove a nota "Capacidade: X" de dentro de detalhes quando ja existe
+    // coluna capacidade propria preenchida - achado real: a capacidade
+    // ficava duplicada (no campo certo E como texto solto em detalhes).
+    if (r.capacidade && r.detalhes) {
+      r.detalhes = r.detalhes
+        .replace(/(?:^|;\s*)Capacidade(?:\s+m[áa]xima|\s+estimada)?:?\s*[^;]+/i, "")
+        .replace(/^;\s*|;\s*$/g, "")
+        .replace(/;\s*;/g, ";")
+        .trim() || null;
+    }
     // Remove localizacao duplicada dentro do modelo (ex: modelo="Tanque de
     // Água Agrosis, 2021 - Tupã, SP" com localizacao="Tupã/SP" -> tira
     // ", Tupã, SP" do modelo) - a localizacao ja esta no campo proprio.
@@ -2163,7 +2173,17 @@
       if (cidadeLoc && ufLoc) {
         const cidadeEscapada = cidadeLoc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const reLoc = new RegExp(`[\\s,\\-|]+${cidadeEscapada}\\s*[,\\-/]\\s*${ufLoc}\\b`, "i");
-        if (reLoc.test(r.modelo)) r.modelo = r.modelo.replace(reLoc, "").trim();
+        if (reLoc.test(r.modelo)) {
+          r.modelo = r.modelo.replace(reLoc, "").trim();
+        } else {
+          // Fallback: cidade aparece sozinha, sem UF do lado (ex: "IPACOL -
+          // 2025 - Belo Horizonte" com localizacao="Belo Horizonte/MG") -
+          // so remove quando a cidade esta no FINAL da string, pra reduzir
+          // risco de tirar uma palavra no meio que so por acaso bate com
+          // nome de cidade.
+          const reCidadeSozinha = new RegExp(`[\\s,\\-|]+${cidadeEscapada}\\s*$`, "i");
+          if (reCidadeSozinha.test(r.modelo)) r.modelo = r.modelo.replace(reCidadeSozinha, "").trim();
+        }
       }
     }
     // Remove material do modelo quando ja foi capturado em "Material: X" -
@@ -2176,38 +2196,59 @@
         .replace(/a[çc]o\s*carbono/gi, " ")
         .trim();
     }
-    // Reconhece o "tipo" (subclassificação dentro da categoria, ex: um
-    // Compressor pode ser Parafuso/Pistão/Centrífugo, um Tanque pode ser
-    // Pipa/Pulverizador/Combate a Incêndio) quando isso ajuda a separar o
-    // texto do modelo do que é so classificação. Vocabulário mínimo, só com
-    // evidência real de uso (visto nos dados dela) - não é lista exaustiva.
-    // "detalhes" guarda o tipo (nao existe coluna "tipo" separada
-    // confirmada no banco).
+    // "Tipo" = classificação física/funcional do equipamento dentro da
+    // categoria (ex: um Tanque pode ser fisicamente Pipa/Misturador/
+    // Armazenamento). "Aplicação" = pra que/o que ele guarda ou processa
+    // (água, leite, combustível, pulverização) - são coisas diferentes
+    // (esclarecido por ela). Vocabulário mínimo, só com evidência real de
+    // uso nos dados dela - não é lista exaustiva. Guardados em "detalhes"
+    // como "Tipo: X" e "Aplicação: Y" separados (não existe coluna própria
+    // confirmada pra nenhum dos dois). Captura TODAS as ocorrências (não só
+    // a primeira), porque um mesmo item pode ter mais de uma aplicação ao
+    // mesmo tempo (ex: "Tanque de Água e Diesel" = Água + Combustível).
     var TIPOS_CONHECIDOS_POR_CATEGORIA = {
       "Compressor": [{ re: /\bParafuso\b/i, label: "Parafuso" }, { re: /\bPist[ãa]o\b/i, label: "Pist\xE3o" }, { re: /\bCentr[íi]fugo\b/i, label: "Centr\xEDfugo" }, { re: /\bPalhetas\b/i, label: "Palhetas" }, { re: /\bScroll\b/i, label: "Scroll" }],
       "Tanque": [
         { re: /\bSuc[çc][ãa]o\s*(a|e)?\s*V[áa]cuo\b/i, label: "Suc\xE7\xE3o a V\xE1cuo" },
         { re: /\bResfriador(?:\s+de\s+\w+)?\b/i, label: "Resfriador" },
-        { re: /\bPulverizador\b/i, label: "Pulverizador" },
         { re: /\bPipa\b/i, label: "Pipa" },
         { re: /\bIsot[ée]rmico\b/i, label: "Isot\xE9rmico" },
         { re: /\bMisturador\b/i, label: "Misturador" },
-        { re: /\bCombate\s*(a)?\s*Inc[êe]ndio\b/i, label: "Combate a Inc\xEAndio" },
         { re: /\bPress[ãa]o\b/i, label: "Press\xE3o" },
-        { re: /\bCombust[íi]vel\b/i, label: "Combust\xEDvel" },
-        { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" }
+        { re: /\bArmazenamento\b/i, label: "Armazenamento" }
+      ]
+    };
+    var APLICACOES_CONHECIDAS_POR_CATEGORIA = {
+      "Tanque": [
+        { re: /\bCombate\s*(a)?\s*Inc[êe]ndio\b/i, label: "Combate a Inc\xEAndio" },
+        { re: /\bPulverizador\b/i, label: "Pulveriza\xE7\xE3o" },
+        { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" },
+        { re: /\b(Combust[íi]vel|Diesel|[ÓO]leo)\b/i, label: "Combust\xEDvel" },
+        { re: /\bLeite\b/i, label: "Leite" },
+        { re: /\b[ÁA]gua\b/i, label: "\xC1gua" }
       ],
       "Carreta": [
         { re: /\bCombate\s*(a)?\s*Inc[êe]ndio\b/i, label: "Combate a Inc\xEAndio" },
-        { re: /\bPulverizador\b/i, label: "Pulverizador" },
-        { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" }
+        { re: /\bPulverizador\b/i, label: "Pulveriza\xE7\xE3o" },
+        { re: /\bAgr[íi]cola\b/i, label: "Agr\xEDcola" },
+        { re: /\b(Combust[íi]vel|Diesel|[ÓO]leo)\b/i, label: "Combust\xEDvel" },
+        { re: /\bLeite\b/i, label: "Leite" },
+        { re: /\b[ÁA]gua\b/i, label: "\xC1gua" }
       ]
     };
     if (r.categoria && r.modelo && TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria]) {
-      const tipoEncontrado = TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria].find((tp) => tp.re.test(r.modelo));
-      if (tipoEncontrado) {
-        r.detalhes = [r.detalhes, `Tipo: ${tipoEncontrado.label}`].filter(Boolean).join("; ");
-        r.modelo = r.modelo.replace(tipoEncontrado.re, " ").trim();
+      const tiposEncontrados = TIPOS_CONHECIDOS_POR_CATEGORIA[r.categoria].filter((tp) => tp.re.test(r.modelo));
+      if (tiposEncontrados.length) {
+        r.detalhes = [r.detalhes, `Tipo: ${tiposEncontrados.map((t) => t.label).join(", ")}`].filter(Boolean).join("; ");
+        tiposEncontrados.forEach((tp) => { r.modelo = r.modelo.replace(tp.re, " ").trim(); });
+      }
+    }
+    if (r.categoria && r.modelo && APLICACOES_CONHECIDAS_POR_CATEGORIA[r.categoria]) {
+      const aplicacoesEncontradas = APLICACOES_CONHECIDAS_POR_CATEGORIA[r.categoria].filter((ap) => ap.re.test(r.modelo));
+      if (aplicacoesEncontradas.length) {
+        const labelsUnicos = [...new Set(aplicacoesEncontradas.map((a) => a.label))];
+        r.detalhes = [r.detalhes, `Aplica\xE7\xE3o: ${labelsUnicos.join(", ")}`].filter(Boolean).join("; ");
+        aplicacoesEncontradas.forEach((ap) => { r.modelo = r.modelo.replace(ap.re, " ").trim(); });
       }
     }
     // Remove a categoria do texto do modelo quando ela aparece repetida ali
