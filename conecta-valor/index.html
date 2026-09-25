@@ -1223,7 +1223,17 @@
       polaridade: obj.polaridade,
       carcaca: obj.carcaca,
       capacidade: obj.capacidade,
-      localizacao: obj.localizacao
+      localizacao: obj.localizacao,
+      // Atributos que o proprio parser ja entrega prontos (ex: coletor do MF
+      // Rural - linha_modelo, polos, frequencia_hz, grau_protecao,
+      // refrigeracao_motor, cidade/uf, capacidade_unidade, pressao_bar,
+      // pmta_kgf_cm2, combustivel, specs por categoria como vazao/PCM/kVA) -
+      // nao tem coluna propria hoje, entao vao soltos aqui dentro do jsonb.
+      // Mesclado por cima do mapa acima porque e mais especifico; pra quem
+      // nao usa isso (todo o resto dos coletores) obj.atributos_normalizados
+      // e undefined e o spread vira {} - nao muda nada do comportamento
+      // anterior.
+      ...(obj.atributos_normalizados || {})
     };
     const limpo = {};
     Object.keys(mapa).forEach((k) => {
@@ -1818,6 +1828,17 @@
         }
       }
     }
+    // Fracao tipo "1/2cv", "1/3cv", "1/4cv", "1/6cv" - muito comum em motor
+    // eletrico pequeno. Precisa ser testada ANTES do cvMatch solto, senao
+    // "1/2cv" vira "2 CV" (le so o denominador, valor 4x maior que o real)
+    // e ainda deixa "1/" preso como lixo dentro do modelo depois da limpeza.
+    const cvFracaoMatch = t.match(/(\d{1,2})\s*\/\s*(\d{1,2})\s*cv\b/i);
+    let potenciaCvFracao = null;
+    if (cvFracaoMatch) {
+      const numerador = parseInt(cvFracaoMatch[1], 10);
+      const denominador = parseInt(cvFracaoMatch[2], 10);
+      if (denominador !== 0) potenciaCvFracao = Math.round(numerador / denominador * 1000) / 1000;
+    }
     const cvMatch = t.match(/(\d+(?:[.,]\d+)?)\s*cv/i);
     const kwMatch = t.match(/(\d+(?:[.,]\d+)?)\s*kw/i);
     const gphMatch = t.match(/(\d+(?:[.,]\d+)?)\s*gph/i);
@@ -1865,14 +1886,15 @@
     if (kgfCmMatch) detalhesPartes.push(`Press\xE3o: ${kgfCmMatch[1]} kgf/cm\xB2`);
     const detalhes = detalhesPartes.length > 0 ? detalhesPartes.join("; ") : null;
     let capacidade = null;
-    if (cvMatch) capacidade = `${cvMatch[1]} CV`;
+    if (potenciaCvFracao != null) capacidade = `${potenciaCvFracao} CV`;
+    else if (cvMatch) capacidade = `${cvMatch[1]} CV`;
     else if (kwMatch) capacidade = `${kwMatch[1]} kW`;
     else if (gphMatch) capacidade = `${gphMatch[1]} GPH`;
     else if (kvaMatch) capacidade = `${kvaMatch[1]} kVA`;
     else if (kgHoraMatch) capacidade = `${kgHoraMatch[1]}${kgHoraMatch[2] || ""} kg/h`;
     else if (tonHoraMatch) capacidade = `${tonHoraMatch[1]} ton/h`;
     else if (capacidadeMatch) capacidade = `${capacidadeMatch[1]}${capacidadeMatch[2] || ""} ${/m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L"}`;
-    const potenciaCvFinal = nova.atributos.potencia_cv != null ? nova.atributos.potencia_cv : cvMatch ? Number(cvMatch[1].replace(",", ".")) : null;
+    const potenciaCvFinal = nova.atributos.potencia_cv != null ? nova.atributos.potencia_cv : potenciaCvFracao != null ? potenciaCvFracao : cvMatch ? Number(cvMatch[1].replace(",", ".")) : null;
     const rpmFinal = nova.atributos.rpm != null ? nova.atributos.rpm : rpmMatch ? Number(rpmMatch[1]) : null;
     const anoFinal = nova.atributos.ano != null ? String(nova.atributos.ano) : anoMatch ? anoMatch[0] : null;
     const tensaoFinal = tensaoMatch ? tensaoMatch[1] + "V" : nova.atributos.tensao_v != null ? nova.atributos.tensao_v + "V" : null;
@@ -1994,6 +2016,20 @@
     "Sopradora": [1, 800],
     "Linha de Envase": [1, 2e3]
   };
+  // Mesma ideia do POTENCIA_KW_RANGES, mas pra CV (1 CV ≈ 0.736 kW) - faltava
+  // essa tabela, entao potencia_cv nunca passava por nenhum filtro de
+  // plausibilidade (achado real: registro lixo com categoria="Misturador"
+  // e potencia_cv=30 nunca era barrado por nada).
+  var POTENCIA_CV_RANGES = {
+    "Motor El\xE9trico": [0.05, 1400],
+    "Motorredutor": [0.05, 700],
+    "Compressor": [0.5, 1400],
+    "Bomba": [0.1, 700],
+    "Gerador": [1, 4e3],
+    "Exaustor": [0.1, 280],
+    "Sopradora": [1, 1100],
+    "Linha de Envase": [1, 2700]
+  };
   var PESO_KG_RANGES = {
     "Motor El\xE9trico": [1, 8e3],
     "Motorredutor": [1, 3e3],
@@ -2023,6 +2059,16 @@
     if (!valor) return false;
     return /^(liquid filling line|filler(\s*\([a-z ]+\))?|filling line)$/i.test(String(valor).trim());
   }
+  // Pedacos de navegacao/UI do site (menu lateral, filtro, login etc.) que
+  // o parser as vezes capturava como se fossem o modelo do item - achado
+  // real: "Filtrar por Estado" aparecia como modelo, com categoria/marca/
+  // potencia herdados (por engano) de um anuncio vizinho na mesma pagina.
+  // Nao e um modelo de verdade, e o resto do registro tambem fica suspeito
+  // quando isso acontece.
+  function pareceNavegacaoSite(valor) {
+    if (!valor) return false;
+    return /^(filtrar por [a-zà-ÿ]+|menu|login|entrar|cadastro|todas as categorias|quem somos|depoimentos|lojas oficiais|m[íi]dia kit|pesquisa por .*|lista de favoritos.*|ao vivo)$/i.test(String(valor).trim());
+  }
   function pareceMarcaInvalida(valor) {
     if (!valor) return false;
     const palavras = String(valor).trim().split(/\s+/);
@@ -2030,22 +2076,63 @@
   }
   function limparModeloDuplicado(modelo, marca) {
     if (!modelo || !marca) return modelo;
-    const idx = modelo.toLowerCase().lastIndexOf(marca.toLowerCase());
-    if (idx === -1) return modelo;
-    const depois = modelo.slice(idx + marca.length).trim().replace(/^[-–—:]\s*/, "");
+    // A marca pode estar duplicada dentro do modelo tanto pelo nome
+    // completo/normalizado (ex: "SEW-EURODRIVE") quanto pela abreviacao
+    // original que gerou essa normalizacao (ex: "SEW", "CAT", "ATLAS") -
+    // achado real: registro com marca ja normalizada pra "SEW-EURODRIVE"
+    // mas modelo ainda com "Motoredutor SEW 1:48 Ø30mm" nunca batia (so
+    // procurava "sew-eurodrive" dentro do texto, que so tem "sew").
+    const candidatos = [marca];
+    for (const chave in MARCA_ALIASES) {
+      if (MARCA_ALIASES[chave] === marca) candidatos.push(chave);
+    }
+    let melhorIdx = -1;
+    let melhorLen = 0;
+    for (const cand of candidatos) {
+      if (!cand) continue;
+      const escapado = cand.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\b${escapado}\\b`, "gi");
+      let m;
+      let ultimo = null;
+      while ((m = re.exec(modelo)) !== null) {
+        ultimo = m;
+        if (m.index === re.lastIndex) re.lastIndex++;
+      }
+      if (ultimo && ultimo.index > melhorIdx) {
+        melhorIdx = ultimo.index;
+        melhorLen = ultimo[0].length;
+      }
+    }
+    if (melhorIdx === -1) return modelo;
+    const depois = modelo.slice(melhorIdx + melhorLen).trim().replace(/^[-–—:]\s*/, "");
     if (depois.length > 0) return depois;
     // Marca no FINAL do modelo (nada sobra depois dela) - antes a funcao
     // desistia aqui e devolvia o modelo original, causando duplicacao tipo
     // "KRONES FILLING LINE KRONES" quando a marca foi extraida do proprio
     // modelo (ex: fabricante de origem invalido, marca recuperada do fim
     // do texto do modelo). Agora tenta usar o que vem ANTES da marca.
-    const antes = modelo.slice(0, idx).trim().replace(/[-–—:]\s*$/, "");
+    const antes = modelo.slice(0, melhorIdx).trim().replace(/[-–—:]\s*$/, "");
     return antes.length > 0 ? antes : modelo;
   }
   function limparModeloAposExtracao(modelo) {
     if (modelo == null) return modelo;
     let m = modelo;
+    // Selos/rotulos de site que grudam no final do texto (ex: Machineseeker
+    // marca "Comerciante verificado" no proprio titulo do anuncio) - nao e
+    // parte do modelo, e badge de UI. Tira em qualquer posicao no final.
+    m = m.replace(/\s*[-–—|]?\s*(Comerciante|Vendedor|An[úu]ncio)\s+verificado\s*$/i, "");
+    // Rotulo de campo que vazou junto com o valor (ex: site mostrava
+    // "Modelo: W22 IR3 Premium..." e so o valor deveria ter sido salvo,
+    // mas o rotulo "Modelo" ficou colado no comeco).
+    m = m.replace(/^modelo\s*:?\s*/i, "");
+    // "1/2cv" etc (fracao de CV, comum em motor eletrico pequeno) - precisa
+    // consumir o "1/" tambem, senao so o "2cv" e cortado e sobra um "1/"
+    // solto e sem sentido dentro do modelo.
+    m = m.replace(/\d{1,2}\s*\/\s*\d{1,2}\s*cv\b/gi, " ");
     m = m.replace(/\d+(?:[.,]\d+)?\s*cv\b/gi, " ");
+    // "0,7/0,91 kW" (faixa/par de valores antes da unidade) - mesmo caso do
+    // "1/2cv": sem isso so "0,91 kW" e cortado e sobra "0,7/" solto.
+    m = m.replace(/\d+(?:[.,]\d+)?\s*\/\s*\d+(?:[.,]\d+)?\s*kw\b/gi, " ");
     m = m.replace(/\d+(?:[.,]\d+)?\s*kw\b/gi, " ");
     m = m.replace(/\d{2,3}(?:\s*\/\s*\d{2,3}){1,3}\s*v\b/gi, " ");
     m = m.replace(/[\d.]{3,6}\s*rpm\b/gi, " ");
@@ -2081,6 +2168,17 @@
       anteriorBorda = m;
       m = m.replace(stopwordFinal, "").trim();
     } while (m !== anteriorBorda && m.length > 0);
+    // Mesma correcao, mas para o INICIO da frase - acontece quando a
+    // categoria e removida do comeco do modelo (ex: categoria="Caldeira",
+    // modelo="Caldeira de Vapor a Lenha..." -> sobra "de Vapor a Lenha...",
+    // uma preposicao solta grudada no que restou). Roda em loop pelo mesmo
+    // motivo do caso final: pode sobrar mais de uma preposicao solta.
+    const stopwordInicio = /^(de|da|do|das|dos|e|a|o|em|com|para|por|sem)\s+/i;
+    let anteriorInicio;
+    do {
+      anteriorInicio = m;
+      m = m.replace(stopwordInicio, "").trim();
+    } while (m !== anteriorInicio && m.length > 0);
     // Se so sobrou uma preposicao/stopword solta (ex: "de", depois de tirar
     // categoria/local/material/tipo), trata como se nao tivesse modelo
     // nenhum - uma preposicao sozinha nao e um modelo de verdade.
@@ -2129,6 +2227,24 @@
     if (r.marca && pareceLocalizacao(r.marca)) r.marca = null;
     if (r.modelo && pareceTextoInvalido(r.modelo)) r.modelo = null;
     if (r.modelo && pareceModeloGenerico(r.modelo)) r.modelo = null;
+    // Quando o modelo e claramente um pedaco de navegacao do site (ex:
+    // "Filtrar por Estado"), o registro inteiro fica suspeito - marca,
+    // potencia, rpm etc quase sempre vieram por engano de outro item da
+    // mesma pagina, nao desse "produto" que nem existe de verdade. Limpa
+    // tudo em vez de so o modelo, pra nao deixar um item fantasma com
+    // especificacoes tecnicas inventadas.
+    if (r.modelo && pareceNavegacaoSite(r.modelo)) {
+      r.modelo = null;
+      r.marca = null;
+      r.potencia_cv = null;
+      r.potencia_kw = null;
+      r.rpm = null;
+      r.tensao = null;
+      r.capacidade = null;
+      r.material = null;
+      r.tipo = null;
+      r.aplicacao = null;
+    }
     if (r.marca && pareceTextoInvalido(r.marca)) r.marca = null;
     if (r.marca && pareceMarcaInvalida(r.marca)) r.marca = null;
     if (!r.marca && r.modelo) {
@@ -2297,6 +2413,8 @@
     if ("anoFabricacao" in r) r.anoFabricacao = anoValido(r.anoFabricacao);
     if ("potencia_kw" in r) r.potencia_kw = valorNumericoPlausivel(r.potencia_kw, r.categoria, POTENCIA_KW_RANGES);
     if ("potenciaKw" in r) r.potenciaKw = valorNumericoPlausivel(r.potenciaKw, r.categoria, POTENCIA_KW_RANGES);
+    if ("potencia_cv" in r) r.potencia_cv = valorNumericoPlausivel(r.potencia_cv, r.categoria, POTENCIA_CV_RANGES);
+    if ("potenciaCv" in r) r.potenciaCv = valorNumericoPlausivel(r.potenciaCv, r.categoria, POTENCIA_CV_RANGES);
     if ("pesoKg" in r) r.pesoKg = valorNumericoPlausivel(r.pesoKg, r.categoria, PESO_KG_RANGES);
     return r;
   }
@@ -2344,113 +2462,53 @@
     const num = parseFloat(limpo);
     return isNaN(num) ? null : num;
   }
-  function parseMFRuralItemLocal(rawText) {
-    const texto = rawText || "";
-    const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
-    const normalizarEspacos = (s) => s.replace(/\s+/g, " ").trim();
-    let titulo = null;
-    for (let i = 0; i < linhas.length - 1; i++) {
-      if (linhas[i] && /^Imagem /i.test(linhas[i + 1]) && normalizarEspacos(linhas[i + 1]).includes(normalizarEspacos(linhas[i]))) {
-        titulo = linhas[i];
-        break;
-      }
-    }
-    if (!titulo) {
-      for (let i = 0; i < linhas.length; i++) {
-        if (/^(M[áa]quinas\/ Equipamentos|Industriais|Agr[íi]colas|Logo MF Rural|O que você procura\?|Login|Cadastro|Todas as Categorias|Quem Somos|MF Magazine|Depoimentos|Lojas Oficiais|Midia Kit)$/i.test(linhas[i])) continue;
-        if (/^Imagem /i.test(linhas[i])) continue;
-        titulo = linhas[i];
-        break;
-      }
-    }
-    const tipoMatch = texto.match(/Tipo:\s*([^\n]+)/i);
-    const localMatch = texto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s(?:d[aeo]s?\s)?[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*\/\s*([A-Z]{2})\s*\n/);
-    const estadoGeral = tipoMatch ? /nov[oa]/i.test(tipoMatch[1]) ? "Novo" : tipoMatch[1].trim() : null;
-    const localizacaoGeral = localMatch ? `${localMatch[1]}/${localMatch[2]}` : null;
-    const blocoDescricao = texto.match(/Descri[çc][ãa]o([\s\S]+?)Fale com o anunciante/i);
-    let topicosTecnicos = [];
-    if (blocoDescricao) {
-      topicosTecnicos = blocoDescricao[1].split("\n").map((l) => l.trim()).filter((l) => /^[-•]\s*\S/.test(l)).map((l) => l.replace(/^[-•]\s*/, "").replace(/;\s*$/, "").trim()).filter((l) => /\d+[\s.,]*\d*\s*(mm|cm|m\b|metros?|litros?|l\b|bicos?|bar|cv|hp|kw|kg|ton|por minuto|por hora|\/min|\/h\b)/i.test(l));
-    }
-    const potenciaPublicadaMatch = texto.match(/Pot[êe]ncia publicada:?\s*([\d.,]+)\s*kw/i);
-    const pesoAproximadoMatch = texto.match(/Peso aproximado:?\s*([\d.,]+)\s*kg/i);
-    const regexSubitem = /-\s*(.+?)\s*-\s*Valor:?\s*([\d.,]+)\s*-\s*DISPON[ÍI]VEL/gi;
-    const subitens = [...texto.matchAll(regexSubitem)];
-    if (subitens.length > 1) {
-      return subitens.map((m) => {
-        const fimMatch = m.index + m[0].length;
-        const trechoDepois = texto.slice(fimMatch, fimMatch + 200);
-        const pmtaMatch2 = trechoDepois.match(/PMTA\s*([\d.,]+)\s*kgf\/cm[²2]/i);
-        const capMatch = m[1].match(/([\d.,]+)\s*(kgv?\/h)/i);
-        const detalhesPartes2 = [];
-        if (pmtaMatch2) detalhesPartes2.push(`PMTA: ${pmtaMatch2[1]} kgf/cm\xB2`);
-        return {
-          categoria: classificarCategoriaGenerica(m[1]) || classificarCategoriaGenerica(titulo || ""),
-          marca: null,
-          modelo: m[1].trim(),
-          capacidade: capMatch ? `${capMatch[1]} ${capMatch[2]}` : null,
-          detalhes: detalhesPartes2.length ? detalhesPartes2.join("; ") : null,
-          estado: estadoGeral,
-          localizacao: localizacaoGeral,
-          preco: parsePrecoBR(m[2]),
-          moeda: "BRL",
-          canal: "Revenda/Terceiro",
-          tipo_mercado: "Venda Direta"
-        };
-      }).filter((item) => item.preco === null || item.preco > 10); // exclui preço simbólico (R$10 ou menos) - ver comentário em parseMFRuralLocal
-    }
-    const precoMatch = texto.match(/R\$\s*([\d.,]+)\s*(Unidade|Kilo|Peça|Kg|Litro|Outra|Tonelada|Metro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote)/i);
-    const capacidadeRotuloMatch = texto.match(/Capacidade:\s*\n?\s*([\d.,]+\s*(?:l|litros?|kg|ton(?:elada)?s?|m[³3])\s*\/?\s*h(?:ora)?)/i);
-    const marcaRotuloMatch = texto.match(/Marca:\s*\n?\s*([^\n]+)/i);
-    const modeloRotuloMatch = texto.match(/Modelo:\s*\n?\s*([^\n]+)/i);
-    const capacidadeMatch = texto.match(/at[ée]\s*([\d.,]+)\s*(kg\/h|ton(?:elada)?s?\/h|l\/h|litros?\/h|m[³3]\/h)(?:\s*(?:com|a)\s*([\d.,]+)\s*bar\s*(?:\(g\))?)?/i) || texto.match(/([\d.,]+)\s*(kgv?\/h)/i) || texto.match(/([\d.,]+)\s*(T\s*por\s*Hora)/i) || texto.match(/(de\s+[\d.,]+\s*a\s*[\d.,]+)\s*(ton(?:elada)?s?\s*por\s*hora)/i) || texto.match(/at[ée]\s*([\d.,]+)\s*(unidades?\s*\/\s*hora|frascos?\s*\/\s*hora|garrafas?\s*\/\s*hora|sach[êe]s?\s*\/\s*hora|pe[çc]as?\s*\/\s*hora)/i) || texto.match(/([\d.,]+)\s*(litros|l\b|m[³3])\b/i);
-    const pmtaMatch = texto.match(/PMTA\s*([\d.,]+)\s*kgf\/cm[²2]/i);
-    const marcaMatch = marcaRotuloMatch || texto.match(/\bda\s+([A-Z][\wà-ÿ]+)\s+s[ãa]o\b/) || texto.match(/\bpela\s+([A-Z][\wà-ÿ]+)\b/);
-    let codigoModeloDescricao = null;
-    if (blocoDescricao && !/\d/.test(titulo)) {
-      const primeiraLinhaDesc = blocoDescricao[1].split("\n").map((l) => l.trim()).find(Boolean);
-      if (primeiraLinhaDesc && /^[A-Z0-9][A-Z0-9-]{2,15}$/i.test(primeiraLinhaDesc) && /\d/.test(primeiraLinhaDesc)) {
-        codigoModeloDescricao = primeiraLinhaDesc;
-      }
-    }
-    const modeloFinal = modeloRotuloMatch ? modeloRotuloMatch[1].trim() : codigoModeloDescricao ? `${titulo} ${codigoModeloDescricao}` : titulo;
-    const categoriaFinal = classificarCategoriaGenerica(titulo) || (blocoDescricao ? classificarCategoriaGenerica(blocoDescricao[1]) : null);
-    let marcaFinal = marcaMatch ? marcaMatch[1].trim() : null;
-    if (!marcaFinal && blocoDescricao) {
-      const encontrada = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(blocoDescricao[1]));
-      if (encontrada) marcaFinal = encontrada;
-    }
-    if (!titulo || !precoMatch) return [];
-    const precoUnico = parsePrecoBR(precoMatch[1]);
-    if (precoUnico !== null && precoUnico <= 10) return []; // preço simbólico (R$10 ou menos) - ver comentário em parseMFRuralLocal
-    const detalhesPartes = [];
-    if (capacidadeMatch) {
-      detalhesPartes.push(`Capacidade: at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}`);
-      if (capacidadeMatch[3]) detalhesPartes.push(`Press\xE3o: ${capacidadeMatch[3]} bar(g)`);
-    } else if (capacidadeRotuloMatch) {
-      detalhesPartes.push(`Capacidade: ${capacidadeRotuloMatch[1]}`);
-    }
-    if (pmtaMatch) detalhesPartes.push(`PMTA: ${pmtaMatch[1]} kgf/cm\xB2`);
-    if (pesoAproximadoMatch) detalhesPartes.push(`Peso: ${pesoAproximadoMatch[1]} kg`);
-    detalhesPartes.push(...topicosTecnicos);
-    return [{
-      categoria: categoriaFinal,
-      marca: marcaFinal,
-      modelo: modeloFinal,
-      capacidade: capacidadeMatch ? `at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}` : capacidadeRotuloMatch ? capacidadeRotuloMatch[1] : null,
-      potencia_kw: potenciaPublicadaMatch ? Number(potenciaPublicadaMatch[1].replace(",", ".")) : null,
-      detalhes: detalhesPartes.length ? detalhesPartes.join("; ") : null,
-      estado: estadoGeral,
-      localizacao: localizacaoGeral,
-      preco: parsePrecoBR(precoMatch[1]),
-      moeda: "BRL",
-      canal: "Revenda/Terceiro",
-      tipo_mercado: "Venda Direta"
-    }];
-  }
-  function parseMFRuralLocal(rawText) {
+  // ==========================================================================
+  // COLETOR MF RURAL — arquitetura em etapas (Fase 1, ver notas de commit)
+  //
+  // Antes: o título inteiro do anúncio virava `modelo` (texto misturado:
+  // marca + linha + carcaça + polos + tensão + frequência + grau de proteção
+  // tudo junto), e capacidade/peso/pressão/PMTA ficavam concatenados dentro
+  // de `detalhes` como texto livre.
+  //
+  // Agora: o parser é dividido em 5 funções de responsabilidade única —
+  //   extractListingsMFRural   -> localiza os blocos brutos de cada anúncio
+  //                                (só usado pela página de LISTAGEM; a
+  //                                página de ITEM ÚNICO já é um bloco só)
+  //   extractCommonDataMFRural -> dados comuns a qualquer categoria (preço,
+  //                                local/cidade/uf, categoria, nota de preço)
+  //   normalizeEquipmentMFRural-> separa marca / linha_modelo / modelo /
+  //                                carcaça / polos / tensão / frequência /
+  //                                grau de proteção / refrigeração do título
+  //   extractCategorySpecsMFRural -> specs técnicas por categoria (motor,
+  //                                bomba, compressor, transformador, tanque)
+  //   validateObservationMFRural -> validação final (preço simbólico etc.)
+  //
+  // Os campos que já têm coluna própria continuam preenchidos do jeito de
+  // sempre (marca, modelo, capacidade, potencia_cv, potencia_kw, polaridade,
+  // tensao, carcaca, rpm, material, tipo, aplicacao). Os atributos que ainda
+  // não têm coluna (linha_modelo, polos como número, frequencia_hz,
+  // grau_protecao, refrigeracao_motor, capacidade_unidade, peso_kg,
+  // pressao_bar, pmta_kgf_cm2, combustivel, cidade, uf, e os específicos de
+  // bomba/compressor/transformador/tanque) vão dentro de
+  // `atributos_normalizados` (jsonb) — não exige alterar schema nem RPC.
+  //
+  // `detalhes` passa a ser só texto livre de verdade: capacidade, peso,
+  // PMTA e pressão saem de lá e viram campo estruturado.
+  //
+  // Continua passando pelo `sanitizeResult` compartilhado depois (chamado
+  // no site de uso, não aqui dentro) — isso não muda.
+  // ==========================================================================
+
+  var CARCACA_SUFIXOS_RE = "(?:SD|MD|LD|ST|MT|LT|S|M|L|T)";
+
+  // Extrai os blocos brutos de uma página de LISTAGEM do MF Rural. Cada
+  // bloco = um anúncio ainda não processado (linhas de título + a linha de
+  // localização que serviu de âncora + o texto onde o preço foi achado).
+  // Mesma lógica de detecção de bloco que já existia em parseMFRuralLocal
+  // (âncora = linha de localização "Cidade/UF", reset em "Anúncios"/"Banner
+  // destacado" pra não pegar lixo de menu/destaque como título do 1o item).
+  function extractListingsMFRural(rawText) {
     const lines = (rawText || "").split("\n").map((l) => l.trim());
-    const itens = [];
     const priceRe = /R\$\s*([\d.,]+)\s*(Unidade|Kilo|Peça|Kg|Litro|Outra|Tonelada|Metro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote|[Aa]\s*partir\s*de)?/i;
     // Regex de local restrito a no maximo 5 "palavras" antes do separador -
     // uma frase de descricao que so por acaso termina mencionando o estado
@@ -2459,20 +2517,26 @@
     // reconhecida por engano como se fosse a linha de localizacao, derrubando
     // titulo e local do primeiro item de cada bloco.
     const localRe = /^(?:[A-Za-zÀ-ÿ.'()]+\s+){0,4}[A-Za-zÀ-ÿ.'()]+\s*[\/\-]\s*[A-Z]{2}$/;
+    const blocos = [];
     let blockStart = 0;
     function acharPrecoNoIndice(idx) {
       if (idx < 0 || idx >= lines.length || !lines[idx]) return null;
       const juntas = lines[idx] + " " + (lines[idx + 1] || "");
       const m = juntas.match(priceRe);
       if (!m || !m[2]) return null;
+      // Bug encontrado testando o refactor do MF Rural: o preço precisa
+      // começar DENTRO da linha `idx`, não só ter "vazado" da linha
+      // seguinte na concatenação. Sem essa checagem, quando o bloco tem
+      // título de uma linha só seguido direto da linha de preço (padrão
+      // comum), o loop que varre `k = blockStart..i` encontrava o preço já
+      // no índice do TÍTULO (porque juntas = título+preço contém "R$..."),
+      // e o título inteiro virava um array vazio - `modelo` saía sempre
+      // null pra esse formato de bloco.
+      if (m.index >= lines[idx].length + 1) return null;
       const unidadeNaMesmaLinha = lines[idx].toLowerCase().includes(m[2].toLowerCase());
       return { match: m, linhasConsumidas: unidadeNaMesmaLinha ? 1 : 2 };
     }
     for (let i = 0; i < lines.length; i++) {
-      // Reset: "Anúncios" e "Banner destacado" marcam o inicio da secao real
-      // de resultados nas paginas do MF Rural - tudo antes disso (menu,
-      // MF Magazine, filtros de categoria/estado, destaques) e "lixo" de
-      // navegacao que nao deve virar titulo do primeiro item da lista.
       if (lines[i] === "Anúncios" || lines[i] === "Banner destacado") {
         blockStart = i + 1;
         continue;
@@ -2509,36 +2573,448 @@
       }
       if (idxPrecoAbsoluto === -1) blockStart = novoBlockStart;
       else blockStart = i + 1;
-      const m = achado.match;
-      const textoBloco = [...new Set(linhasTitulo)].join(" ");
-      const fatos = extrairFatosDeTexto(textoBloco);
       const tituloLimpo = linhasTitulo.find(
         (l) => l && !/^(Logo MF Rural|M[áa]quinas\/ Equipamentos|Industriais|Agr[íi]colas|O que voc[êe] procura\?|Login|Cadastro|Todas as Categorias|Quem Somos|MF Magazine|Depoimentos|Lojas Oficiais|Midia Kit|Anúncio sem imagem\/foto)$/i.test(l)
       ) || null;
-      const unidadePreco = (m[2] || "").trim().toLowerCase();
-      let notaPreco = null;
-      if (/tonelada/i.test(unidadePreco)) notaPreco = "Pre\xE7o por tonelada, n\xE3o \xE9 valor fixo total";
-      else if (/kilo|^kg/i.test(unidadePreco)) notaPreco = "Pre\xE7o por kg, n\xE3o \xE9 valor fixo total";
-      else if (/metro/i.test(unidadePreco)) notaPreco = "Pre\xE7o por metro, n\xE3o \xE9 valor fixo total";
-      else if (/partir de/i.test(unidadePreco)) notaPreco = 'Pre\xE7o "a partir de" \u2014 pode variar conforme especifica\xE7\xE3o';
-      const precoFinal = parsePrecoBR(m[1]);
-      // Preço simbólico (R$10 ou menos) no MF Rural normalmente significa que
-      // o anunciante colocou um valor qualquer só pra conseguir publicar sem
-      // preço real definido - não é dado de mercado de verdade, então não
-      // entra na base (senão distorce médias/faixas de valor). Limite
-      // ajustado de R$1 pra R$10 depois de achar um caso real de R$10,00
-      // que passava despercebido com o limite anterior.
-      if (precoFinal !== null && precoFinal <= 10) continue;
-      itens.push({
-        ...fatos,
-        modelo: tituloLimpo,
-        localizacao: lines[i],
-        preco: precoFinal,
-        detalhes: notaPreco ? [fatos.detalhes, notaPreco].filter(Boolean).join("; ") : fatos.detalhes
+      blocos.push({
+        tituloLinhas: linhasTitulo,
+        tituloBruto: tituloLimpo,
+        textoBlocoCompleto: [...new Set(linhasTitulo)].join(" "),
+        localizacaoLinha: lines[i],
+        precoStr: achado.match[1],
+        unidadePreco: achado.match[2] || ""
       });
+    }
+    return blocos;
+  }
+
+  // Dados comuns a qualquer categoria: preço, local (cidade/uf), categoria
+  // e a nota de preço (por tonelada/kg/metro/"a partir de" - não é valor
+  // fixo total).
+  function extractCommonDataMFRural(tituloBruto, precoStr, unidadePreco, localizacaoLinha) {
+    const preco = precoStr != null ? parsePrecoBR(precoStr) : null;
+    const unidade = (unidadePreco || "").trim().toLowerCase();
+    let notaPreco = null;
+    if (/tonelada/i.test(unidade)) notaPreco = "Pre\xE7o por tonelada, n\xE3o \xE9 valor fixo total";
+    else if (/kilo|^kg/i.test(unidade)) notaPreco = "Pre\xE7o por kg, n\xE3o \xE9 valor fixo total";
+    else if (/metro/i.test(unidade)) notaPreco = "Pre\xE7o por metro, n\xE3o \xE9 valor fixo total";
+    else if (/partir de/i.test(unidade)) notaPreco = 'Pre\xE7o "a partir de" — pode variar conforme especifica\xE7\xE3o';
+
+    let cidade = null, uf = null;
+    if (localizacaoLinha) {
+      const locMatch = localizacaoLinha.match(/^(.+?)\s*[\/\-]\s*([A-Z]{2})$/);
+      if (locMatch) {
+        cidade = locMatch[1].trim();
+        uf = locMatch[2].trim();
+      }
+    }
+
+    const categoria = tituloBruto ? classificarCategoriaGenerica(tituloBruto) : null;
+
+    return { tituloBruto, preco, moeda: "BRL", notaPreco, localizacaoLinha, cidade, uf, categoria };
+  }
+
+  // Separa marca / linha_modelo / modelo / carcaça / polos / tensão do
+  // TÍTULO (não do bloco inteiro) - é o título que mistura tudo hoje.
+  // categoriaNome é usada só pra tirar do início do texto um substantivo
+  // genérico repetido (ex: título "Compressor Chicago QHP..." com
+  // categoria "Compressor" -> não precisa repetir a categoria dentro do
+  // modelo, ela já está no campo `categoria`).
+  function normalizeEquipmentMFRural(tituloBruto, categoriaNome) {
+    let t = (tituloBruto || "").trim();
+    const r = {
+      marca: null, linha_modelo: null, modelo: null, carcaca: null,
+      polaridade: null, polos: null, tensao_titulo: null,
+      frequencia_hz: null, grau_protecao: null, refrigeracao_motor: null
+    };
+    if (!t) return r;
+
+    // Substantivo genérico da categoria repetido no início do título (ex:
+    // "Compressor Chicago..." com categoria "Compressor") - tira só se for
+    // a primeira palavra, pra não arriscar cortar em outro lugar do texto.
+    if (categoriaNome) {
+      const catRe = new RegExp(`^${categoriaNome.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}s?\\b`, "i");
+      t = t.replace(catRe, "").trim();
+    }
+
+    // Marca conhecida (mesma lista usada no resto do coletor).
+    const marcaEncontrada = MARCAS_CONHECIDAS.find(
+      (m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(t)
+    );
+    if (marcaEncontrada) {
+      r.marca = normalizarMarca(marcaEncontrada);
+      t = t.replace(new RegExp(`\\b${marcaEncontrada.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i"), " ");
+    }
+
+    // Grau de proteção (IP) - ex "IP55".
+    const ipMatch = t.match(/\bIP\s?(\d{2})\b/i);
+    if (ipMatch) {
+      r.grau_protecao = `IP${ipMatch[1]}`;
+      t = t.replace(ipMatch[0], " ");
+    }
+
+    // Refrigeração (IC) - ex "IC411".
+    const icMatch = t.match(/\bIC\s?(\d{2,3})\b/i);
+    if (icMatch) {
+      r.refrigeracao_motor = `IC${icMatch[1]}`;
+      t = t.replace(icMatch[0], " ");
+    }
+
+    // Frequência - exige "Hz" explícito pra não confundir com outro número
+    // qualquer (ex: potência, ano).
+    const hzMatch = t.match(/\b(\d{2,3})\s*hz\b/i);
+    if (hzMatch) {
+      r.frequencia_hz = Number(hzMatch[1]);
+      t = t.replace(hzMatch[0], " ");
+    }
+
+    // Potência (CV/HP/kW/kVA) - já vira campo próprio em
+    // extractCategorySpecsMFRural/extrairFatosDeTexto, então tira do texto
+    // aqui pra não sobrar solta dentro de modelo/linha_modelo. Fração tipo
+    // "1/2cv" primeiro (senão só o denominador é cortado e sobra "1/" solto).
+    const potenciaFracaoMatch = t.match(/\b\d{1,2}\s*\/\s*\d{1,2}\s*cv\b/i);
+    if (potenciaFracaoMatch) {
+      t = t.replace(potenciaFracaoMatch[0], " ");
+    } else {
+      const potenciaMatch = t.match(/\b\d+(?:[.,]\d+)?\s*(cv|hp|kw|kva)\b/i);
+      if (potenciaMatch) t = t.replace(potenciaMatch[0], " ");
+    }
+
+    // Tensão - dois formatos diferentes:
+    // - Motor: um "V" só no final pra todos os valores, ex "220/380/440V".
+    // - Transformador: cada valor tem o próprio "V" (primário/secundário),
+    //   ex "13800V/380V" - testado ANTES do formato de motor, senão o
+    //   regex de motor batia só parcial no meio do número grande (achava
+    //   "800V" dentro de "13800V") e corrompia o resto do título.
+    if (categoriaNome === "Transformador") {
+      const tensaoDuplaMatch = t.match(/(\d+(?:[.,]\d+)?)\s*k?v\s*\/\s*(\d+(?:[.,]\d+)?)\s*k?v\b/i);
+      if (tensaoDuplaMatch) {
+        r.tensao_titulo = `${tensaoDuplaMatch[1]}V/${tensaoDuplaMatch[2]}V`;
+        t = t.replace(tensaoDuplaMatch[0], " ");
+      }
+    } else {
+      const tensaoMatch = t.match(/(\d{2,3}(?:\s*\/\s*\d{2,3}){0,3})\s*v\b/i);
+      if (tensaoMatch) {
+        r.tensao_titulo = `${tensaoMatch[1].replace(/\s+/g, "")}V`;
+        t = t.replace(tensaoMatch[0], " ");
+      }
+    }
+
+    // Polos - "6P" ou "6 polos".
+    const poloMatch = t.match(/\b(\d)\s*p(?:[oó]los?)?\b/i);
+    if (poloMatch) {
+      r.polos = Number(poloMatch[1]);
+      r.polaridade = `${poloMatch[1]} polos`;
+      t = t.replace(poloMatch[0], " ");
+    }
+
+    // Carcaça - código IEC/WEG (2-3 dígitos + sufixo de carcaça conhecido:
+    // S/M/L/T e variantes SD/MD/LD/ST/MT/LT). Restrito a esses sufixos pra
+    // não colidir com tensão/corrente/potência (que já foram removidas do
+    // texto acima de qualquer forma, mas o rótulo explícito "carcaça:" tem
+    // prioridade quando presente).
+    const carcacaMatch =
+      t.match(new RegExp(`\\bcarca[çc]a\\s*[:\\-]?\\s*(\\d{2,3}\\s?${CARCACA_SUFIXOS_RE})\\b`, "i")) ||
+      t.match(new RegExp(`\\b(\\d{2,3}\\s?${CARCACA_SUFIXOS_RE})\\b`));
+    if (carcacaMatch) {
+      r.carcaca = carcacaMatch[1].toUpperCase().replace(/\s+/g, "");
+      t = t.replace(carcacaMatch[0], " ");
+    }
+
+    // Linha do motor - só documentado com confiança pra WEG (nomenclatura
+    // pública conhecida: W21/W22/W50 + IR3 + Plus/Premium/Standard). Outras
+    // marcas ficam sem linha_modelo nessa fase, pra não inventar separação
+    // sem padrão confirmado.
+    if (r.marca === "WEG") {
+      const linhaMatch = tituloBruto.match(/\bW\d{2}\b(?:\s+IR\d+)?(?:\s+(?:Plus|Premium|Standard))?/i);
+      if (linhaMatch) r.linha_modelo = linhaMatch[0].replace(/\s+/g, " ").trim();
+    }
+
+    // Modelo = o que sobrou do título depois de tirar marca + tudo que já
+    // virou campo próprio acima. Limpeza de espaço duplo e pontuação solta
+    // nas pontas (o `sanitizeResult` compartilhado ainda faz uma limpeza
+    // adicional em cima disso depois, na hora de salvar).
+    const modeloLimpo = t.replace(/\s{2,}/g, " ").replace(/^[\s,;:\-–—\/]+|[\s,;:\-–—\/]+$/g, "").trim();
+    r.modelo = modeloLimpo || null;
+
+    return r;
+  }
+
+  // Specs técnicas por categoria - roda sobre o texto ORIGINAL do bloco
+  // (não o título já limpo), porque detalhes como peso/PMTA/pressão
+  // costumam estar em linhas separadas do título. Tudo aqui retorna dentro
+  // de `extras` pra ir em atributos_normalizados (nenhum desses tem coluna
+  // própria hoje) - exceto `combustivel`, que já é atributo padrão do
+  // coletor mas hoje só entrava concatenado em `detalhes`.
+  function extractCategorySpecsMFRural(categoriaNome, textoBlocoCompleto) {
+    const t = textoBlocoCompleto || "";
+    const extras = {};
+    let combustivel = null;
+
+    const pesoMatch = t.match(/peso\s*(?:aproximado)?:?\s*([\d.,]+)\s*kg/i);
+    if (pesoMatch) extras.peso_kg = parseNumeroBR(pesoMatch[1]);
+
+    const pmtaMatch = t.match(/PMTA\s*([\d.,]+)\s*kgf\s*\/\s*cm[\xB22]/i);
+    if (pmtaMatch) extras.pmta_kgf_cm2 = parseNumeroBR(pmtaMatch[1]);
+
+    const pressaoMatch = t.match(/(?:press[\xE3a]o(?:\s+de)?|at[\xE9e])?\s*([\d.,]+)\s*bar\b/i);
+    if (pressaoMatch) extras.pressao_bar = parseNumeroBR(pressaoMatch[1]);
+
+    if (/\bcavaco\b/i.test(t)) combustivel = "Cavaco";
+    else if (/\blenha\b/i.test(t)) combustivel = "Lenha";
+    else if (/biomassa/i.test(t)) combustivel = "Biomassa";
+    else if (/\bg[\xE1a]s\b|\bglp\b/i.test(t)) combustivel = "G\xE1s";
+    else if (/\b[\xF3o]leo\b|\bbpf\b/i.test(t)) combustivel = "\xD3leo";
+    else if (/\bdiesel\b/i.test(t)) combustivel = "Diesel";
+    if (combustivel) extras.combustivel = combustivel;
+
+    if (categoriaNome === "Bomba") {
+      const vazaoM3h = t.match(/(\d+(?:[.,]\d+)?)\s*m[\xB33]\s*\/\s*h/i);
+      const vazaoLh = t.match(/(\d+(?:[.,]\d+)?)\s*(?:l|litros?)\s*\/\s*h/i);
+      const alturaManometrica = t.match(/(\d+(?:[.,]\d+)?)\s*m\.?\s*c\.?\s*a\.?\b/i);
+      if (vazaoM3h) extras.vazao_m3h = parseNumeroBR(vazaoM3h[1]);
+      else if (vazaoLh) extras.vazao_lh = parseNumeroBR(vazaoLh[1]);
+      if (alturaManometrica) extras.altura_manometrica_mca = parseNumeroBR(alturaManometrica[1]);
+    } else if (categoriaNome === "Compressor") {
+      const pcmMatch = t.match(/(\d+(?:[.,]\d+)?)\s*pcm\b/i);
+      if (pcmMatch) extras.pcm = parseNumeroBR(pcmMatch[1]);
+    } else if (categoriaNome === "Transformador") {
+      const kvaMatch = t.match(/(\d+(?:[.,]\d+)?)\s*kva\b/i);
+      if (kvaMatch) extras.potencia_kva = parseNumeroBR(kvaMatch[1]);
+      const tensaoDuplaMatch = t.match(/(\d+(?:[.,]\d+)?)\s*k?v\s*\/\s*(\d+(?:[.,]\d+)?)\s*k?v\b/i);
+      if (tensaoDuplaMatch) {
+        extras.tensao_primaria = `${tensaoDuplaMatch[1]}V`;
+        extras.tensao_secundaria = `${tensaoDuplaMatch[2]}V`;
+      }
+    } else if (categoriaNome === "Tanque" || categoriaNome === "Tanque Misturador") {
+      const orientacaoMatch = t.match(/\b(horizontal|vertical)\b/i);
+      if (orientacaoMatch) {
+        extras.orientacao = orientacaoMatch[1].charAt(0).toUpperCase() + orientacaoMatch[1].slice(1).toLowerCase();
+      }
+    }
+
+    return extras;
+  }
+
+  // Quebra o texto de capacidade (ex: "500 L", "30 CV") em valor+unidade -
+  // usado só pra preencher capacidade_unidade em atributos_normalizados; o
+  // campo `capacidade` (coluna existente) continua com o texto completo.
+  function separarCapacidadeUnidade(capacidadeTexto) {
+    if (!capacidadeTexto) return null;
+    const m = String(capacidadeTexto).match(/^[\d.,\/]+\s*(.+)$/);
+    return m ? m[1].trim() : null;
+  }
+
+  // Validação final: preço simbólico ou ausência total de identificação do
+  // produto (nem modelo, nem linha, nem marca) derruba o item.
+  function validateObservationMFRural(item) {
+    if (!item) return false;
+    if (item.preco !== null && item.preco !== void 0 && item.preco <= 10) return false;
+    if (!item.modelo && !item.marca) return false;
+    return true;
+  }
+
+  // Monta o objeto de atributos_normalizados só com o que foi encontrado
+  // (mesmo padrão de limpeza usado em atributosNormalizadosDe).
+  function limparAtributosExtras(mapa) {
+    const limpo = {};
+    Object.keys(mapa).forEach((k) => {
+      const v = mapa[k];
+      if (v !== void 0 && v !== null && v !== "") limpo[k] = v;
+    });
+    return Object.keys(limpo).length > 0 ? limpo : null;
+  }
+
+  function parseMFRuralItemLocal(rawText) {
+    const texto = rawText || "";
+    const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
+    const normalizarEspacos = (s) => s.replace(/\s+/g, " ").trim();
+    let titulo = null;
+    for (let i = 0; i < linhas.length - 1; i++) {
+      if (linhas[i] && /^Imagem /i.test(linhas[i + 1]) && normalizarEspacos(linhas[i + 1]).includes(normalizarEspacos(linhas[i]))) {
+        titulo = linhas[i];
+        break;
+      }
+    }
+    if (!titulo) {
+      for (let i = 0; i < linhas.length; i++) {
+        if (/^(M[áa]quinas\/ Equipamentos|Industriais|Agr[íi]colas|Logo MF Rural|O que você procura\?|Login|Cadastro|Todas as Categorias|Quem Somos|MF Magazine|Depoimentos|Lojas Oficiais|Midia Kit)$/i.test(linhas[i])) continue;
+        if (/^Imagem /i.test(linhas[i])) continue;
+        titulo = linhas[i];
+        break;
+      }
+    }
+    const tipoMatch = texto.match(/Tipo:\s*([^\n]+)/i);
+    const localMatch = texto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s(?:d[aeo]s?\s)?[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*\/\s*([A-Z]{2})\s*\n/);
+    const estadoGeral = tipoMatch ? /nov[oa]/i.test(tipoMatch[1]) ? "Novo" : tipoMatch[1].trim() : null;
+    const localizacaoGeral = localMatch ? `${localMatch[1]}/${localMatch[2]}` : null;
+    const blocoDescricao = texto.match(/Descri[çc][ãa]o([\s\S]+?)Fale com o anunciante/i);
+    let topicosTecnicos = [];
+    if (blocoDescricao) {
+      topicosTecnicos = blocoDescricao[1].split("\n").map((l) => l.trim()).filter((l) => /^[-•]\s*\S/.test(l)).map((l) => l.replace(/^[-•]\s*/, "").replace(/;\s*$/, "").trim()).filter((l) => /\d+[\s.,]*\d*\s*(mm|cm|m\b|metros?|litros?|l\b|bicos?|bar|cv|hp|kw|kg|ton|por minuto|por hora|\/min|\/h\b)/i.test(l))
+        // Peso/PMTA/pressão/potência já viram campo estruturado em
+        // extractCategorySpecsMFRural (peso_kg/pmta_kgf_cm2/pressao_bar) ou
+        // na coluna potencia_cv/potencia_kw - não duplica esse dado como
+        // texto solto dentro de `detalhes` (que deve ficar só com nota
+        // livre de verdade, ex: dimensões, número de bicos etc.).
+        .filter((l) => !/^(peso|pmta|press[ãa]o)\b/i.test(l) && !/^pot[êe]ncia\b.*\b(cv|hp|kw)\b/i.test(l));
+    }
+    // Preço simbólico (R$10 ou menos) no MF Rural normalmente significa que
+    // o anunciante colocou um valor qualquer só pra conseguir publicar sem
+    // preço real definido - não é dado de mercado de verdade, então não
+    // entra na base (senão distorce médias/faixas de valor). Limite
+    // ajustado de R$1 pra R$10 depois de achar um caso real de R$10,00
+    // que passava despercebido com o limite anterior.
+    const regexSubitem = /-\s*(.+?)\s*-\s*Valor:?\s*([\d.,]+)\s*-\s*DISPON[ÍI]VEL/gi;
+    const subitens = [...texto.matchAll(regexSubitem)];
+    if (subitens.length > 1) {
+      const categoriaBase = classificarCategoriaGenerica(titulo || "");
+      return subitens.map((m) => {
+        const fimMatch = m.index + m[0].length;
+        const trechoDepois = texto.slice(fimMatch, fimMatch + 200);
+        const categoriaItem = classificarCategoriaGenerica(m[1]) || categoriaBase;
+        const norm = normalizeEquipmentMFRural(m[1].trim(), categoriaItem);
+        const capMatch = m[1].match(/([\d.,]+)\s*(kgv?\/h)/i);
+        const capacidade = capMatch ? `${capMatch[1]} ${capMatch[2]}` : null;
+        const extras = extractCategorySpecsMFRural(categoriaItem, trechoDepois);
+        const atributos_normalizados = limparAtributosExtras({
+          linha_modelo: norm.linha_modelo,
+          polos: norm.polos,
+          frequencia_hz: norm.frequencia_hz,
+          grau_protecao: norm.grau_protecao,
+          refrigeracao_motor: norm.refrigeracao_motor,
+          capacidade_unidade: separarCapacidadeUnidade(capacidade),
+          ...extras
+        });
+        return {
+          categoria: categoriaItem,
+          marca: norm.marca,
+          modelo: norm.modelo || m[1].trim(),
+          capacidade,
+          detalhes: null,
+          estado: estadoGeral,
+          localizacao: localizacaoGeral,
+          carcaca: norm.carcaca,
+          polaridade: norm.polaridade,
+          tensao: norm.tensao_titulo,
+          preco: parsePrecoBR(m[2]),
+          moeda: "BRL",
+          canal: "Revenda/Terceiro",
+          tipo_mercado: "Venda Direta",
+          atributos_normalizados
+        };
+      }).filter((item) => validateObservationMFRural(item));
+    }
+    const precoMatch = texto.match(/R\$\s*([\d.,]+)\s*(Unidade|Kilo|Peça|Kg|Litro|Outra|Tonelada|Metro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote)/i);
+    const capacidadeRotuloMatch = texto.match(/Capacidade:\s*\n?\s*([\d.,]+\s*(?:l|litros?|kg|ton(?:elada)?s?|m[³3])\s*\/?\s*h(?:ora)?)/i);
+    const marcaRotuloMatch = texto.match(/Marca:\s*\n?\s*([^\n]+)/i);
+    const modeloRotuloMatch = texto.match(/Modelo:\s*\n?\s*([^\n]+)/i);
+    const capacidadeMatch = texto.match(/at[ée]\s*([\d.,]+)\s*(kg\/h|ton(?:elada)?s?\/h|l\/h|litros?\/h|m[³3]\/h)(?:\s*(?:com|a)\s*([\d.,]+)\s*bar\s*(?:\(g\))?)?/i) || texto.match(/([\d.,]+)\s*(kgv?\/h)/i) || texto.match(/([\d.,]+)\s*(T\s*por\s*Hora)/i) || texto.match(/(de\s+[\d.,]+\s*a\s*[\d.,]+)\s*(ton(?:elada)?s?\s*por\s*hora)/i) || texto.match(/at[ée]\s*([\d.,]+)\s*(unidades?\s*\/\s*hora|frascos?\s*\/\s*hora|garrafas?\s*\/\s*hora|sach[êe]s?\s*\/\s*hora|pe[çc]as?\s*\/\s*hora)/i) || texto.match(/([\d.,]+)\s*(litros|l\b|m[³3])\b/i);
+    const potenciaPublicadaMatch = texto.match(/Pot[êe]ncia publicada:?\s*([\d.,]+)\s*kw/i);
+    const marcaMatch = marcaRotuloMatch || texto.match(/\bda\s+([A-Z][\wà-ÿ]+)\s+s[ãa]o\b/) || texto.match(/\bpela\s+([A-Z][\wà-ÿ]+)\b/);
+    let codigoModeloDescricao = null;
+    if (blocoDescricao && !/\d/.test(titulo)) {
+      const primeiraLinhaDesc = blocoDescricao[1].split("\n").map((l) => l.trim()).find(Boolean);
+      if (primeiraLinhaDesc && /^[A-Z0-9][A-Z0-9-]{2,15}$/i.test(primeiraLinhaDesc) && /\d/.test(primeiraLinhaDesc)) {
+        codigoModeloDescricao = primeiraLinhaDesc;
+      }
+    }
+    const modeloBruto = modeloRotuloMatch ? modeloRotuloMatch[1].trim() : codigoModeloDescricao ? `${titulo} ${codigoModeloDescricao}` : titulo;
+    const categoriaFinal = classificarCategoriaGenerica(titulo) || (blocoDescricao ? classificarCategoriaGenerica(blocoDescricao[1]) : null);
+    let marcaFinal = marcaMatch ? marcaMatch[1].trim() : null;
+    if (!marcaFinal && blocoDescricao) {
+      const encontrada = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(blocoDescricao[1]));
+      if (encontrada) marcaFinal = encontrada;
+    }
+    if (!titulo || !precoMatch) return [];
+    const fatos = extrairFatosDeTexto(texto);
+    const norm = normalizeEquipmentMFRural(modeloBruto, categoriaFinal);
+    const extras = extractCategorySpecsMFRural(categoriaFinal, texto);
+    const capacidadeFinal = capacidadeMatch ? `at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}` : capacidadeRotuloMatch ? capacidadeRotuloMatch[1] : fatos.capacidade;
+    const marca = (marcaFinal ? normalizarMarca(marcaFinal) : null) || norm.marca || fatos.marca;
+    const atributos_normalizados = limparAtributosExtras({
+      linha_modelo: norm.linha_modelo,
+      polos: norm.polos,
+      frequencia_hz: norm.frequencia_hz,
+      grau_protecao: norm.grau_protecao,
+      refrigeracao_motor: norm.refrigeracao_motor,
+      capacidade_unidade: separarCapacidadeUnidade(capacidadeFinal),
+      cidade: localizacaoGeral ? localizacaoGeral.split("/")[0] : null,
+      uf: localizacaoGeral ? localizacaoGeral.split("/")[1] : null,
+      ...extras
+    });
+    return [{
+      categoria: categoriaFinal,
+      marca,
+      modelo: norm.modelo,
+      capacidade: capacidadeFinal,
+      material: fatos.material,
+      potencia_cv: fatos.potencia_cv,
+      potencia_kw: potenciaPublicadaMatch ? parseNumeroBR(potenciaPublicadaMatch[1]) : fatos.potencia_kw,
+      polaridade: norm.polaridade || fatos.polaridade,
+      tensao: norm.tensao_titulo || fatos.tensao,
+      rpm: fatos.rpm,
+      carcaca: norm.carcaca,
+      detalhes: topicosTecnicos.length ? topicosTecnicos.join("; ") : null,
+      estado: estadoGeral || fatos.estado,
+      localizacao: localizacaoGeral,
+      preco: parsePrecoBR(precoMatch[1]),
+      moeda: "BRL",
+      canal: "Revenda/Terceiro",
+      tipo_mercado: "Venda Direta",
+      atributos_normalizados
+    }].filter((item) => validateObservationMFRural(item));
+  }
+
+  function parseMFRuralLocal(rawText) {
+    const blocos = extractListingsMFRural(rawText);
+    const itens = [];
+    for (const bloco of blocos) {
+      const comuns = extractCommonDataMFRural(bloco.tituloBruto, bloco.precoStr, bloco.unidadePreco, bloco.localizacaoLinha);
+      if (comuns.preco !== null && comuns.preco <= 10) continue;
+      const fatos = extrairFatosDeTexto(bloco.textoBlocoCompleto);
+      const categoriaFinal = comuns.categoria || fatos.categoria;
+      const norm = normalizeEquipmentMFRural(bloco.tituloBruto, categoriaFinal);
+      const extras = extractCategorySpecsMFRural(categoriaFinal, bloco.textoBlocoCompleto);
+      const marca = norm.marca || fatos.marca;
+      const atributos_normalizados = limparAtributosExtras({
+        linha_modelo: norm.linha_modelo,
+        polos: norm.polos,
+        frequencia_hz: norm.frequencia_hz,
+        grau_protecao: norm.grau_protecao,
+        refrigeracao_motor: norm.refrigeracao_motor,
+        capacidade_unidade: separarCapacidadeUnidade(fatos.capacidade),
+        cidade: comuns.cidade,
+        uf: comuns.uf,
+        ...extras
+      });
+      const item = {
+        categoria: categoriaFinal,
+        categoria_id: fatos.categoria_id,
+        marca,
+        modelo: norm.modelo,
+        capacidade: fatos.capacidade,
+        material: fatos.material,
+        finalidade: fatos.finalidade,
+        potencia_cv: fatos.potencia_cv,
+        potencia_kw: fatos.potencia_kw,
+        polaridade: norm.polaridade || fatos.polaridade,
+        tensao: norm.tensao_titulo || fatos.tensao,
+        rpm: fatos.rpm,
+        ano: fatos.ano,
+        carcaca: norm.carcaca,
+        estado: fatos.estado,
+        localizacao: bloco.localizacaoLinha,
+        preco: comuns.preco,
+        moeda: comuns.moeda,
+        detalhes: comuns.notaPreco || null,
+        atributos_normalizados
+      };
+      if (validateObservationMFRural(item)) itens.push(item);
     }
     return itens;
   }
+
   function parseSuperbidItemLocal(rawText) {
     const texto = rawText || "";
     const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
