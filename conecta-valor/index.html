@@ -3573,6 +3573,74 @@
     });
     return itens;
   }
+  // ==========================================================================
+  // COLETOR SYX (Sucatas e Recicláveis) — arquitetura em etapas (Fase 1,
+  // mesmo padrão do MF Rural/Superbid/OLX/Facebook Marketplace)
+  //
+  // Bug real confirmado por teste antes de codar: o preço de sucata quase
+  // sempre vem com uma unidade junto (R$ X /Kg, /Ton, /Lt, /Un) - essencial
+  // pra interpretar o valor certo (preço por kg é uma ordem de grandeza
+  // totalmente diferente de preço por tonelada). A regex já capturava essa
+  // unidade (precoMatch[2]), mas:
+  //  - em parseSYXItemLocal (item) ela nunca era usada em lugar nenhum -
+  //    perdida por completo;
+  //  - em parseSYXLocal (listagem) só o caso "Ton" virava uma nota vaga em
+  //    detalhes ("Preço por tonelada") - Kg/Lt/Un eram ignorados.
+  // Corrigido: unidade de preço agora vai estruturada em
+  // atributos_normalizados.unidade_preco nos dois parsers.
+  //
+  // Também corrigido: parseSYXItemLocal aceitava item sem preço válido
+  // (a condição só rejeitava quando FALTAVA título E preço ao mesmo tempo -
+  // um item com título mas sem preço passava com preco: null). Agora exige
+  // preço válido, igual o resto dos coletores da Fase 1.
+  //
+  // Adicionado: detecção de material típico de sucata (ferro, cobre,
+  // alumínio, bronze, latão, chumbo, papel/papelão, plástico, vidro, aço
+  // carbono/inox) - vocabulário mais amplo que o extrairFatosDeTexto
+  // compartilhado (que só reconhece aço inox/carbono), mas escopado só
+  // aqui dentro do SYX, sem tocar na função compartilhada nem em outros
+  // coletores. Material é o principal fator de preço de sucata, então essa
+  // era a lacuna mais relevante pra esse coletor especificamente.
+  // ==========================================================================
+
+  var MATERIAIS_SUCATA = [
+    { re: /\ba[çc]o\s*inox(?:id[áa]vel)?\b/i, label: "A\xE7o Inox" },
+    { re: /\ba[çc]o\s*carbono\b/i, label: "A\xE7o Carbono" },
+    { re: /\bferro\s*(fundido|velho)?\b/i, label: "Ferro" },
+    { re: /\bcobre\b/i, label: "Cobre" },
+    { re: /\balum[íi]nio\b/i, label: "Alum\xEDnio" },
+    { re: /\bbronze\b/i, label: "Bronze" },
+    { re: /\blat[ãa]o\b/i, label: "Lat\xE3o" },
+    { re: /\bchumbo\b/i, label: "Chumbo" },
+    { re: /\bpapel(?:[ãa]o)?\b/i, label: "Papel/Papel\xE3o" },
+    { re: /\bpl[áa]stico\b/i, label: "Pl\xE1stico" },
+    { re: /\bvidro\b/i, label: "Vidro" }
+  ];
+
+  // Normaliza a unidade de preço capturada na regex (Un/Lt/Ton/Kg) pra um
+  // valor consistente, minúsculo.
+  function normalizarUnidadePrecoSYX(unidadeBruta) {
+    if (!unidadeBruta) return null;
+    const u = unidadeBruta.trim().toLowerCase();
+    if (u === "ton") return "ton";
+    if (u === "kg") return "kg";
+    if (u === "lt") return "l";
+    if (u === "un") return "un";
+    return u;
+  }
+
+  function normalizeEquipmentSYX(textoBusca) {
+    const encontrado = MATERIAIS_SUCATA.find((m) => m.re.test(textoBusca || ""));
+    return { material: encontrado ? encontrado.label : null };
+  }
+
+  function validateObservationSYX(item) {
+    if (!item) return false;
+    if (item.preco === null || item.preco === void 0 || item.preco <= 0) return false;
+    if (!item.modelo && !item.categoria) return false;
+    return true;
+  }
+
   function parseSYXLocal(rawText) {
     const texto = rawText || "";
     const subcategoriaMatch = texto.match(/Sucatas? de ([A-Za-zÀ-ÿ ]+?)(?:\s*\(|\n|·)/i);
@@ -3584,7 +3652,7 @@
       if (!precoMatch) return;
       const ehLeilao = /Encerra dia|Valor inicial/i.test(bloco);
       const localMatch = bloco.match(/\n\s*([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*-\s*([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*\n/);
-      const unidadeMatch = precoMatch[2] || null;
+      const unidadePreco = normalizarUnidadePrecoSYX(precoMatch[2]);
       const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
       const linhasUteis = linhas.filter((l) => !/^(Venda direta|Encerra dia|Valor inicial|EM NEGOCIA[ÇC][ÃA]O)/i.test(l));
       const localTexto = localMatch ? `${localMatch[1]} - ${localMatch[2]}` : null;
@@ -3595,18 +3663,26 @@
         titulo = l;
         break;
       }
-      itens.push({
+      const norm = normalizeEquipmentSYX((titulo || "") + " " + bloco);
+      const atributos_normalizados = limparAtributosExtras({
+        unidade_preco: unidadePreco,
+        cidade: localMatch ? localMatch[1].trim() : null,
+        uf: localMatch ? localMatch[2].trim() : null
+      });
+      const item = {
         categoria: classificarCategoriaGenerica(titulo || bloco) || (contextoCompartilhado ? "Sucata" : null),
         modelo: titulo || contextoCompartilhado || null,
-        capacidade: unidadeMatch === "Ton" ? "Pre\xE7o por tonelada" : null,
+        material: norm.material,
         localizacao: localMatch ? `${localMatch[1].trim()}/${localMatch[2].trim()}` : null,
         preco: parsePrecoBR(precoMatch[1]),
         moeda: "BRL",
         estado: "Usado",
         canal: "Revenda/Terceiro",
         tipo_mercado: ehLeilao ? "Leil\xE3o" : "Venda Direta",
-        detalhes: ehLeilao ? "Valor inicial de lance (leil\xE3o), n\xE3o \xE9 pre\xE7o fixo final" : null
-      });
+        detalhes: ehLeilao ? "Valor inicial de lance (leil\xE3o), n\xE3o \xE9 pre\xE7o fixo final" : null,
+        atributos_normalizados
+      };
+      if (validateObservationSYX(item)) itens.push(item);
     });
     return itens;
   }
@@ -3995,18 +4071,28 @@
     const subcategoria = breadcrumbMatch ? breadcrumbMatch[2].trim() : null;
     const uf = breadcrumbMatch ? breadcrumbMatch[3].trim() : null;
     const cidade = breadcrumbMatch ? breadcrumbMatch[4].trim() : null;
-    if (!titulo && !precoMatch) return [];
-    return [{
+    const unidadePreco = precoMatch ? normalizarUnidadePrecoSYX(precoMatch[2]) : null;
+    const norm = normalizeEquipmentSYX((titulo || "") + " " + texto);
+    const atributos_normalizados = limparAtributosExtras({
+      unidade_preco: unidadePreco,
+      cidade,
+      uf,
+      subcategoria
+    });
+    const item = {
       categoria: classificarCategoriaGenerica(texto + " " + (titulo || "")) || "Sucata",
       modelo: titulo || subcategoria || "Sucata",
+      material: norm.material,
       localizacao: cidade && uf ? `${cidade}/${uf}` : uf || null,
       detalhes: descMatch ? descMatch[1].trim() : subcategoria ? `Subcategoria: ${subcategoria}` : null,
       preco: precoMatch ? parsePrecoBR(precoMatch[1]) : null,
       moeda: "BRL",
       estado: "Usado",
       canal: "Revenda/Terceiro",
-      tipo_mercado: "Venda Direta"
-    }];
+      tipo_mercado: "Venda Direta",
+      atributos_normalizados
+    };
+    return [item].filter((it) => validateObservationSYX(it));
   }
   // ==========================================================================
   // COLETOR FACEBOOK MARKETPLACE — arquitetura em etapas (Fase 1, mesmo
