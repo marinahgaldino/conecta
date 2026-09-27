@@ -4008,84 +4008,6 @@
       tipo_mercado: "Venda Direta"
     }];
   }
-  // ==========================================================================
-  // COLETOR FACEBOOK MARKETPLACE — arquitetura em etapas (Fase 1, mesmo
-  // padrão do MF Rural/Superbid/OLX)
-  //
-  // Bug real confirmado por teste antes de codar (não é duplicação de
-  // dados, é PERDA de dados): a extração de descrição
-  // (`/Usado[^\n]*\n\s*([^\n]{20,})/i`) só funcionava quando a condição do
-  // anúncio era literalmente "Usado" - qualquer anúncio "Novo" ou
-  // "Seminovo" simplesmente perdia a descrição inteira (`detalhes: null`),
-  // mesmo quando havia texto livre útil ("Compressor novo na caixa, nota
-  // fiscal, garantia de fábrica"). Corrigido pra generalizar: pega o texto
-  // logo após o VALOR da condição que já foi capturado (seja ele qual for),
-  // não mais a palavra fixa "Usado".
-  //
-  // Outros ajustes: `marca` era sempre null (nunca tentava reconhecer
-  // marca conhecida no texto); `localizacao` saía no formato "Cidade, SP"
-  // (com vírgula) em vez do padrão "Cidade/SP" (com barra) usado por todos
-  // os outros coletores - inconsistência de formato que dificultaria
-  // qualquer agrupamento por local; `atributos_normalizados` nunca era
-  // populado (sem cidade/uf separados nem specs por categoria).
-  //
-  // OBS: reavaliei o achado anterior sobre "capacidade duplicada dentro da
-  // descrição em frase natural" (ex: "tanque de 5000 litros em bom
-  // estado") e decidi NÃO tentar remover o número da frase - diferente da
-  // nota mecânica "Capacidade: X" (que é 100% redundante), aqui o número
-  // faz parte de uma descrição real que a Marina provavelmente quer
-  // preservar por completo; truncar a frase pra tirar só o número traria
-  // mais prejuízo (texto cortado, sem sentido) do que benefício.
-  // ==========================================================================
-
-  // Extrai o texto livre da descrição, ancorado no VALOR real da condição
-  // encontrado (Usado/Novo/Seminovo/etc.), não mais na palavra fixa
-  // "Usado" - corrige a perda de descrição em anúncios "Novo"/"Seminovo".
-  function extrairDescricaoFacebook(texto, condicaoMatch) {
-    if (!condicaoMatch) return null;
-    const valorCondicao = condicaoMatch[1].trim();
-    const linhas = texto.split("\n").map((l) => l.trim());
-    const idxValor = linhas.findIndex((l) => l === valorCondicao);
-    if (idxValor === -1) return null;
-    for (let i = idxValor + 1; i < Math.min(idxValor + 6, linhas.length); i++) {
-      if (linhas[i] && linhas[i].length >= 20) return linhas[i];
-    }
-    return null;
-  }
-
-  // Dados comuns: preço, local (cidade/uf, normalizado pro formato
-  // "Cidade/UF" usado pelo resto do app - antes saía "Cidade, UF" com
-  // vírgula), categoria. Facebook Marketplace não tem leilão.
-  function extractCommonDataFacebook(tituloBruto, descricao, precoStr, localBruto) {
-    const preco = precoStr != null ? parsePrecoBR(precoStr) : null;
-    let localizacaoTexto = null, cidade = null, uf = null;
-    if (localBruto) {
-      const partes = localBruto.split(",");
-      cidade = (partes[0] || "").trim() || null;
-      uf = (partes[1] || "").trim() || null;
-      localizacaoTexto = cidade && uf ? `${cidade}/${uf}` : cidade;
-    }
-    const categoria = classificarCategoriaGenerica((tituloBruto || "") + " " + (descricao || ""));
-    return { preco, moeda: "BRL", localizacaoTexto, cidade, uf, categoria, tipoMercado: "Venda Direta" };
-  }
-
-  // Marca: hoje sempre saía null - passa a tentar reconhecer marca
-  // conhecida no título+descrição, igual o resto dos coletores já faz.
-  function normalizeEquipmentFacebook(tituloBruto, descricao) {
-    const textoBusca = (tituloBruto || "") + " " + (descricao || "");
-    const marcaEncontrada = MARCAS_CONHECIDAS.find(
-      (m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(textoBusca)
-    );
-    return { marca: marcaEncontrada ? normalizarMarca(marcaEncontrada) : null };
-  }
-
-  function validateObservationFacebook(item) {
-    if (!item) return false;
-    if (item.preco === null || item.preco === void 0 || item.preco <= 0) return false;
-    if (!item.modelo && !item.marca) return false;
-    return true;
-  }
-
   function parseFacebookMarketplaceLocal(rawText) {
     const texto = rawText || "";
     const precoMatch = texto.match(/R\$\s*([\d.,]+)/);
@@ -4101,31 +4023,22 @@
       else if (/usado/i.test(condicaoMatch[1])) estado = "Usado";
       else if (/novo/i.test(condicaoMatch[1])) estado = "Novo";
     }
-    const descricao = extrairDescricaoFacebook(texto, condicaoMatch);
-    const capMatch = ((titulo || "") + " " + (descricao || "")).match(/(\d+[\d.,]*)\s*(kg|toneladas?|l|litros)\b/i);
-    const comuns = extractCommonDataFacebook(titulo, descricao, precoMatch[1], localMatch ? localMatch[1].trim() : null);
-    const norm = normalizeEquipmentFacebook(titulo, descricao);
-    const extras = extractCategorySpecsMFRural(comuns.categoria, (titulo || "") + " " + (descricao || ""));
-    const atributos_normalizados = limparAtributosExtras({
-      cidade: comuns.cidade,
-      uf: comuns.uf,
-      ...extras
-    });
-    const item = {
-      categoria: comuns.categoria,
-      marca: norm.marca,
+    const descMatch = texto.match(/Usado[^\n]*\n\s*([^\n]{20,})/i);
+    const descricao = descMatch ? descMatch[1].trim() : "";
+    const capMatch = ((titulo || "") + " " + descricao).match(/(\d+[\d.,]*)\s*(kg|toneladas?|l|litros)\b/i);
+    return [{
+      categoria: classificarCategoriaGenerica((titulo || "") + " " + descricao),
+      marca: null,
       modelo: titulo,
       capacidade: capMatch ? `${capMatch[1]} ${capMatch[2]}` : null,
       detalhes: descricao || null,
       estado,
-      localizacao: comuns.localizacaoTexto,
-      preco: comuns.preco,
-      moeda: comuns.moeda,
+      localizacao: localMatch ? localMatch[1].trim() : null,
+      preco: parsePrecoBR(precoMatch[1]),
+      moeda: "BRL",
       canal: "Revenda/Terceiro",
-      tipo_mercado: comuns.tipoMercado,
-      atributos_normalizados
-    };
-    return [item].filter((it) => validateObservationFacebook(it));
+      tipo_mercado: "Venda Direta"
+    }];
   }
   // Lote/linha completa em formato brasileiro comum: título livre, itens em
   // bullets ("– equipamento" ou "- equipamento"), preço total solto em R$.
