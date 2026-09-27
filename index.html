@@ -3701,7 +3701,119 @@
     return itens;
   }
   var UFS_BR = ["AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"];
-  function parseOLXLocal(rawText) {
+  // ==========================================================================
+  // COLETOR OLX — arquitetura em etapas (Fase 1, mesmo padrão do MF Rural/
+  // Superbid)
+  //
+  // Bugs reais corrigidos (achados por teste sintético, não coberto pelo
+  // sanitizeResult porque são específicos da extração bruta do OLX):
+  //  1) A extração de "descrição" (parseOLXLocal) só parava em "publicidade"
+  //     ou "Detalhes" - linha de preço ("R$ 1.200") e o próprio rótulo
+  //     "Descrição" podiam vazar pro texto final de `detalhes`.
+  //  2) O parser nunca lia rótulos estruturados que o OLX mostra na página
+  //     de item (Marca, Voltagem) - só "Condição" e "Localização" eram
+  //     lidos; o resto dependia só do fallback genérico do sanitizeResult
+  //     (extrairFatosDeTexto no texto do modelo) funcionar por acaso.
+  //  3) Nem item nem listagem populavam atributos_normalizados (cidade/uf
+  //     separados, specs por categoria) - só usavam o campo `localizacao`
+  //     como string única, igual o MF Rural/Superbid faziam antes da Fase 1.
+  // ==========================================================================
+
+  var UFS_BR_RE_PARTE = UFS_BR.join("|");
+
+  // Separa "Cidade, UF" / "Bairro\nCidade, UF" / "CidadeUF" (grudado) em
+  // {cidade, uf}. Mesma lógica de extrairLocalizacaoGenerica, mas retornando
+  // as partes separadas (pra alimentar atributos_normalizados.cidade/uf),
+  // não só a string combinada.
+  function separarCidadeUfOLX(bruto) {
+    if (!bruto) return { texto: null, cidade: null, uf: null };
+    const comVirgulaOuTraco = bruto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*[-,]\s*([A-Z]{2})\b/);
+    if (comVirgulaOuTraco) {
+      return { texto: `${comVirgulaOuTraco[1]}/${comVirgulaOuTraco[2]}`, cidade: comVirgulaOuTraco[1].trim(), uf: comVirgulaOuTraco[2].trim() };
+    }
+    const grudado = bruto.match(new RegExp(`([A-ZÀ-Ÿ][a-zà-ÿ]+)(${UFS_BR_RE_PARTE})\\b`));
+    if (grudado) return { texto: `${grudado[1]}/${grudado[2]}`, cidade: grudado[1].trim(), uf: grudado[2].trim() };
+    return { texto: bruto.trim() || null, cidade: null, uf: null };
+  }
+
+  function extrairLocalizacaoGenerica(bruto) {
+    if (!bruto) return null;
+    const comVirgulaOuTraco = bruto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*[-,]\s*([A-Z]{2})\b/);
+    if (comVirgulaOuTraco) return `${comVirgulaOuTraco[1]}/${comVirgulaOuTraco[2]}`;
+    const grudado = bruto.match(new RegExp(`([A-Z\xC0-Ÿ][a-z\xE0-\xFF]+)(${UFS_BR.join("|")})\\b`));
+    return grudado ? `${grudado[1]}/${grudado[2]}` : null;
+  }
+
+  // Extrai os blocos brutos de uma página de LISTAGEM do OLX. Mesma lógica
+  // de detecção que já existia em parseOLXListaLocal (separador = "Adicionar
+  // aos favoritos", que aparece uma vez por card).
+  function extractListingsOLX(rawText) {
+    const texto = rawText || "";
+    const blocos = texto.split(/Adicionar aos favoritos/i).slice(0, -1);
+    const resultado = [];
+    blocos.forEach((bloco) => {
+      const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
+      if (linhas.length === 0) return;
+      let tituloBruto = null;
+      for (const l of linhas) {
+        if (/^(Slide \d+|Frete grátis|Entrega Fácil|Parcele sem juros|Destaque)$/i.test(l)) continue;
+        tituloBruto = l;
+        break;
+      }
+      if (!tituloBruto) return;
+      const precosPrincipais = linhas.filter((l) => /^R\$\s*[\d.,]+$/.test(l)).map((l) => l.match(/R\$\s*([\d.,]+)/)[1]);
+      if (precosPrincipais.length === 0) return;
+      const linhaLocal = linhas.find((l) => extrairLocalizacaoGenerica(l));
+      resultado.push({
+        tituloBruto,
+        textoBlocoCompleto: linhas.join(" "),
+        localizacaoLinha: linhaLocal || null,
+        precoStr: precosPrincipais[precosPrincipais.length - 1]
+      });
+    });
+    return resultado;
+  }
+
+  // Dados comuns: preço, local (cidade/uf), categoria. OLX não tem leilão -
+  // sempre Venda Direta.
+  function extractCommonDataOLX(tituloBruto, precoStr, localizacaoLinha) {
+    const preco = precoStr != null ? parsePrecoBR(precoStr) : null;
+    const { texto: localizacaoTexto, cidade, uf } = separarCidadeUfOLX(localizacaoLinha);
+    const categoria = tituloBruto ? classificarCategoriaGenerica(tituloBruto) : null;
+    return { tituloBruto, preco, moeda: "BRL", localizacaoTexto, cidade, uf, categoria, tipoMercado: "Venda Direta" };
+  }
+
+  // Lê rótulos estruturados que o OLX expõe na página de item (Marca,
+  // Voltagem, Condição) - hoje só Condição era lido; Marca e Voltagem eram
+  // ignorados e dependiam só do fallback genérico funcionar. Faz fallback
+  // pra extrairFatosDeTexto (marca conhecida no texto livre) quando o
+  // rótulo não aparece.
+  function normalizeEquipmentOLX(tituloBruto, textoCompleto, categoriaNome) {
+    const r = { marca: null, tensao: null, condicao: null };
+    const marcaRotuloMatch = (textoCompleto || "").match(/\bMarca\s*\n\s*([^\n]+)/i);
+    const voltagemRotuloMatch = (textoCompleto || "").match(/\bVoltagem\s*\n\s*([^\n]+)/i);
+    const condicaoMatch = (textoCompleto || "").match(/Condi[çc][ãa]o\s*:?\s*\n?\s*([^\n]+)/i);
+    if (marcaRotuloMatch) r.marca = normalizarMarca(marcaRotuloMatch[1].trim());
+    if (voltagemRotuloMatch) r.tensao = voltagemRotuloMatch[1].trim();
+    if (condicaoMatch) r.condicao = /usad/i.test(condicaoMatch[1]) ? "Usado" : condicaoMatch[1].trim();
+    if (!r.marca) {
+      const marcaEncontrada = MARCAS_CONHECIDAS.find(
+        (m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(tituloBruto || "")
+      );
+      if (marcaEncontrada) r.marca = normalizarMarca(marcaEncontrada);
+    }
+    return r;
+  }
+
+  // Validação final: sem preço, ou sem nenhuma identificação do produto.
+  function validateObservationOLX(item) {
+    if (!item) return false;
+    if (item.preco === null || item.preco === void 0 || item.preco <= 0) return false;
+    if (!item.modelo && !item.marca) return false;
+    return true;
+  }
+
+  function parseOLXItemLocal(rawText) {
     const texto = rawText || "";
     const linhas = texto.split("\n").map((l) => l.trim());
     let titulo = null;
@@ -3718,7 +3830,7 @@
         break;
       }
     }
-    let descMatch = null;
+    let descricaoBruta = null;
     if (titulo) {
       let ultimoIdxTitulo = -1;
       for (let i = 0; i < linhas.length; i++) {
@@ -3727,80 +3839,90 @@
       }
       if (ultimoIdxTitulo !== -1) {
         const linhasDescricao = [];
+        // Corrigido: antes só parava em "publicidade"/"Detalhes" - linha de
+        // preço e o próprio rótulo "Descrição" podiam vazar pro texto final.
+        // Agora também para em qualquer linha de preço, e ignora (sem parar)
+        // o rótulo "Descrição" sozinho, que só marca o início do texto.
         for (let i = ultimoIdxTitulo + 1; i < Math.min(ultimoIdxTitulo + 8, linhas.length); i++) {
-          if (!linhas[i] || /^(publicidade|Detalhes)$/i.test(linhas[i])) break;
-          linhasDescricao.push(linhas[i]);
+          const l = linhas[i];
+          if (!l || /^(publicidade|Detalhes|Localiza[çc][ãa]o|Marca|Voltagem)$/i.test(l)) break;
+          if (/^(~~)?R\$\s*[\d.,]+(~~)?$/.test(l)) break;
+          if (/^Descri[çc][ãa]o$/i.test(l)) continue;
+          linhasDescricao.push(l);
         }
-        if (linhasDescricao.length > 0) descMatch = [null, linhasDescricao.join(" ")];
+        if (linhasDescricao.length > 0) descricaoBruta = linhasDescricao.join(" ").trim() || null;
       }
     }
-    const condicaoMatch = texto.match(/Condi[çc][ãa]o\s*:?\s*\n?\s*([^\n]+)/i);
     const localizacaoMatches = [...texto.matchAll(/Localiza[çc][ãa]o\s*\n+([^\n]+)\n?([^\n]*)/gi)];
     const localizacaoMatch = localizacaoMatches.length > 0 ? localizacaoMatches[localizacaoMatches.length - 1] : null;
     const precosEncontrados = [...texto.matchAll(/(~~)?R\$\s*([\d.,]+)(~~)?/g)];
     const precoValido = precosEncontrados.find((m) => !m[1] && !m[3]) || precosEncontrados[precosEncontrados.length - 1];
     if (!titulo || !precoValido) return [];
-    let localizacao = null;
+    let localizacaoTexto = null, cidade = null, uf = null;
     if (localizacaoMatch) {
-      let tentarExtrair = function(linha) {
-        const comVirgulaMatch = linha.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*,\s*([A-Z]{2})\s*,/);
-        if (comVirgulaMatch) return `${comVirgulaMatch[1]}/${comVirgulaMatch[2]}`;
-        const grudadoMatch = linha.match(new RegExp(`([A-Z\xC0-\u0178][a-z\xE0-\xFF]+)(${UFS_BR.join("|")})(?=,|\\s|$)`));
-        return grudadoMatch ? `${grudadoMatch[1]}/${grudadoMatch[2]}` : null;
-      };
       const linhaBairro = (localizacaoMatch[1] || "").trim();
       const linhaCidade = (localizacaoMatch[2] || "").trim();
-      localizacao = tentarExtrair(linhaCidade) || tentarExtrair(linhaBairro) || linhaBairro || null;
+      const separado = separarCidadeUfOLX(linhaCidade).cidade ? separarCidadeUfOLX(linhaCidade) : separarCidadeUfOLX(linhaBairro);
+      localizacaoTexto = separado.texto || linhaBairro || null;
+      cidade = separado.cidade;
+      uf = separado.uf;
     }
-    return [{
-      categoria: classificarCategoriaGenerica(titulo + " " + (descMatch ? descMatch[1] : "")),
+    const categoriaFinal = classificarCategoriaGenerica(titulo + " " + (descricaoBruta || ""));
+    const norm = normalizeEquipmentOLX(titulo, texto, categoriaFinal);
+    const extras = extractCategorySpecsMFRural(categoriaFinal, (titulo || "") + " " + (descricaoBruta || ""));
+    const atributos_normalizados = limparAtributosExtras({
+      cidade,
+      uf,
+      ...extras
+    });
+    const item = {
+      categoria: categoriaFinal,
+      marca: norm.marca,
       modelo: titulo,
-      detalhes: descMatch ? descMatch[1].trim() : null,
-      estado: condicaoMatch ? /usad/i.test(condicaoMatch[1]) ? "Usado" : condicaoMatch[1].trim() : null,
-      localizacao,
+      detalhes: descricaoBruta,
+      estado: norm.condicao,
+      localizacao: localizacaoTexto,
+      tensao: norm.tensao,
       preco: parsePrecoBR(precoValido[2]),
       moeda: "BRL",
       canal: "Revenda/Terceiro",
-      tipo_mercado: "Venda Direta"
-    }];
+      tipo_mercado: "Venda Direta",
+      atributos_normalizados
+    };
+    return [item].filter((it) => validateObservationOLX(it));
   }
-  function extrairLocalizacaoGenerica(bruto) {
-    if (!bruto) return null;
-    const comVirgulaOuTraco = bruto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*[-,]\s*([A-Z]{2})\b/);
-    if (comVirgulaOuTraco) return `${comVirgulaOuTraco[1]}/${comVirgulaOuTraco[2]}`;
-    const grudado = bruto.match(new RegExp(`([A-Z\xC0-\u0178][a-z\xE0-\xFF]+)(${UFS_BR.join("|")})\\b`));
-    return grudado ? `${grudado[1]}/${grudado[2]}` : null;
+  // Mantido por compatibilidade externa - mesmo contrato de antes.
+  function parseOLXLocal(rawText) {
+    return parseOLXItemLocal(rawText);
   }
+
   function parseOLXListaLocal(rawText) {
-    const texto = rawText || "";
-    const blocos = texto.split(/Adicionar aos favoritos/i).slice(0, -1);
+    const blocos = extractListingsOLX(rawText);
     const itens = [];
-    blocos.forEach((bloco) => {
-      const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
-      if (linhas.length === 0) return;
-      let titulo = null;
-      for (const l of linhas) {
-        if (/^(Slide \d+|Frete grátis|Entrega Fácil|Parcele sem juros|Destaque)$/i.test(l)) continue;
-        titulo = l;
-        break;
-      }
-      if (!titulo) return;
-      const precosPrincipais = linhas.filter((l) => /^R\$\s*[\d.,]+$/.test(l)).map((l) => l.match(/R\$\s*([\d.,]+)/)[1]);
-      if (precosPrincipais.length === 0) return;
-      const precoFinal = precosPrincipais[precosPrincipais.length - 1];
-      const linhaLocal = linhas.find((l) => extrairLocalizacaoGenerica(l));
-      const localizacao = linhaLocal ? extrairLocalizacaoGenerica(linhaLocal) : null;
-      itens.push({
-        categoria: classificarCategoriaGenerica(titulo),
-        modelo: titulo,
-        localizacao,
-        preco: parsePrecoBR(precoFinal),
-        moeda: "BRL",
-        estado: /usad/i.test(titulo) ? "Usado" : null,
-        canal: "Revenda/Terceiro",
-        tipo_mercado: "Venda Direta"
+    for (const bloco of blocos) {
+      const comuns = extractCommonDataOLX(bloco.tituloBruto, bloco.precoStr, bloco.localizacaoLinha);
+      const norm = normalizeEquipmentOLX(bloco.tituloBruto, bloco.textoBlocoCompleto, comuns.categoria);
+      const extras = extractCategorySpecsMFRural(comuns.categoria, bloco.textoBlocoCompleto);
+      const atributos_normalizados = limparAtributosExtras({
+        cidade: comuns.cidade,
+        uf: comuns.uf,
+        ...extras
       });
-    });
+      const item = {
+        categoria: comuns.categoria,
+        marca: norm.marca,
+        modelo: bloco.tituloBruto,
+        localizacao: comuns.localizacaoTexto,
+        tensao: norm.tensao,
+        preco: comuns.preco,
+        moeda: comuns.moeda,
+        estado: norm.condicao || (/usad/i.test(bloco.tituloBruto || "") ? "Usado" : null),
+        canal: "Revenda/Terceiro",
+        tipo_mercado: comuns.tipoMercado,
+        atributos_normalizados
+      };
+      if (validateObservationOLX(item)) itens.push(item);
+    }
     return itens;
   }
   function acharPrecoML(texto, apartir) {
@@ -3886,6 +4008,84 @@
       tipo_mercado: "Venda Direta"
     }];
   }
+  // ==========================================================================
+  // COLETOR FACEBOOK MARKETPLACE — arquitetura em etapas (Fase 1, mesmo
+  // padrão do MF Rural/Superbid/OLX)
+  //
+  // Bug real confirmado por teste antes de codar (não é duplicação de
+  // dados, é PERDA de dados): a extração de descrição
+  // (`/Usado[^\n]*\n\s*([^\n]{20,})/i`) só funcionava quando a condição do
+  // anúncio era literalmente "Usado" - qualquer anúncio "Novo" ou
+  // "Seminovo" simplesmente perdia a descrição inteira (`detalhes: null`),
+  // mesmo quando havia texto livre útil ("Compressor novo na caixa, nota
+  // fiscal, garantia de fábrica"). Corrigido pra generalizar: pega o texto
+  // logo após o VALOR da condição que já foi capturado (seja ele qual for),
+  // não mais a palavra fixa "Usado".
+  //
+  // Outros ajustes: `marca` era sempre null (nunca tentava reconhecer
+  // marca conhecida no texto); `localizacao` saía no formato "Cidade, SP"
+  // (com vírgula) em vez do padrão "Cidade/SP" (com barra) usado por todos
+  // os outros coletores - inconsistência de formato que dificultaria
+  // qualquer agrupamento por local; `atributos_normalizados` nunca era
+  // populado (sem cidade/uf separados nem specs por categoria).
+  //
+  // OBS: reavaliei o achado anterior sobre "capacidade duplicada dentro da
+  // descrição em frase natural" (ex: "tanque de 5000 litros em bom
+  // estado") e decidi NÃO tentar remover o número da frase - diferente da
+  // nota mecânica "Capacidade: X" (que é 100% redundante), aqui o número
+  // faz parte de uma descrição real que a Marina provavelmente quer
+  // preservar por completo; truncar a frase pra tirar só o número traria
+  // mais prejuízo (texto cortado, sem sentido) do que benefício.
+  // ==========================================================================
+
+  // Extrai o texto livre da descrição, ancorado no VALOR real da condição
+  // encontrado (Usado/Novo/Seminovo/etc.), não mais na palavra fixa
+  // "Usado" - corrige a perda de descrição em anúncios "Novo"/"Seminovo".
+  function extrairDescricaoFacebook(texto, condicaoMatch) {
+    if (!condicaoMatch) return null;
+    const valorCondicao = condicaoMatch[1].trim();
+    const linhas = texto.split("\n").map((l) => l.trim());
+    const idxValor = linhas.findIndex((l) => l === valorCondicao);
+    if (idxValor === -1) return null;
+    for (let i = idxValor + 1; i < Math.min(idxValor + 6, linhas.length); i++) {
+      if (linhas[i] && linhas[i].length >= 20) return linhas[i];
+    }
+    return null;
+  }
+
+  // Dados comuns: preço, local (cidade/uf, normalizado pro formato
+  // "Cidade/UF" usado pelo resto do app - antes saía "Cidade, UF" com
+  // vírgula), categoria. Facebook Marketplace não tem leilão.
+  function extractCommonDataFacebook(tituloBruto, descricao, precoStr, localBruto) {
+    const preco = precoStr != null ? parsePrecoBR(precoStr) : null;
+    let localizacaoTexto = null, cidade = null, uf = null;
+    if (localBruto) {
+      const partes = localBruto.split(",");
+      cidade = (partes[0] || "").trim() || null;
+      uf = (partes[1] || "").trim() || null;
+      localizacaoTexto = cidade && uf ? `${cidade}/${uf}` : cidade;
+    }
+    const categoria = classificarCategoriaGenerica((tituloBruto || "") + " " + (descricao || ""));
+    return { preco, moeda: "BRL", localizacaoTexto, cidade, uf, categoria, tipoMercado: "Venda Direta" };
+  }
+
+  // Marca: hoje sempre saía null - passa a tentar reconhecer marca
+  // conhecida no título+descrição, igual o resto dos coletores já faz.
+  function normalizeEquipmentFacebook(tituloBruto, descricao) {
+    const textoBusca = (tituloBruto || "") + " " + (descricao || "");
+    const marcaEncontrada = MARCAS_CONHECIDAS.find(
+      (m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(textoBusca)
+    );
+    return { marca: marcaEncontrada ? normalizarMarca(marcaEncontrada) : null };
+  }
+
+  function validateObservationFacebook(item) {
+    if (!item) return false;
+    if (item.preco === null || item.preco === void 0 || item.preco <= 0) return false;
+    if (!item.modelo && !item.marca) return false;
+    return true;
+  }
+
   function parseFacebookMarketplaceLocal(rawText) {
     const texto = rawText || "";
     const precoMatch = texto.match(/R\$\s*([\d.,]+)/);
@@ -3901,22 +4101,31 @@
       else if (/usado/i.test(condicaoMatch[1])) estado = "Usado";
       else if (/novo/i.test(condicaoMatch[1])) estado = "Novo";
     }
-    const descMatch = texto.match(/Usado[^\n]*\n\s*([^\n]{20,})/i);
-    const descricao = descMatch ? descMatch[1].trim() : "";
-    const capMatch = ((titulo || "") + " " + descricao).match(/(\d+[\d.,]*)\s*(kg|toneladas?|l|litros)\b/i);
-    return [{
-      categoria: classificarCategoriaGenerica((titulo || "") + " " + descricao),
-      marca: null,
+    const descricao = extrairDescricaoFacebook(texto, condicaoMatch);
+    const capMatch = ((titulo || "") + " " + (descricao || "")).match(/(\d+[\d.,]*)\s*(kg|toneladas?|l|litros)\b/i);
+    const comuns = extractCommonDataFacebook(titulo, descricao, precoMatch[1], localMatch ? localMatch[1].trim() : null);
+    const norm = normalizeEquipmentFacebook(titulo, descricao);
+    const extras = extractCategorySpecsMFRural(comuns.categoria, (titulo || "") + " " + (descricao || ""));
+    const atributos_normalizados = limparAtributosExtras({
+      cidade: comuns.cidade,
+      uf: comuns.uf,
+      ...extras
+    });
+    const item = {
+      categoria: comuns.categoria,
+      marca: norm.marca,
       modelo: titulo,
       capacidade: capMatch ? `${capMatch[1]} ${capMatch[2]}` : null,
       detalhes: descricao || null,
       estado,
-      localizacao: localMatch ? localMatch[1].trim() : null,
-      preco: parsePrecoBR(precoMatch[1]),
-      moeda: "BRL",
+      localizacao: comuns.localizacaoTexto,
+      preco: comuns.preco,
+      moeda: comuns.moeda,
       canal: "Revenda/Terceiro",
-      tipo_mercado: "Venda Direta"
-    }];
+      tipo_mercado: comuns.tipoMercado,
+      atributos_normalizados
+    };
+    return [item].filter((it) => validateObservationFacebook(it));
   }
   // Lote/linha completa em formato brasileiro comum: título livre, itens em
   // bullets ("– equipamento" ou "- equipamento"), preço total solto em R$.
