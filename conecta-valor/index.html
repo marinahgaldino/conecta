@@ -1412,12 +1412,37 @@
     return { valor: ano, confianca: 0.75, original: String(ano) };
   }
 
+  // Bug real corrigido (achado com anúncio real do MF Rural: "CAT" casava
+  // dentro de "Categorias", virando marca "Caterpillar"): a checagem "só
+  // aceita se vier seguido de \b (fim de palavra) OU de uma letra
+  // maiúscula/dígito (colado num código de modelo, ex: BaumannGX50)" não
+  // funcionava, porque a flag "i" (case-insensitive) da regex faz [A-Z0-9]
+  // casar com QUALQUER letra minúscula também - ou seja, virava sempre
+  // verdadeiro, pra qualquer continuação. Reescrito sem depender de
+  // lookahead sensível a maiúscula dentro de uma regex "i": encontra a
+  // marca (comparação sem diferenciar caixa) e decide separadamente, à
+  // parte, olhando o texto ORIGINAL (sem uppercase, sem flag "i") se o que
+  // vem logo depois é: nada/fim de palavra (fronteira de verdade), ou um
+  // código de modelo de verdade (letras maiúsculas seguidas de dígito nos
+  // próximos caracteres, ex: "GX50"). Só marcas com nome no meio de uma
+  // palavra qualquer (ex: "CAT" em "Categorias") ficam de fora.
   function extrairFabricante(texto) {
-    var tUpper = texto.toUpperCase();
+    var t = texto || "";
     for (var i = 0; i < MARCAS_CONHECIDAS.length; i++) {
       var marca = MARCAS_CONHECIDAS[i];
-      if (new RegExp("\\b" + marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?=\\b|[A-Z0-9])", "i").test(tUpper)) {
-        return { valor: normalizarMarca(marca), confianca: 0.95, original: marca };
+      var escapada = marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      var re = new RegExp("\\b" + escapada, "gi");
+      var m;
+      while ((m = re.exec(t)) !== null) {
+        var fim = m.index + m[0].length;
+        var proximoChar = t[fim];
+        var resto = t.slice(fim, fim + 6);
+        var fronteiraDeVerdade = !proximoChar || !/[A-Za-zÀ-ÿ0-9]/.test(proximoChar);
+        var coladoEmCodigo = !fronteiraDeVerdade && /^[A-Z]{0,4}\d/.test(resto);
+        if (fronteiraDeVerdade || coladoEmCodigo) {
+          return { valor: normalizarMarca(marca), confianca: 0.95, original: marca };
+        }
+        re.lastIndex = m.index + 1;
       }
     }
     return null;
@@ -2844,7 +2869,7 @@
         break;
       }
     }
-    const tipoMatch = texto.match(/Tipo:\s*([^\n]+)/i);
+    const tipoMatch = texto.match(/\bTipo:\s*(Novo|Usado|Seminovo|Recondicionado)\b/i);
     const localMatch = texto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s(?:d[aeo]s?\s)?[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*\/\s*([A-Z]{2})\s*\n/);
     const estadoGeral = tipoMatch ? /nov[oa]/i.test(tipoMatch[1]) ? "Novo" : tipoMatch[1].trim() : null;
     const localizacaoGeral = localMatch ? `${localMatch[1]}/${localMatch[2]}` : null;
@@ -2927,10 +2952,29 @@
       if (encontrada) marcaFinal = encontrada;
     }
     if (!titulo || !precoMatch) return [];
-    const fatos = extrairFatosDeTexto(texto);
+    // Escopo restrito ao bloco de Descrição do próprio anúncio: usar o texto
+    // completo da página aqui contamina o resultado com conteúdo de
+    // "Produtos Relacionados" / filtros de categoria da barra lateral (ex:
+    // marca/material/combustível de outros anúncios listados na mesma página).
+    const textoEscopo = blocoDescricao ? blocoDescricao[1] : texto;
+    const fatos = extrairFatosDeTexto(textoEscopo);
     const norm = normalizeEquipmentMFRural(modeloBruto, categoriaFinal);
-    const extras = extractCategorySpecsMFRural(categoriaFinal, texto);
-    const capacidadeFinal = capacidadeMatch ? `at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}` : capacidadeRotuloMatch ? capacidadeRotuloMatch[1] : fatos.capacidade;
+    const extras = extractCategorySpecsMFRural(categoriaFinal, textoEscopo);
+    let capacidadeFinal;
+    if (capacidadeMatch) {
+      const brutoCapacidade = capacidadeMatch[0].trim();
+      if (/^at[ée]\b/i.test(brutoCapacidade)) {
+        capacidadeFinal = `at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}`;
+      } else if (/^de\s+/i.test(brutoCapacidade)) {
+        capacidadeFinal = brutoCapacidade;
+      } else {
+        capacidadeFinal = `${capacidadeMatch[1]} ${capacidadeMatch[2]}`;
+      }
+    } else if (capacidadeRotuloMatch) {
+      capacidadeFinal = capacidadeRotuloMatch[1];
+    } else {
+      capacidadeFinal = fatos.capacidade;
+    }
     const marca = (marcaFinal ? normalizarMarca(marcaFinal) : null) || norm.marca || fatos.marca;
     const atributos_normalizados = limparAtributosExtras({
       linha_modelo: norm.linha_modelo,
@@ -3041,7 +3085,16 @@
     const priceStandaloneRe = /^R\$\s*([\d.,]+)\s*$/;
     const JUNK_LINE_RE = /^(Ícone Cart[ãa]o de Cr[ée]dito.*|Em at[ée] \d+x no cart[ãa]o|\d+\s*lance(s)?\s*\|\s*Lance atual:|Lance atual:)$/i;
     const blocos = [];
-    let blockStart = 0;
+    // O bloco do 1º produto não tinha limite inferior - começava do
+    // topo absoluto da página, arrastando cabeçalho/breadcrumb e TODOS os
+    // filtros de categoria da barra lateral (Agronegócios, Construção
+    // Civil, Planta Industrial etc) junto com o texto do 1º produto real.
+    // Achado real: motobomba saiu com categoria="Planta Industrial" e
+    // finalidade="Pós/Granulados" - nada a ver, vieram do menu de
+    // filtros. A linha "N anúncios encontrados" sempre existe nessa
+    // página e marca o fim da barra de filtros / início da lista real.
+    const idxResultados = lines.findIndex((l) => /\d+\s*an[uú]ncios\s*encontrados/i.test(l));
+    let blockStart = idxResultados !== -1 ? idxResultados + 1 : 0;
     for (let i = 0; i < lines.length; i++) {
       const m = lines[i].match(priceStandaloneRe);
       if (!m) continue;
@@ -3112,7 +3165,10 @@
 
     // "ANO 2013" - depois disso normalmente só vem série/capacidade/potência,
     // então corta a frase aqui e guarda o resto só pra extrair os rótulos.
-    const partes = t.split(/,?\s*ANO\s+(\d{4})/i);
+    // Aceita ":" opcional antes do ano (achado real: título usava "ANO:
+    // 2012" - com ":", sem isso o corte não acontecia e SÉRIE/CAP/POT
+    // sobravam inteiros dentro do texto que ia pro modelo).
+    const partes = t.split(/,?\s*ANO:?\s+(\d{4})/i);
     if (partes.length > 1) {
       t = partes[0].trim();
       r.ano = partes[1];
@@ -3121,11 +3177,34 @@
     const serieMatch = tituloBruto.match(/S[ÉE]RIE\.?:?\s*([\w\-\/]+)/i);
     if (serieMatch) r.numero_serie = serieMatch[1];
 
-    const capacidadeMatch = tituloBruto.match(/CAP\.?\s*([\d.,]+\s*(?:M[³3]\/H|M[³3]|L\/MIN|KW))/i);
+    // Aceita ":" opcional depois de "CAP." (achado real: "CAP.: 2.500 L" -
+    // com ":", só o "." era aceito) e também litros/kg soltos (sem
+    // "/MIN"), não só M³/M³-H/KW.
+    const capacidadeMatch = tituloBruto.match(/CAP\.?:?\s*([\d.,]+\s*(?:M[³3]\/H|M[³3]|L\/MIN|L\b|KG\b|KW))/i);
     if (capacidadeMatch) r.capacidade_titulo = capacidadeMatch[1].trim();
 
-    const potMatch = tituloBruto.match(/POT\.?:?\s*([\d.,]+)\s*KW/i);
+    const potMatch = tituloBruto.match(/POT\.?:?\s*([\d.,]+)\s*KW\b/i);
     if (potMatch) r.potencia_kw_titulo = parseNumeroBR(potMatch[1]);
+    // POT. em CV (sem KW) - não vira campo estruturado aqui (a captura em
+    // CV já acontece por outro caminho, no fatos/extras do coletor), mas
+    // ainda precisa ser removido do texto que sobra pro modelo - senão
+    // ficava pela metade depois que só o número era cortado por outra
+    // limpeza genérica (achado real: modelo saía "POT , FREQUÊNCIA...").
+    const potCvMatch = !potMatch ? tituloBruto.match(/POT\.?:?\s*([\d.,]+)\s*CV\b/i) : null;
+
+    // Remove do texto que vira modelo os trechos já capturados em campo
+    // próprio (SÉRIE/CAP/POT) - antes só saíam do texto quando por acaso
+    // vinham depois de "ANO X" (cortados de tabela junto com o resto);
+    // sem "ANO" no título ou com "ANO:" não reconhecido, esses rótulos
+    // ficavam soltos e quebrados no modelo final.
+    if (serieMatch) t = t.replace(serieMatch[0], " ");
+    if (capacidadeMatch) t = t.replace(capacidadeMatch[0], " ");
+    if (potMatch) t = t.replace(potMatch[0], " ");
+    if (potCvMatch) t = t.replace(potCvMatch[0], " ");
+    // A remoção acima deixa 2 vírgulas soltas lado a lado quando o trecho
+    // removido tinha vírgula nos dois lados (", POT: 20 CV," -> ", ,") -
+    // funde numa só antes da limpeza final de pontuação.
+    t = t.replace(/,\s*,/g, ",");
 
     // Marca conhecida (mesma lista usada no resto do coletor). Corta do
     // início do texto até o fim do nome da marca - o que sobra depois é o
@@ -3170,8 +3249,28 @@
         break;
       }
     }
+    // Fallback: página real de item Mercado Balcão mostra só a cidade,
+    // sem "- UF" (ex: "Código 874\nRio de Janeiro"), igual ao que já
+    // acontecia na página de listagem (extractListingsSuperbid já tinha
+    // esse fallback, o item não tinha) - sem isso a localização nunca
+    // era capturada nesse formato, mesmo com a cidade bem visível.
+    if (!localizacao) {
+      const idxCodigo = linhas.findIndex((l) => /^C[óo]digo\s+\d+$/i.test(l));
+      if (idxCodigo !== -1 && linhas[idxCodigo + 1]) {
+        const candidata = linhas[idxCodigo + 1];
+        if (/^[A-Za-zÀ-ÿ\s.'-]+$/.test(candidata) && candidata.length > 2 && candidata.length < 40) {
+          localizacao = candidata;
+        }
+      }
+    }
     let titulo = null;
-    const idxAncora = linhas.findIndex((l) => /^Pra[çc]a\b|Lance inicial:|^\d+\s*visitas$/i.test(l));
+    // "^\d+\s*visitas$" exigia a linha inteira ser só "N visitas" - em
+    // anúncios Mercado Balcão (venda direta, sem leilão/Praça/Lance
+    // inicial:) a linha real vem colada com o resto dos contadores ("42
+    // visitas•0 participantes•0 propostas"), então a âncora nunca batia
+    // e o item inteiro (preço, dados, tudo) era descartado. Troquei "$"
+    // por "\b" pra aceitar a linha colada também.
+    const idxAncora = linhas.findIndex((l) => /^Pra[çc]a\b|Lance inicial:|^\d+\s*visitas\b/i.test(l));
     if (idxAncora > 0) {
       for (let i = idxAncora - 1; i >= Math.max(0, idxAncora - 6); i--) {
         if (linhas[i] && linhas[i].length > 5 && !/^(Compartilhe|Compartilhar|D[uú]vidas e contato|[ÍI]cone Cart[ãa]o de Cr[ée]dito|Use seu cart[ãa]o.*|Novidade!.*)$/i.test(linhas[i])) {
@@ -3420,7 +3519,8 @@
     machineseeker: "Machineseeker",
     linha_completa: "Linha completa (leil\xE3o europeu)",
     lote_br: "Lote/linha completa \u2014 v\xE1rios equipamentos (gr\xE1tis, sem IA)",
-    facebook: "Facebook Marketplace",
+    facebook: "Facebook Marketplace (item \xFAnico)",
+    facebook_lista: "Facebook Marketplace (lista de busca)",
     syx: "Central de Materiais / SYX (lista)",
     syx_item: "Central de Materiais / SYX (item \xFAnico)",
     made_in_china: "Made-in-China.com",
@@ -3440,12 +3540,22 @@
     if (/Lote\s+\d+/i.test(t) && /Lance inicial:/i.test(t) && /Pra[çc]a\s+[úu]nica|HABILITE-SE/i.test(t)) return "superbid_item";
     if (/Mercado Balc[ãa]o ou Compre J[áa]/i.test(t) && /Valor de venda/i.test(t) && /Superbid/i.test(t)) return "superbid_item";
     if (/Lote\s+\d+/i.test(t) && /Ícone Localiza[çc][ãa]o/i.test(t)) return "superbid";
+    // Facebook precisa ser checado ANTES do MF Rural: o regex genérico do MF
+    // Rural (linha abaixo) usa \s* entre o preço e a palavra de unidade, que
+    // também casa quebra de linha - numa listagem do Facebook, o preço de
+    // um card e o título do PRÓXIMO card (ex: "R$49.500\nMáquina de envase")
+    // batiam por acidente com esse regex e a página inteira era detectada
+    // como "mfrural" (achado real, testado com página de busca real).
+    // Página de listagem (resultados de busca) tem vários cards "Título no
+    // grupo Cidade, UF" - diferente da página de um único anúncio, que só
+    // tem "Condição"/"Entrou no Facebook em". Checa listagem primeiro.
+    if (/Resultados da pesquisa/i.test(t) || (t.match(/\sno grupo\s[A-ZÀ-Ÿ]/g) || []).length > 1) return "facebook_lista";
+    if (/facebook\.com\/marketplace|A localiza[çc][ãa]o é aproximada|Entrou no Facebook em/i.test(t)) return "facebook";
     if (/Fale com o anunciante|Denunciar an[uú]ncio/i.test(t) && /R\$\s*[\d.,]+\s*(Unidade|Kilo|Peça|Kg|Litro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote|Outra|Tonelada|Metro)/i.test(t) && /mfrural|MF Rural/i.test(t)) return "mfrural_item";
     if (/R\$\s*[\d.,]+\s*(Unidade|Kilo|Peça|Kg|Litro|M[áa]quina|Equipamento|Conjunto|Lote|Item|Pacote)/i.test(t)) return "mfrural";
     if (/^Valor:\s*R\$\s*[\d.,]+/im.test(t)) return "engarrafe";
     if (/Machineseeker|Designa[çc][ãa]o da m[áa]quina:|ID do an[uú]ncio:/i.test(t)) return "machineseeker";
     if (/DETALHES T[ÉE]CNICOS/i.test(t) && /DETALHES DAS M[ÁA]QUINAS|EQUIPAMENTOS/i.test(t)) return "linha_completa";
-    if (/facebook\.com\/marketplace|A localiza[çc][ãa]o é aproximada|Entrou no Facebook em/i.test(t)) return "facebook";
     if (/centraldemateriais\.com\.br|SYX/i.test(t) || /#[0-9a-zA-Z]+.*(?:Venda direta|Valor inicial|EM NEGOCIA)/i.test(t)) {
       const qtdCodigos = (t.match(/#[0-9a-zA-Z]+/g) || []).length;
       if (qtdCodigos > 1) return "syx";
@@ -3642,16 +3752,63 @@
   }
 
   function parseSYXLocal(rawText) {
-    const texto = rawText || "";
+    // Normaliza quebras de linha CRLF -> LF: sem isso, o \r sobra colado
+    // no fim da "primeira linha" usada abaixo pra detectar auto-duplicação
+    // de título, e a comparação de igualdade (metade === metade) falha
+    // silenciosamente (achado real, página SYX usa \r\n).
+    const texto = (rawText || "").replace(/\r\n/g, "\n");
     const subcategoriaMatch = texto.match(/Sucatas? de ([A-Za-zÀ-ÿ ]+?)(?:\s*\(|\n|·)/i);
     const contextoCompartilhado = subcategoriaMatch ? `Sucata de ${subcategoriaMatch[1].trim()}` : null;
-    const blocos = texto.split(/#[0-9a-zA-Z]+/).slice(1);
+    // O ID do produto ("#2436") é sempre numérico e vem colado direto no
+    // título sem separador ("#2436Grupo Gerador..."), e o título por sua
+    // vez costuma vir duplicado colado ("Grupo GeradorGrupo Gerador...").
+    // Quando o título começa com um número de quantidade ("02 Geradores...",
+    // "03 Compressores..."), um split ingênuo por dígitos (/#\d+/) não
+    // consegue distinguir os dígitos do ID dos dígitos do início do título
+    // e acaba comendo os dois juntos (achado real: "#400902 Geradores..."
+    // virava ID "400902", comendo o "02 " do título junto). Como IDs têm
+    // comprimento variável (3 a 7 dígitos nos dados reais), a forma
+    // confiável de separar é achar o MENOR prefixo numérico tal que o
+    // restante da primeira linha seja uma auto-duplicação exata
+    // (resto = X+X) - esse resto vira o título já limpo, sem duplicação.
+    const partesBrutas = texto.split("#").slice(1);
+    const blocos = partesBrutas.map((parte) => {
+      const nlIdx = parte.indexOf("\n");
+      const primeiraLinha = nlIdx === -1 ? parte : parte.slice(0, nlIdx);
+      const resto = nlIdx === -1 ? "" : parte.slice(nlIdx);
+      let corte = -1;
+      for (let s = 1; s <= Math.min(8, primeiraLinha.length); s++) {
+        const prefixo = primeiraLinha.slice(0, s);
+        if (!/^\d+$/.test(prefixo)) continue;
+        const sufixo = primeiraLinha.slice(s);
+        if (sufixo.length > 0 && sufixo.length % 2 === 0) {
+          const metade = sufixo.length / 2;
+          if (sufixo.slice(0, metade) === sufixo.slice(metade)) {
+            corte = s;
+            break;
+          }
+        }
+      }
+      const linhaLimpa = corte !== -1
+        ? primeiraLinha.slice(corte, corte + (primeiraLinha.length - corte) / 2)
+        : primeiraLinha.replace(/^\d+/, "");
+      return linhaLimpa + resto;
+    });
     const itens = [];
     blocos.forEach((bloco) => {
       const precoMatch = bloco.match(/R\$\s*([\d.,]+)\s*(Un|Lt|Ton|Kg)?/i);
       if (!precoMatch) return;
       const ehLeilao = /Encerra dia|Valor inicial/i.test(bloco);
-      const localMatch = bloco.match(/\n\s*([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*-\s*([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*\n/);
+      // Os grupos de captura usam [ \t] (não \s) entre as palavras do nome
+      // da cidade/estado: com \s, quando o título duplicado é uma única
+      // palavra maiúscula sem dígitos ("Exaustor"), a repetição gulosa
+      // atravessava a quebra de linha e colava o título dentro da
+      // localização (achado real: localizacao saía "Exaustor\nIndaiatuba"
+      // em vez de só "Indaiatuba"). Também aceita conector minúsculo
+      // (da/das/de/do/dos) entre as palavras - achado real: "São Caetano
+      // do Sul - São Paulo" não batia sem isso, pois "do" começa minúsculo.
+      const CIDADE_COM_CONECTOR_SYX = "[A-Z\xC0-\xDE][a-z\xE0-\xFF]+(?:[ \\t](?:d[aeo]s?[ \\t])?[A-Z\xC0-\xDE][a-z\xE0-\xFF]+)*";
+      const localMatch = bloco.match(new RegExp(`\\n\\s*(${CIDADE_COM_CONECTOR_SYX})[ \\t]*-[ \\t]*(${CIDADE_COM_CONECTOR_SYX})[ \\t]*\\n`));
       const unidadePreco = normalizarUnidadePrecoSYX(precoMatch[2]);
       const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
       const linhasUteis = linhas.filter((l) => !/^(Venda direta|Encerra dia|Valor inicial|EM NEGOCIA[ÇC][ÃA]O)/i.test(l));
@@ -3663,17 +3820,32 @@
         titulo = l;
         break;
       }
+      // A primeira linha do bloco às vezes vem com o título colado duas
+      // vezes sem separador (achado real: "02 Geradores a Gasolina 8KVA
+      // Kanpor GERA802 Geradores a Gasolina 8KVA Kanpor GERA8") - detecta
+      // auto-duplicação exata (string == metade+metade) e usa só a metade.
+      if (titulo && titulo.length % 2 === 0) {
+        const metade = titulo.length / 2;
+        if (titulo.slice(0, metade) === titulo.slice(metade)) {
+          titulo = titulo.slice(0, metade);
+        }
+      }
       const norm = normalizeEquipmentSYX((titulo || "") + " " + bloco);
+      // A listagem mostra o estado por extenso ("Indaiatuba - São Paulo"),
+      // não a UF abreviada - sem converter, localizacao saía "Cidade/São
+      // Paulo" em vez do padrão "Cidade/SP" usado pelo resto do app
+      // (mesmo mapa ESTADOS_BR já usado no Mercado Livre).
+      const ufSigla = localMatch ? ESTADOS_BR[localMatch[2].trim().toLowerCase()] || localMatch[2].trim() : null;
       const atributos_normalizados = limparAtributosExtras({
         unidade_preco: unidadePreco,
         cidade: localMatch ? localMatch[1].trim() : null,
-        uf: localMatch ? localMatch[2].trim() : null
+        uf: ufSigla
       });
       const item = {
         categoria: classificarCategoriaGenerica(titulo || bloco) || (contextoCompartilhado ? "Sucata" : null),
         modelo: titulo || contextoCompartilhado || null,
         material: norm.material,
-        localizacao: localMatch ? `${localMatch[1].trim()}/${localMatch[2].trim()}` : null,
+        localizacao: localMatch ? `${localMatch[1].trim()}/${ufSigla}` : null,
         preco: parsePrecoBR(precoMatch[1]),
         moeda: "BRL",
         estado: "Usado",
@@ -3801,9 +3973,18 @@
   // {cidade, uf}. Mesma lógica de extrairLocalizacaoGenerica, mas retornando
   // as partes separadas (pra alimentar atributos_normalizados.cidade/uf),
   // não só a string combinada.
+  // Nome de cidade com conector minúsculo no meio (ex: "São Caetano DO
+  // SUL", "Presidente Prudente" não precisa, mas "Vila Velha" nem "Santo
+  // André" também não - o caso real é "do/da/dos/das" tipo "Caetano do
+  // Sul", "Coxim do Sul" etc). Sem isso, a cadeia de palavras maiúsculas
+  // quebra no conector minúsculo e captura só o pedaço final antes da UF
+  // (achado real: OLX concatenou bairro+cidade sem espaço - "São
+  // JoséSão Caetano do Sul, SP" - e sem o conector o resultado saía
+  // "Sul/SP" em vez de "São Caetano do Sul/SP").
+  var CONECTOR_CIDADE_RE_PARTE = "(?:\\s(?:d[aeo]s?\\s)?[A-Z\xC0-\xDE\xC7][a-z\xE0-\xFF]+)*";
   function separarCidadeUfOLX(bruto) {
     if (!bruto) return { texto: null, cidade: null, uf: null };
-    const comVirgulaOuTraco = bruto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*[-,]\s*([A-Z]{2})\b/);
+    const comVirgulaOuTraco = bruto.match(new RegExp(`([A-Z\xC0-\xDE\xC7][a-z\xE0-\xFF]+${CONECTOR_CIDADE_RE_PARTE})\\s*[-,]\\s*([A-Z]{2})\\b`));
     if (comVirgulaOuTraco) {
       return { texto: `${comVirgulaOuTraco[1]}/${comVirgulaOuTraco[2]}`, cidade: comVirgulaOuTraco[1].trim(), uf: comVirgulaOuTraco[2].trim() };
     }
@@ -3814,7 +3995,7 @@
 
   function extrairLocalizacaoGenerica(bruto) {
     if (!bruto) return null;
-    const comVirgulaOuTraco = bruto.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*[-,]\s*([A-Z]{2})\b/);
+    const comVirgulaOuTraco = bruto.match(new RegExp(`([A-Z\xC0-\xDE\xC7][a-z\xE0-\xFF]+${CONECTOR_CIDADE_RE_PARTE})\\s*[-,]\\s*([A-Z]{2})\\b`));
     if (comVirgulaOuTraco) return `${comVirgulaOuTraco[1]}/${comVirgulaOuTraco[2]}`;
     const grudado = bruto.match(new RegExp(`([A-Z\xC0-Ÿ][a-z\xE0-\xFF]+)(${UFS_BR.join("|")})\\b`));
     return grudado ? `${grudado[1]}/${grudado[2]}` : null;
@@ -4011,6 +4192,7 @@
   }
   function parseMercadoLivreItemLocal(rawText) {
     const texto = rawText || "";
+    const linhas = texto.split("\n").map((l) => l.trim());
     const tituloMatch = texto.match(/^([^\n]+)\n\1\n/m) || texto.match(/^([^\n]+)\n\1$/m);
     let titulo = tituloMatch ? tituloMatch[1].trim() : null;
     if (!titulo) {
@@ -4025,13 +4207,59 @@
     if (!titulo || !precoInfo) return [];
     const marcaMatch = texto.match(/Marca\s*\n\s*([^\n]+)/i);
     const modeloMatch = texto.match(/Modelo\s*\n\s*([^\n]+)/i);
-    const potenciaMatch = texto.match(/Pot[êe]ncia\s*\n\s*([\d.,]+)\s*W/i);
+    const potenciaMatch = texto.match(/Pot[êe]ncia\s*\n\s*([\d.,]+)\s*W\b/i);
+    // A "Ficha Técnica" real usa CV (não W) e tem outros campos que nunca
+    // eram lidos (Tensão/Carcaça/Número de polos) - página real testada:
+    // "Potência: 5CV", "Tensão: 380/660V", "Carcaça: 100L", "Número de
+    // polos: 4 polos". Sem isso esses campos saíam sempre null.
+    const potenciaCvMatch = texto.match(/Pot[êe]ncia:?\s*\n?\s*([\d.,]+)\s*CV\b/i);
+    const tensaoMatch = texto.match(/Tens[ãa]o:?\s*\n?\s*([\d/]+\s*V)\b/i);
+    const carcacaMatch = texto.match(/Carca[çc]a:?\s*\n?\s*([^\n]+)/i);
+    const polosMatch = texto.match(/N[uú]mero de polos:?\s*\n?\s*(\d+)\s*polos/i);
     const condicaoMatch = texto.match(/\b(Novo|Usado)\s*\|/i) || texto.match(/^\s*(Novo|Usado)\s*$/im);
+    // Localização real não usa UF abreviada nem "Cidade/UF" - vem como
+    // "Cidade, Estado por extenso" numa linha isolada (ex: "Caxias Do
+    // Sul, Rio Grande Do Sul"). Sem isso a localização nunca era capturada.
+    let localizacao = null;
+    const localizacaoLinha = linhas.find((l) => {
+      const m = l.match(/^([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ÿ]?[a-zà-ÿ]*)*),\s*([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ÿ]?[a-zà-ÿ]*)*)$/);
+      return m && !!ESTADOS_BR[m[2].trim().toLowerCase()];
+    });
+    if (localizacaoLinha) {
+      const m = localizacaoLinha.match(/^(.+?),\s*(.+)$/);
+      localizacao = `${m[1].trim()}/${ESTADOS_BR[m[2].trim().toLowerCase()]}`;
+    }
+    // Descrição real (texto livre logo após o rótulo "Descrição") nunca
+    // era capturada - parava sempre em branco ou nos próximos rótulos
+    // estruturados (Ficha Técnica/Indicação de Uso/Observações).
+    let detalhes = null;
+    // Usa a ÚLTIMA ocorrência de "Descrição", não a primeira - o menu de
+    // "Atalhos do teclado" no topo da página também tem um item chamado
+    // "Descrição" (atalho "D"), e pegar a primeira capturava esse lixo de
+    // navegação em vez da descrição real do produto.
+    let idxDescricao = -1;
+    linhas.forEach((l, i) => { if (/^Descri[çc][ãa]o$/i.test(l)) idxDescricao = i; });
+    if (idxDescricao !== -1) {
+      const partes = [];
+      for (let i = idxDescricao + 1; i < Math.min(idxDescricao + 8, linhas.length); i++) {
+        const l = linhas[i];
+        if (!l) break;
+        if (/^(Ficha T[ée]cnica|Indica[çc][ãa]o de Uso|Observa[çc][õo]es|Ver descri[çc][ãa]o completa)$/i.test(l)) break;
+        partes.push(l);
+      }
+      detalhes = partes.length ? partes.join(" ").trim() : null;
+    }
     return [{
       categoria: classificarCategoriaGenerica(titulo),
       marca: marcaMatch ? marcaMatch[1].trim() : null,
       modelo: modeloMatch ? modeloMatch[1].trim() : titulo,
+      potencia_cv: potenciaCvMatch ? Number(potenciaCvMatch[1].replace(",", ".")) : null,
       potencia_kw: potenciaMatch ? Number(potenciaMatch[1].replace(",", ".")) / 1e3 : null,
+      tensao: tensaoMatch ? tensaoMatch[1].trim() : null,
+      carcaca: carcacaMatch ? carcacaMatch[1].trim() : null,
+      polaridade: polosMatch ? `${polosMatch[1]} polos` : null,
+      localizacao,
+      detalhes,
       estado: condicaoMatch ? /novo/i.test(condicaoMatch[1]) ? "Novo" : "Usado" : "Novo",
       preco: precoInfo.valor,
       moeda: "BRL",
@@ -4042,7 +4270,12 @@
   function parseMercadoLivreListaLocal(rawText) {
     const texto = rawText || "";
     const itens = [];
-    const regexTitulo = /^([^\n]{10,}?)\n\1$/gm;
+    // Selo promocional ("OFERTA IMPERDÍVEL", "ÚLTIMAS 4" etc) aparece só na
+    // 1ª das duas linhas de título (alt-text da imagem), não na 2ª (texto
+    // visível do card) - sem o grupo opcional abaixo, as duas linhas
+    // deixam de ser idênticas e o card inteiro era descartado (achado
+    // real: 2 de 6 cards de uma página real perdidos por esse motivo).
+    const regexTitulo = /^([^\n]{10,}?)(?:\s+[A-ZÀ-Ÿ0-9][A-ZÀ-Ÿ0-9\s]{2,40})?\n\1$/gm;
     const anchors = [...texto.matchAll(regexTitulo)];
     anchors.forEach((m, idx) => {
       const inicioBusca = m.index + m[0].length;
@@ -4065,32 +4298,79 @@
   function parseSYXItemLocal(rawText) {
     const texto = rawText || "";
     const breadcrumbMatch = texto.match(/(Sucatas e Recicláveis|Sobras Industriais|Infraestrutura Industrial|Equipamentos[^>]*)\s*>\s*([^>]+?)\s*>\s*([A-Z]{2})\s*>\s*([^>]+?)\s*>\s*([^\n·]+)/i);
+    if (breadcrumbMatch) {
+      const precoMatch2 = texto.match(/R\$\s*([\d.,]+)\s*(Un|Lt|Ton|Kg)?/i);
+      const descMatch = texto.match(/(?:Detalhes|Observa[çc][õo]es)\s*[·:]?\s*\n?\s*([^\n]{15,400})/i);
+      const titulo2 = breadcrumbMatch[5].trim();
+      const subcategoria = breadcrumbMatch[2].trim();
+      const uf2 = breadcrumbMatch[3].trim();
+      const cidade2 = breadcrumbMatch[4].trim();
+      const unidadePreco2 = precoMatch2 ? normalizarUnidadePrecoSYX(precoMatch2[2]) : null;
+      const norm2 = normalizeEquipmentSYX((titulo2 || "") + " " + texto);
+      const item2 = {
+        categoria: classificarCategoriaGenerica(texto + " " + (titulo2 || "")) || "Sucata",
+        modelo: titulo2 || subcategoria || "Sucata",
+        material: norm2.material,
+        localizacao: cidade2 && uf2 ? `${cidade2}/${uf2}` : uf2 || null,
+        detalhes: descMatch ? descMatch[1].trim() : subcategoria ? `Subcategoria: ${subcategoria}` : null,
+        preco: precoMatch2 ? parsePrecoBR(precoMatch2[1]) : null,
+        moeda: "BRL",
+        estado: "Usado",
+        canal: "Revenda/Terceiro",
+        tipo_mercado: "Venda Direta",
+        atributos_normalizados: limparAtributosExtras({ unidade_preco: unidadePreco2, cidade: cidade2, uf: uf2, subcategoria })
+      };
+      return [item2].filter((it) => validateObservationSYX(it));
+    }
+    // Formato real testado (página de item da categoria "Infraestrutura
+    // Industrial") NÃO tem o breadcrumb "X > Y > UF > Z > Título" acima -
+    // usa título solto + "ID / #NNNN" + localização "Cidade - UF" +
+    // "Informações complementares" com rótulos (Marca/Modelo-SKU/
+    // Potência/Voltagem/Rotação) + "PRODUTO NOVO"/"PRODUTO USADO" no
+    // texto livre. O parser antigo só sabia ler o formato de breadcrumb e
+    // devolvia tudo null (modelo/localização/marca) pra esse formato.
+    const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
+    const idxProdutoEm = linhas.findIndex((l) => /^PRODUTO EM$/i.test(l));
+    const titulo = idxProdutoEm > 0 ? linhas[idxProdutoEm - 1] : linhas[0] || null;
     const precoMatch = texto.match(/R\$\s*([\d.,]+)\s*(Un|Lt|Ton|Kg)?/i);
-    const descMatch = texto.match(/(?:Detalhes|Observa[çc][õo]es)\s*[·:]?\s*\n?\s*([^\n]{15,400})/i);
-    const titulo = breadcrumbMatch ? breadcrumbMatch[5].trim() : null;
-    const subcategoria = breadcrumbMatch ? breadcrumbMatch[2].trim() : null;
-    const uf = breadcrumbMatch ? breadcrumbMatch[3].trim() : null;
-    const cidade = breadcrumbMatch ? breadcrumbMatch[4].trim() : null;
-    const unidadePreco = precoMatch ? normalizarUnidadePrecoSYX(precoMatch[2]) : null;
-    const norm = normalizeEquipmentSYX((titulo || "") + " " + texto);
-    const atributos_normalizados = limparAtributosExtras({
-      unidade_preco: unidadePreco,
-      cidade,
-      uf,
-      subcategoria
-    });
+    if (!titulo || !precoMatch) return [];
+    const idMatch = texto.match(/\bID\s*\n\s*#(\w+)/i);
+    const linhaLocal = linhas.find((l) => /^\[?[A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s(?:d[aeo]s?\s)?[A-ZÀ-Ÿ][a-zà-ÿ]+)*\s*-\s*[A-Z]{2}\]?/.test(l));
+    const localMatch = linhaLocal ? linhaLocal.match(/([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s(?:d[aeo]s?\s)?[A-ZÀ-Ÿ][a-zà-ÿ]+)*)\s*-\s*([A-Z]{2})\b/) : null;
+    const ehLeilao = /Encerra dia|Valor inicial/i.test(texto);
+    const marcaMatch = texto.match(/\bMarca:?\s*\n?\s*([^\n]+)/i);
+    const modeloSkuMatch = texto.match(/Modelo\s*\/\s*SKU:?\s*\n?\s*([^\n]+)/i) || texto.match(/\bModelo:?\s*\n?\s*([^\n]+)/i);
+    const potenciaKwMatch = texto.match(/Pot[êe]ncia:?\s*\n?\s*([\d.,]+)\s*KW\b/i);
+    const tensaoMatch = texto.match(/Voltagem:?\s*\n?\s*([^\n]+)/i);
+    const rpmMatch = texto.match(/Rota[çc][ãa]o:?\s*\n?\s*([\d.,]+)\s*RPM/i);
+    const condicaoMatch = texto.match(/PRODUTO\s+(NOVO|USADO)\b/i);
+    const categoria = classificarCategoriaGenerica(titulo) || "Sucata";
+    const norm = normalizeEquipmentSYX(titulo + " " + texto);
+    const extras = extractCategorySpecsMFRural(categoria, texto);
+    const unidadePreco = normalizarUnidadePrecoSYX(precoMatch[2]);
+    const localizacao = localMatch ? `${localMatch[1].trim()}/${localMatch[2].trim()}` : null;
     const item = {
-      categoria: classificarCategoriaGenerica(texto + " " + (titulo || "")) || "Sucata",
-      modelo: titulo || subcategoria || "Sucata",
+      categoria,
+      marca: marcaMatch ? normalizarMarca(marcaMatch[1].trim()) : null,
+      modelo: modeloSkuMatch ? modeloSkuMatch[1].trim() : titulo,
       material: norm.material,
-      localizacao: cidade && uf ? `${cidade}/${uf}` : uf || null,
-      detalhes: descMatch ? descMatch[1].trim() : subcategoria ? `Subcategoria: ${subcategoria}` : null,
-      preco: precoMatch ? parsePrecoBR(precoMatch[1]) : null,
+      potencia_kw: potenciaKwMatch ? parseNumeroBR(potenciaKwMatch[1]) : null,
+      tensao: tensaoMatch ? tensaoMatch[1].trim() : null,
+      rpm: rpmMatch ? Number(rpmMatch[1].replace(/\./g, "")) : null,
+      localizacao,
+      detalhes: null,
+      preco: parsePrecoBR(precoMatch[1]),
       moeda: "BRL",
-      estado: "Usado",
+      estado: condicaoMatch ? /novo/i.test(condicaoMatch[1]) ? "Novo" : "Usado" : "Usado",
       canal: "Revenda/Terceiro",
-      tipo_mercado: "Venda Direta",
-      atributos_normalizados
+      tipo_mercado: ehLeilao ? "Leil\xE3o" : "Venda Direta",
+      atributos_normalizados: limparAtributosExtras({
+        unidade_preco: unidadePreco,
+        identificador: idMatch ? `ID #${idMatch[1]}` : null,
+        cidade: localMatch ? localMatch[1].trim() : null,
+        uf: localMatch ? localMatch[2].trim() : null,
+        ...extras
+      })
     };
     return [item].filter((it) => validateObservationSYX(it));
   }
@@ -4133,10 +4413,20 @@
     const linhas = texto.split("\n").map((l) => l.trim());
     const idxValor = linhas.findIndex((l) => l === valorCondicao);
     if (idxValor === -1) return null;
-    for (let i = idxValor + 1; i < Math.min(idxValor + 6, linhas.length); i++) {
-      if (linhas[i] && linhas[i].length >= 20) return linhas[i];
+    // A descrição inteira vai da linha seguinte à condição até a linha que
+    // repete a localização ("...· A localização é aproximada") ou até
+    // "Informações do vendedor" - o que vier primeiro. Antes só pegava a
+    // PRIMEIRA linha com >=20 caracteres e parava, perdendo os bullets
+    // (capacidade, bicos, esteira, mesa acumuladora) e o resto do texto
+    // (achado real: "Capacidade de até 2.000 litros/hora" ficava de fora
+    // e a capacidade saía null mesmo constando no anúncio).
+    const partes = [];
+    for (let i = idxValor + 1; i < linhas.length; i++) {
+      const l = linhas[i];
+      if (/localiza[çc][ãa]o é aproximada/i.test(l) || /^Informa[çc][õo]es do vendedor$/i.test(l)) break;
+      if (l) partes.push(l);
     }
-    return null;
+    return partes.length ? partes.join(" ") : null;
   }
 
   // Dados comuns: preço, local (cidade/uf, normalizado pro formato
@@ -4179,7 +4469,11 @@
     const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
     const idxPreco = linhas.findIndex((l) => /R\$\s*[\d.,]+/.test(l));
     const titulo = idxPreco > 0 ? linhas[idxPreco - 1] : null;
-    const localMatch = texto.match(/em\s+\[?([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s[A-ZÀ-Ÿ][a-zà-ÿ]+)*,\s*[A-Z]{2})\]?/);
+    // Nome de cidade com elisão/apóstrofo ("Santa Bárbara d'Oeste") não
+    // batia: "d" minúsculo colado direto no apóstrofo + palavra maiúscula
+    // quebrava a cadeia de repetição (achado real: localizacao saía null).
+    // Aceita "d'"/"d’" colado (sem espaço) OU conector com espaço (do/da/dos/das/de).
+    const localMatch = texto.match(/em\s+\[?([A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s(?:d['’]|d[aeo]s?\s)?[A-ZÀ-Ÿ][a-zà-ÿ]+)*,\s*[A-Z]{2})\]?/);
     const condicaoMatch = texto.match(/Condi[çc][ãa]o\s*\n\s*([^\n]+)/i);
     let estado = null;
     if (condicaoMatch) {
@@ -4212,6 +4506,81 @@
       atributos_normalizados
     };
     return [item].filter((it) => validateObservationFacebook(it));
+  }
+  // Página de listagem (resultados de busca) do Facebook Marketplace: cada
+  // card real vem como uma linha combinada "Título no grupo Cidade, UF"
+  // (usada como aria-label), seguida de 1 ou 2 linhas de preço (atual e,
+  // se houver promoção, o valor original riscado - sempre nessa ordem: o
+  // atual primeiro), depois o título limpo repetido e a localização limpa
+  // repetida. Não existia parser de lista pro Facebook antes - a página
+  // inteira de busca caía no parser de item único, que lia só o primeiro
+  // preço da página inteira e descartava os outros anúncios (achado real:
+  // uma busca com ~35 resultados retornava só 1 item). A listagem não tem
+  // a descrição completa do anúncio (só existe na página do item), então
+  // detalhes/capacidade sempre saem null aqui - esperado, não é bug.
+  // Itens sem preço ou sem marca/modelo identificável são descartados
+  // (mesma regra de validateObservationFacebook), a pedido da Marina: "às
+  // vezes tem ausência de muita info, podemos nem considerar alguns
+  // anúncios que não tiver o mínimo de info".
+  var CIDADE_COM_CONECTOR_FACEBOOK = "[A-Z\xC0-\xDE][a-z\xE0-\xFF]+(?:\\s(?:d['’]|d[aeo]s?\\s)?[A-Z\xC0-\xDE][a-z\xE0-\xFF]+)*";
+  function parseFacebookMarketplaceListaLocal(rawText) {
+    const texto = rawText || "";
+    const linhas = texto.split("\n").map((l) => l.trim()).filter(Boolean);
+    const REGEX_CARD_INICIO = new RegExp(`^(.+?)\\s+no grupo\\s+(${CIDADE_COM_CONECTOR_FACEBOOK},\\s*[A-Z]{2})$`);
+    const indices = [];
+    linhas.forEach((l, i) => {
+      if (REGEX_CARD_INICIO.test(l)) indices.push(i);
+    });
+    const itens = [];
+    indices.forEach((startIdx, idx) => {
+      const endIdx = idx + 1 < indices.length ? indices[idx + 1] : linhas.length;
+      const blocoLinhas = linhas.slice(startIdx, endIdx);
+      const cabecalho = blocoLinhas[0].match(REGEX_CARD_INICIO);
+      if (!cabecalho) return;
+      const titulo = cabecalho[1].trim();
+      const localBruto = cabecalho[2].trim();
+      let precoStr = null;
+      for (let i = 1; i < blocoLinhas.length; i++) {
+        const pm = blocoLinhas[i].match(/^R\$\s*([\d.,]+)$/);
+        if (pm) {
+          precoStr = pm[1];
+          break;
+        }
+        if (!/^R\$/.test(blocoLinhas[i])) break;
+      }
+      const comuns = extractCommonDataFacebook(titulo, null, precoStr, localBruto);
+      const norm = normalizeEquipmentFacebook(titulo, null);
+      const extras = extractCategorySpecsMFRural(comuns.categoria, titulo || "");
+      const atributos_normalizados = limparAtributosExtras({
+        cidade: comuns.cidade,
+        uf: comuns.uf,
+        ...extras
+      });
+      const item = {
+        categoria: comuns.categoria,
+        marca: norm.marca,
+        modelo: titulo,
+        capacidade: null,
+        detalhes: null,
+        estado: null,
+        localizacao: comuns.localizacaoTexto,
+        preco: comuns.preco,
+        moeda: comuns.moeda,
+        canal: "Revenda/Terceiro",
+        tipo_mercado: comuns.tipoMercado,
+        atributos_normalizados
+      };
+      itens.push(item);
+    });
+    // Valida DEPOIS de aplicar sanitizeResult (que só roda globalmente
+    // depois que a função retorna) - sem isso, um card cujo título não tem
+    // dígito e não tem marca reconhecida passa na validação aqui (modelo
+    // ainda é o título bruto) e só vira null mais tarde, no sanitize, já
+    // fora do alcance deste filtro - o item incompleto ficava no resultado
+    // final mesmo sem nenhuma info que identifique o equipamento. Reaplicar
+    // sanitizeResult depois (no pipeline externo) é inofensivo/idempotente.
+    // A pedido da Marina: tudo bem descartar anúncio sem o mínimo de info.
+    return itens.map(sanitizeResult).filter((it) => validateObservationFacebook(it));
   }
   // Lote/linha completa em formato brasileiro comum: título livre, itens em
   // bullets ("– equipamento" ou "- equipamento"), preço total solto em R$.
@@ -9017,6 +9386,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           items = parseLoteBRLocal(manualText);
         } else if (formatoPagina === "facebook") {
           items = parseFacebookMarketplaceLocal(manualText);
+        } else if (formatoPagina === "facebook_lista") {
+          items = parseFacebookMarketplaceListaLocal(manualText);
         } else if (formatoPagina === "syx") {
           items = parseSYXLocal(manualText);
         } else if (formatoPagina === "syx_item") {
