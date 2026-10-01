@@ -7653,7 +7653,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         ),
         /* @__PURE__ */ React.createElement("p", { className: "resultado-metodo" }, fraseMetodo),
         /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-meta" },
-          confiancaCliente && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + confiancaCliente }, t("Confian\xE7a ", "Confidence "), confiancaCliente === "alta" ? t("alta", "high") : confiancaCliente === "m\xE9dia" ? t("m\xE9dia", "medium") : t("baixa", "low")),
+          isAdmin && confiancaCliente && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + confiancaCliente }, t("Confian\xE7a ", "Confidence "), confiancaCliente === "alta" ? t("alta", "high") : confiancaCliente === "m\xE9dia" ? t("m\xE9dia", "medium") : t("baixa", "low")),
           equipInfo && /* @__PURE__ */ React.createElement("span", { className: "chip liquidez-" + equipInfo.liquidez.toLowerCase() }, t("Liquidez: ", "Liquidity: "), equipInfo.liquidez),
         )
       ),
@@ -7816,7 +7816,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Se for a leil\xE3o (venda mais r\xE1pida, valor tende a ser menor)", "If it's an auction (faster sale, value tends to be lower)")),
             /* @__PURE__ */ React.createElement("span", { className: "tag-value leilao" }, formatBRL(result.leilao_min), " \u2013 ", formatBRL(result.leilao_max))
           ),
-          result.resumo && /* @__PURE__ */ React.createElement("p", { className: "tag-resumo" }, limparResumo(result.resumo))
+          result.resumo && !/^Estimativa baseada em \d+ observa/i.test(limparResumo(result.resumo)) && /* @__PURE__ */ React.createElement("p", { className: "tag-resumo" }, limparResumo(result.resumo))
         ),
 
         // ===== Comparáveis Premium (V19.1) =====
@@ -7897,7 +7897,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           ))
         ))
       ),
-      /* @__PURE__ */ React.createElement("p", { className: "disclaimer" }, t("Estimativa com base em observa\xE7\xF5es de mercado p\xFAblicas. Use como refer\xEAncia, n\xE3o como laudo de avalia\xE7\xE3o.", "Estimate based on public market observations. Use as a reference, not as a formal appraisal report."))
+      /* @__PURE__ */ React.createElement("p", { className: "disclaimer" }, t("Valor de refer\xEAncia de mercado. N\xE3o substitui laudo de avalia\xE7\xE3o.", "Market reference value. Does not replace a formal appraisal report."))
     );
   }
   function MarketplaceAtivosFullScreen(props) {
@@ -12805,6 +12805,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .resultado-premium-faixa-track { background: #ECEAE4; }
         .resultado-premium-faixa-marcador { border-color: #FFFFFF; }
         .resultado-premium-meta { border-top: 1px solid #EFEDE6; padding-top: 0.9rem; }
+        .resultado-premium-meta:empty { display: none; }
         .resultado-premium-meta-item { color: #4B5058; }
         .resultado-premium .badge-instantaneo { background: #F3F2EE; color: #4B5058; }
         .resultado-premium-valor-label { margin-top: 1rem; }
