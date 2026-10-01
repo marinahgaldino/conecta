@@ -5650,6 +5650,36 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     tipo_combustivel: "Tipo de combust\xEDvel",
     horas_uso: "Horas de uso",
   };
+  // Rótulo legível pra qualquer atributo do SCHEMA_FUNCAO que não tenha
+  // rótulo manual em LABEL_ATRIBUTO_RANKING (ex: "distancia_pontas_mm" ->
+  // "Distância entre pontas (mm)"). Só traduz o próprio nome do campo -
+  // não inventa significado.
+  var UNIDADES_ATRIBUTO = { mm: "mm", m: "m", kg: "kg", ton: "t", l: "L", lh: "L/h", lmin: "L/min", bar: "bar", cv: "CV", kw: "kW", w: "W", v: "V", a: "A", kv: "kV", kva: "kVA", c: "\xB0C", nm: "N\xB7m", n: "N", m3h: "m\xB3/h", m3min: "m\xB3/min", m3: "m\xB3", bph: "unid/h", kgh: "kg/h", g: "g", pol: "pol", mca: "mca", m2h: "m\xB2/h", h: "h", m2: "m\xB2", km: "km", ml: "mL", tr: "TR", btu: "BTU", toneladas: "t" };
+  var PALAVRAS_ATRIBUTO = { distancia: "dist\xE2ncia", diametro: "di\xE2metro", admissivel: "admiss\xEDvel", pressao: "press\xE3o", vazao: "vaz\xE3o", potencia: "pot\xEAncia", tensao: "tens\xE3o", num: "n\xBA de", numero: "n\xBA de", elevacao: "eleva\xE7\xE3o", combustivel: "combust\xEDvel", max: "m\xE1x.", min: "m\xEDn.", area: "\xE1rea", vao: "v\xE3o", frequencia: "frequ\xEAncia", relacao: "rela\xE7\xE3o", reducao: "redu\xE7\xE3o", precisao: "precis\xE3o", dimensoes: "dimens\xF5es", forca: "for\xE7a", onda: "onda", resfriamento: "resfriamento", descricao: "descri\xE7\xE3o", peca: "pe\xE7a", maquina: "m\xE1quina", maquinas: "m\xE1quinas", compativel: "compat\xEDvel", localizacao: "localiza\xE7\xE3o", construida: "constru\xEDda", pe: "p\xE9", construcao: "constru\xE7\xE3o", primaria: "prim\xE1ria", secundaria: "secund\xE1ria", saidas: "sa\xEDdas", saida: "sa\xEDda", comunicacao: "comunica\xE7\xE3o", medicao: "medi\xE7\xE3o", nivel: "n\xEDvel", automacao: "automa\xE7\xE3o", rotulo: "r\xF3tulo", agitacao: "agita\xE7\xE3o", producao: "produ\xE7\xE3o", injecao: "inje\xE7\xE3o", certificacao: "certifica\xE7\xE3o", cnc: "CNC", tuv: "T\xDCV", x: "X", y: "Y", z: "Z" };
+  // Primeira palavra que pede "de" antes do complemento (ex: "Tipo de resfriamento")
+  var ATRIBUTO_PEDE_DE = /^(tipo|capacidade|comprimento|largura|for\xE7a|faixa|press\xE3o|temperatura|pot\xEAncia|altura|n\xEDvel|protocolo|ano|descri\xE7\xE3o|corrente|tens\xE3o|vaz\xE3o)$/;
+  var ATRIBUTO_SEM_DE = /^(total|m\xE1x\.|m\xEDn\.|X|Y|Z|constru\xEDda|ou|prim\xE1ria|secund\xE1ria|nominal|admiss\xEDvel|entre)$/;
+  function rotuloAtributo(attr) {
+    if (!attr) return "";
+    const tokens = String(attr).replace(/^distancia_pontas/, "distancia_entre_pontas").split("_");
+    const palavras = [];
+    const unidades = [];
+    for (let i = 0; i < tokens.length; i++) {
+      const tk = tokens[i];
+      if (tk === "ton" && tokens[i + 1] === "h") { unidades.push("t/h"); i++; continue; }
+      if (tk === "ou") {
+        const prox = tokens[i + 1];
+        if (palavras.length > 0 && prox && !UNIDADES_ATRIBUTO[prox]) palavras.push("ou");
+        continue;
+      }
+      if (palavras.length > 0 && UNIDADES_ATRIBUTO[tk]) { unidades.push(UNIDADES_ATRIBUTO[tk]); continue; }
+      palavras.push(PALAVRAS_ATRIBUTO[tk] || tk);
+    }
+    if (palavras.length > 1 && ATRIBUTO_PEDE_DE.test(palavras[0]) && !ATRIBUTO_SEM_DE.test(palavras[1])) palavras.splice(1, 0, "de");
+    let texto = palavras.join(" ").replace("comprimento onda", "comprimento de onda").replace("entradas sa\xEDdas", "entradas/sa\xEDdas").replace("m\xE1quinas linha", "m\xE1quinas na linha").replace("paletes hora", "paletes por hora");
+    texto = texto.charAt(0).toUpperCase() + texto.slice(1);
+    return unidades.length > 0 ? `${texto} (${unidades.join(" ou ")})` : texto;
+  }
   function getCamposImportantesFaltando(form) {
     const categoriaId = form.categoria_id || resolverCategoriaId(form.categoria);
     const schema = categoriaId && SCHEMA_FUNCAO[categoriaId];
@@ -5686,14 +5716,20 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     schema.ranking_importancia.forEach((attr) => {
       if (MAPA_CAMPO_IMPORTANTE_FORM[attr]) return; // já tem campo fixo (potência/ano/peso/rpm)
       if (vistos.has(attr)) return;
-      const label = LABEL_ATRIBUTO_RANKING[attr];
-      if (!label) return; // atributo sem rótulo conhecido - não inventa nome
+      const label = LABEL_ATRIBUTO_RANKING[attr] || rotuloAtributo(attr);
       vistos.add(attr);
       resultado.push({ chave: attr, label });
     });
     return resultado;
   }
 
+  // O servidor (Edge Function) ainda devolve "... \u2014 sem custo de IA" no
+  // resumo da base própria. O cliente não deve ver isso - removido aqui até
+  // a correção definitiva no servidor.
+  function limparResumo(texto) {
+    if (!texto) return texto;
+    return String(texto).replace(/\s*[\u2014\u2013-]\s*sem custo de IA\.?/gi, ".").replace(/\.{2,}/g, ".").trim();
+  }
   function SkeletonResultCard() {
     return /* @__PURE__ */ React.createElement("div", { className: "skeleton-card", "aria-hidden": "true" },
       /* @__PURE__ */ React.createElement("div", { className: "skeleton-line skeleton-titulo" }),
@@ -6287,7 +6323,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       doc.setFont("helvetica", "normal");
       doc.setFontSize(10.5);
       doc.setTextColor(50);
-      const observacoesPdf = [item.obs, result.resumo].filter(Boolean);
+      const observacoesPdf = [item.obs, limparResumo(result.resumo)].filter(Boolean);
       if (observacoesPdf.length > 0) {
         observacoesPdf.forEach((texto) => {
           const linhas = doc.splitTextToSize(texto, pageWidth - margin * 2);
@@ -7537,19 +7573,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const jaAdicionadosChecklist = /* @__PURE__ */ new Set();
     atributosQual.forEach((attr) => {
       const chaveForm = MAPA_CAMPO_IMPORTANTE_FORM[attr];
-      const label = chaveForm ? LABEL_CAMPO_IMPORTANTE[chaveForm] : LABEL_ATRIBUTO_RANKING[attr] || attr;
+      const label = chaveForm ? LABEL_CAMPO_IMPORTANTE[chaveForm] : LABEL_ATRIBUTO_RANKING[attr] || rotuloAtributo(attr);
       if (jaAdicionadosChecklist.has(label)) return;
       jaAdicionadosChecklist.add(label);
-      const preenchido = !!(chaveForm && item[chaveForm] && String(item[chaveForm]).trim() !== "");
-      checklistTecnico.push({ label, preenchido, coletavel: !!chaveForm });
+      const valorExtra = !chaveForm && item.atributosExtras ? item.atributosExtras[attr] : null;
+      const preenchido = chaveForm ? !!(item[chaveForm] && String(item[chaveForm]).trim() !== "") : !!(valorExtra !== null && valorExtra !== undefined && String(valorExtra).trim() !== "");
+      // Todo atributo da lista agora tem campo no formulário ("+ mais detalhes"),
+      // então todos entram na contagem "X dos Y".
+      checklistTecnico.push({ label, preenchido, coletavel: true });
     });
     // "X dos Y" conta só o que o formulário realmente coleta - os demais
     // aparecem na lista visual como contexto (ex: Tensão, Carcaça), mas não
     // entram na contagem pra não penalizar por um dado que o form não pede.
     const checklistColetavel = checklistTecnico.filter((c) => c.coletavel);
     const qtdPreenchidosChecklist = checklistColetavel.filter((c) => c.preenchido).length;
-    const encontradosQual = result.funil_comparaveis ? result.funil_comparaveis.encontrados : comparaveisOrdenados.length;
     const usadosQual = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : comparaveisOrdenados.length;
+    // Base própria não devolve funil nem lista de comparáveis - sem isso o
+    // card mostrava "0 encontrados / 24 utilizados". Encontrados >= utilizados.
+    const encontradosQual = Math.max(result.funil_comparaveis ? Number(result.funil_comparaveis.encontrados) || 0 : comparaveisOrdenados.length, usadosQual);
     const descartadosQual = Math.max(0, encontradosQual - usadosQual);
     const outliersQual = result.funil_comparaveis && result.funil_comparaveis.outliers_removidos || 0;
     // Só separamos "outlier" de "outros motivos" porque é o único detalhamento
@@ -7631,7 +7672,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           ),
 
           // ---- Compatibilidade Média ----
-          /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao" },
+          compatibilidadeMedia !== null && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao" },
             /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao-head" },
               /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-titulo" }, t("Compatibilidade M\xE9dia", "Average Compatibility")),
               compatibilidadeMedia !== null && /* @__PURE__ */ React.createElement("span", { className: "qualidade2-secao-valor" }, compatibilidadeMedia, "% \u2014 ", classificarCompat(compatibilidadeMedia))
@@ -7709,7 +7750,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               item.rpm && { label: "RPM", valor: item.rpm },
               item.anoFabricacao && { label: t("Ano", "Year"), valor: item.anoFabricacao },
               item.estado && { label: t("Estado", "Condition"), valor: item.estado },
-              item.pesoKg && { label: t("Peso", "Weight"), valor: `${item.pesoKg} kg` }
+              item.pesoKg && { label: t("Peso", "Weight"), valor: `${item.pesoKg} kg` },
+              ...Object.entries(item.atributosExtras || {}).filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "").map(([k, v]) => ({ label: (LABEL_ATRIBUTO_RANKING[k] || rotuloAtributo(k)).replace(/\s*\([^)]*\)$/, ""), valor: (() => { const u = rotuloAtributo(k).match(/\(([^)]*)\)$/); return u && !/ ou /.test(u[1]) ? `${v} ${u[1]}` : String(v); })() }))
             ].filter(Boolean);
             return specs.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "especificacoes-secao" },
               /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Especifica\xE7\xF5es T\xE9cnicas", "Technical Specifications")),
@@ -7736,15 +7778,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             )
           ),
 
-          /* @__PURE__ */ React.createElement("div", { className: "tag-value-row" },
-            /* @__PURE__ */ React.createElement("div", { className: "tag-value-block" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "R$ / kg"), /* @__PURE__ */ React.createElement("span", { className: "tag-value small" }, formatBRL(result.reais_por_kg))),
-            /* @__PURE__ */ React.createElement("div", { className: "tag-value-block" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "R$ / CV"), /* @__PURE__ */ React.createElement("span", { className: "tag-value small" }, formatBRL(result.reais_por_cv)))
+          (result.reais_por_kg || result.reais_por_cv) && /* @__PURE__ */ React.createElement("div", { className: "tag-value-row" },
+            result.reais_por_kg && /* @__PURE__ */ React.createElement("div", { className: "tag-value-block" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "R$ / kg"), /* @__PURE__ */ React.createElement("span", { className: "tag-value small" }, formatBRL(result.reais_por_kg))),
+            result.reais_por_cv && /* @__PURE__ */ React.createElement("div", { className: "tag-value-block" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "R$ / CV"), /* @__PURE__ */ React.createElement("span", { className: "tag-value small" }, formatBRL(result.reais_por_cv)))
           ),
           (result.leilao_min || result.leilao_max) && /* @__PURE__ */ React.createElement("div", { className: "leilao-row" },
             /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Se for a leil\xE3o (venda mais r\xE1pida, valor tende a ser menor)", "If it's an auction (faster sale, value tends to be lower)")),
             /* @__PURE__ */ React.createElement("span", { className: "tag-value leilao" }, formatBRL(result.leilao_min), " \u2013 ", formatBRL(result.leilao_max))
           ),
-          result.resumo && /* @__PURE__ */ React.createElement("p", { className: "tag-resumo" }, result.resumo)
+          result.resumo && /* @__PURE__ */ React.createElement("p", { className: "tag-resumo" }, limparResumo(result.resumo))
         ),
 
         // ===== Comparáveis Premium (V19.1) =====
@@ -8928,7 +8970,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         if (h.result.resumo) {
           doc.setFont("helvetica", "normal");
           doc.setFontSize(9);
-          const linhasResumo = doc.splitTextToSize(h.result.resumo, pageWidth - margin * 2);
+          const linhasResumo = doc.splitTextToSize(limparResumo(h.result.resumo), pageWidth - margin * 2);
           linhasResumo.forEach((linha) => {
             quebraSeNecessario(12);
             doc.text(linha, margin, y);
@@ -9635,6 +9677,21 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       try {
         const parsedRaw = await parseTextOnly(buildParsePrompt(pasteText, ignoreInternal), 1e3, apiKey);
         const parsed = sanitizeResult(parsedRaw);
+        // A leitura pela IA só traz os campos genéricos (marca, modelo,
+        // potência...). Os atributos específicos da categoria (ex: distância
+        // entre pontas de um torno) vêm do extrator local, o mesmo coberto
+        // pela suíte de 81 casos. Valor já digitado pelo usuário prevalece.
+        const extrasLocais = {};
+        try {
+          const local = processarTextoParaAtributos(pasteText);
+          Object.entries(local && local.atributos || {}).forEach(([k, v]) => {
+            if (MAPA_CAMPO_IMPORTANTE_FORM[k]) return; // já tem campo fixo no form
+            if (v === null || v === undefined || String(v).trim() === "") return;
+            extrasLocais[k] = v;
+          });
+        } catch (e) {
+          console.warn("Extrator local de atributos falhou, seguindo só com a IA:", e);
+        }
         setForm((f) => ({
           ...f,
           categoria: parsed.categoria || f.categoria,
@@ -9645,8 +9702,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           pesoKg: parsed.pesoKg ?? f.pesoKg,
           anoFabricacao: parsed.anoFabricacao || f.anoFabricacao,
           rpm: parsed.rpm ?? f.rpm,
-          obs: parsed.obs || f.obs
+          obs: parsed.obs || f.obs,
+          atributosExtras: { ...extrasLocais, ...f.atributosExtras }
         }));
+        if (Object.keys(extrasLocais).length > 0) setMostrarMaisDetalhes(true);
         setIgnoredFields(parsed.ignorados || []);
       } catch (err) {
         setParseError(err.message);
@@ -12687,6 +12746,29 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .subnav-segment { width: 100%; }
           .subnav-segment-btn { flex: 1; text-align: center; padding: 0.55rem 0.4rem; }
         }
+        /* ===== Densidade (01/10): tela de resultado menos "exagerada" ===== */
+        /* Com resultado na tela, o painel de cima só tem Item único/Lote +
+           breadcrumb - vira uma faixa compacta em vez de um cartão grande vazio. */
+        .panel.panel-compacto { padding: 0.8rem 1.25rem 0.3rem; }
+        .panel.panel-compacto .rivet { display: none; }
+        .panel.panel-compacto .subnav-segment { margin-bottom: 0.5rem; }
+        .panel.panel-compacto .breadcrumb { margin: 0 0 0.4rem 0.2rem; }
+        .resultado-premium { padding: 1.35rem 1.6rem; }
+        .resultado-premium-valor-grande { font-size: clamp(1.9rem, 3vw, 2.5rem); }
+        .resultado-premium-valor-label { margin-top: 1rem; }
+        .qualidade2-nota { font-size: 1.9rem; }
+        .qualidade2-indicador-num { font-size: 1.25rem; }
+        /* Coluna lateral de comparáveis sem conteúdo (base própria não traz
+           lista) não aparece mais como caixa bege vazia. */
+        .tag-card > .tag-report-kicker { padding-left: 0.9rem; }
+        .tag-card-sidebar:empty { display: none; }
+        .tag-card-columns:has(> .tag-card-sidebar:empty) { grid-template-columns: 1fr; }
+        @media (min-width: 1280px) {
+          .panel, .tag-card, .review-panel { padding: 1.5rem; }
+          .panel, .tag-card { margin-top: 1rem; margin-bottom: 1rem; }
+          .panel.panel-compacto { padding: 0.8rem 1.25rem 0.3rem; }
+          .hero { min-height: 115px; padding: 1rem 2rem; }
+        }
       `), tab === "ativos" ? React.createElement(MarketplaceAtivosFullScreen, ativosScreenProps) : React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, authStore.isAuthenticated && /* @__PURE__ */ React.createElement("div", { className: "user-menu-wrap" },
       /* @__PURE__ */ React.createElement("button", { type: "button", className: "user-menu-trigger", onClick: () => setMenuUsuarioAberto((v) => !v) },
         /* @__PURE__ */ React.createElement("span", { className: "user-avatar" }, iniciaisDoNome(authStore.currentUser.nome || authStore.currentUser.email)),
@@ -12944,7 +13026,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       })(), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
       "A Conecta Valor usa Intelig\xEAncia Artificial e dados reais de mercado para gerar refer\xEAncias de valor para ativos industriais \u2014 m\xE1quinas, linhas de produ\xE7\xE3o, galp\xF5es e mais.",
       "Conecta Valor uses Artificial Intelligence and real market data to generate value references for industrial assets \u2014 machines, production lines, warehouses and more."
-    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "single", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }),
+    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" + (result ? " panel-compacto" : "") }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "single", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement("div", { className: "breadcrumb" },
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-link", onClick: () => setTab("dashboard") }, t("In\xEDcio", "Home")),
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-sep" }, "\u2192"),
