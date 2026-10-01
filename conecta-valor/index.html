@@ -7543,7 +7543,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ));
   }
 
-  function ResultCard({ item, result, lang }) {
+  function ResultCard({ item, result, lang, isAdmin, onCompletar }) {
     const t = (pt, en) => lang === "en" ? en : pt;
     const [mostrarTodosComparaveis, setMostrarTodosComparaveis] = (0, import_react.useState)(false);
     const [mostrarQualidade, setMostrarQualidade] = (0, import_react.useState)(false);
@@ -7619,6 +7619,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // Sugestões de precisão: campos coletáveis ainda vazios + placa, se não houve foto
     const sugestoesPrecisao = checklistColetavel.filter((c) => !c.preenchido).map((c) => t(`Informar ${c.label.toLowerCase()}`, `Provide ${c.label.toLowerCase()}`));
     if (!result.item_identificado) sugestoesPrecisao.push(t("Enviar uma foto da placa de identifica\xE7\xE3o", "Send a photo of the ID plate"));
+    // Confiança pro cliente: usa a do servidor (confianca_avaliacao); se não
+    // vier (ex: base própria), deriva da nota interna - 75+ alta, 50-74 média.
+    const confiancaCliente = result.confianca_avaliacao || (notaV2 ? (notaV2.nota >= 75 ? "alta" : notaV2.nota >= 50 ? "m\xE9dia" : "baixa") : null);
+    const fraseMetodo = usadosQual > 0
+      ? t(`Valor calculado a partir de ${usadosQual} ${usadosQual === 1 ? "an\xFAncio compar\xE1vel" : "an\xFAncios compar\xE1veis"} de mercado${outliersQual > 0 ? `, com ${outliersQual} pre\xE7o(s) fora do padr\xE3o removido(s) automaticamente` : ", com remo\xE7\xE3o autom\xE1tica de pre\xE7os fora do padr\xE3o"}.`,
+          `Value calculated from ${usadosQual} comparable market ${usadosQual === 1 ? "listing" : "listings"}${outliersQual > 0 ? `, with ${outliersQual} out-of-range price(s) automatically removed` : ", with automatic removal of out-of-range prices"}.`)
+      : t("Valor calculado a partir de an\xFAncios compar\xE1veis de mercado.", "Value calculated from comparable market listings.");
+    const camposFaltandoCliente = checklistTecnico.filter((c) => !c.preenchido).map((c) => c.label);
     const dispersaoQual = precosQual.length >= 2 && result.faixa_media > 0 ? Math.round((maiorPrecoQual - menorPrecoQual) / result.faixa_media * 100) : null;
 
     return /* @__PURE__ */ React.createElement("div", { className: "tag-card" },
@@ -7643,15 +7651,33 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           ),
           /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-faixa-track" }, /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-faixa-marcador", style: { left: faixaPosicaoPct + "%" } }))
         ),
+        /* @__PURE__ */ React.createElement("p", { className: "resultado-metodo" }, fraseMetodo),
         /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-meta" },
-          result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, t("confian\xE7a ", "confidence "), result.confianca_avaliacao),
+          confiancaCliente && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + confiancaCliente }, t("Confian\xE7a ", "Confidence "), confiancaCliente === "alta" ? t("alta", "high") : confiancaCliente === "m\xE9dia" ? t("m\xE9dia", "medium") : t("baixa", "low")),
           equipInfo && /* @__PURE__ */ React.createElement("span", { className: "chip liquidez-" + equipInfo.liquidez.toLowerCase() }, t("Liquidez: ", "Liquidity: "), equipInfo.liquidez),
-          /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, qtdComparaveisExibida, " ", t(qtdComparaveisExibida === 1 ? "compar\xE1vel" : "compar\xE1veis", qtdComparaveisExibida === 1 ? "comparable" : "comparables")),
         )
       ),
 
-      // ===== Painel Qualidade da Avalia\xE7\xE3o 2.0 (premium) =====
-      notaV2 && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-painel" },
+      // ===== Dados informados (01/10): primeira coisa depois do valor =====
+      checklistTecnico.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "dados-informados" + (camposFaltandoCliente.length === 0 ? " completo" : "") },
+        /* @__PURE__ */ React.createElement("div", { className: "dados-informados-topo" },
+          /* @__PURE__ */ React.createElement("span", { className: "dados-informados-titulo" }, t("Dados informados: ", "Data provided: "), /* @__PURE__ */ React.createElement("strong", null, qtdPreenchidosChecklist, " ", t("de", "of"), " ", checklistColetavel.length)),
+          /* @__PURE__ */ React.createElement("div", { className: "dados-informados-barra" }, /* @__PURE__ */ React.createElement("div", { className: "dados-informados-barra-fill", style: { width: Math.round(qtdPreenchidosChecklist / Math.max(1, checklistColetavel.length) * 100) + "%" } }))
+        ),
+        camposFaltandoCliente.length > 0
+          ? /* @__PURE__ */ React.createElement(React.Fragment, null,
+            /* @__PURE__ */ React.createElement("p", { className: "dados-informados-texto" }, t("Quanto mais dados t\xE9cnicos voc\xEA informar, mais compar\xE1veis certos encontramos e mais estreita e confi\xE1vel fica a faixa de valor.", "The more technical data you provide, the more accurate the comparables and the narrower and more reliable the value range.")),
+            /* @__PURE__ */ React.createElement("div", { className: "dados-informados-faltando" },
+              /* @__PURE__ */ React.createElement("span", { className: "dados-informados-faltando-label" }, t("Faltam:", "Missing:")),
+              camposFaltandoCliente.map((c, i) => /* @__PURE__ */ React.createElement("span", { key: i, className: "dados-informados-chip" }, c))
+            ),
+            onCompletar && /* @__PURE__ */ React.createElement("button", { type: "button", className: "dados-informados-btn", onClick: onCompletar }, t("Completar dados e reavaliar", "Complete data and re-evaluate"))
+          )
+          : /* @__PURE__ */ React.createElement("p", { className: "dados-informados-texto" }, t("Todos os dados t\xE9cnicos relevantes foram informados.", "All relevant technical data was provided."))
+      ),
+
+      // ===== Painel Qualidade da Avalia\xE7\xE3o 2.0 — só admin (01/10) =====
+      isAdmin && notaV2 && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-painel" },
         /* @__PURE__ */ React.createElement("div", { className: "qualidade2-header" },
           /* @__PURE__ */ React.createElement("div", { className: "qualidade2-header-top" },
             /* @__PURE__ */ React.createElement("span", { className: "qualidade2-titulo" }, t("Qualidade da Avalia\xE7\xE3o", "Evaluation Quality")),
@@ -12802,6 +12828,20 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .qualidade2-breakdown-item { color: #4B5058; }
         .qualidade2-breakdown-pontos { color: #1B1D1F; }
         .qualidade2-corpo { border-top: 1px solid #EFEDE6; padding: 1.1rem 1.1rem; }
+        .resultado-metodo { margin: 0.9rem 0 0; font-size: 0.84rem; color: #4B5058; line-height: 1.5; }
+        .resultado-premium-meta .confianca-tag { margin-left: 0; font-size: 0.7rem; padding: 0.15rem 0.6rem; }
+        .dados-informados { background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 10px; padding: 1rem 1.2rem; margin: 0 0 1rem; }
+        .dados-informados-topo { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .dados-informados-titulo { font-size: 0.92rem; color: #1B1D1F; }
+        .dados-informados-barra { flex: 1; min-width: 120px; max-width: 260px; height: 6px; background: #ECEAE4; border-radius: 999px; overflow: hidden; }
+        .dados-informados-barra-fill { height: 100%; background: #D89A00; border-radius: 999px; }
+        .dados-informados.completo .dados-informados-barra-fill { background: #2F6F4E; }
+        .dados-informados-texto { margin: 0.6rem 0 0; font-size: 0.84rem; color: #4B5058; line-height: 1.5; }
+        .dados-informados-faltando { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.7rem; }
+        .dados-informados-faltando-label { font-size: 0.8rem; color: #6B7280; margin-right: 0.2rem; }
+        .dados-informados-chip { font-size: 0.78rem; background: #F7F6F2; border: 1px solid #E4E2DC; color: #3A3D42; border-radius: 999px; padding: 0.15rem 0.65rem; }
+        .dados-informados-btn { margin-top: 0.9rem; background: #1B1D1F; color: #FFFFFF; border: none; border-radius: 6px; padding: 0.55rem 1rem; font-size: 0.82rem; font-weight: 600; cursor: pointer; }
+        .dados-informados-btn:hover { background: #000000; }
         .tag-card-sidebar:empty { display: none; }
         .tag-card-columns:has(> .tag-card-sidebar:empty) { grid-template-columns: 1fr; }
         @media (min-width: 1280px) {
@@ -13757,7 +13797,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("div", { className: "batch-progress-track" }, progressoPct !== null ? /* @__PURE__ */ React.createElement("div", { className: "batch-progress-fill", style: { width: progressoPct + "%" } }) : /* @__PURE__ */ React.createElement("div", { className: "batch-progress-fill batch-progress-indeterminate" })),
         /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, r.result ? `${formatBRL(r.result.faixa_min)} \u2013 ${formatBRL(r.result.faixa_max)}` : "\u2014", r.result && r.result.comparaveis && r.result.comparaveis.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "batch-comp-count" }, r.result.comparaveis.length, " comp.")
         )
-      ), isOpen && r.result && /* @__PURE__ */ React.createElement("div", { className: "batch-row-detail" }, /* @__PURE__ */ React.createElement(ResultCard, { item: r.item, result: r.result, lang })), r.status === "erro" && /* @__PURE__ */ React.createElement("div", { className: "batch-row-error" }, /* @__PURE__ */ React.createElement("span", { className: "batch-row-error-icon", "aria-hidden": "true" }, "\u26A0"), /* @__PURE__ */ React.createElement("span", null, t("Falha na consulta \u2014 ", "Query failed \u2014 "), r.error)));
+      ), isOpen && r.result && /* @__PURE__ */ React.createElement("div", { className: "batch-row-detail" }, /* @__PURE__ */ React.createElement(ResultCard, { item: r.item, result: r.result, lang, isAdmin })), r.status === "erro" && /* @__PURE__ */ React.createElement("div", { className: "batch-row-error" }, /* @__PURE__ */ React.createElement("span", { className: "batch-row-error-icon", "aria-hidden": "true" }, "\u26A0"), /* @__PURE__ */ React.createElement("span", null, t("Falha na consulta \u2014 ", "Query failed \u2014 "), r.error)));
     })))) : tab === "coletor" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement("div", { className: "coletor-guia" }, /* @__PURE__ */ React.createElement("strong", null, "3 jeitos de alimentar sua base, de acordo com a situa\xE7\xE3o:"), /* @__PURE__ */ React.createElement("span", null, "\u2460 ", /* @__PURE__ */ React.createElement("b", null, "Formul\xE1rio abaixo"), " \u2014 voc\xEA digita os dados, zero custo"), /* @__PURE__ */ React.createElement("span", null, "\u2461 ", /* @__PURE__ */ React.createElement("b", null, "Coleta manual (mais abaixo)"), " \u2014 cola texto de uma p\xE1gina (MF Rural, Superbid), gr\xE1tis nesses dois formatos"), /* @__PURE__ */ React.createElement("span", null, "\u2462 ", /* @__PURE__ */ React.createElement("b", null, "Coletor autom\xE1tico (mais abaixo)"), " \u2014 a IA busca sozinha em sites j\xE1 aprovados, com custo pequeno de uso")), /* @__PURE__ */ React.createElement(PanelTitle, null, "Adicionar observa\xE7\xE3o manualmente (gr\xE1tis, sem IA)"), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, "Voc\xEA digita o que j\xE1 est\xE1 vendo na tela \u2014 vai direto pro banco, sem passar pela IA, sem custo nenhum."), /* @__PURE__ */ React.createElement("div", { className: "item-form", style: { marginTop: "1.1rem" } }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-categoria" }, "Categoria"), /* @__PURE__ */ React.createElement("input", { id: "entry-categoria", value: entryForm.categoria, onChange: (e) => setEntryForm((f) => ({ ...f, categoria: e.target.value })), placeholder: "Ex: Motor el\xE9trico" })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-marca" }, "Marca"), /* @__PURE__ */ React.createElement("input", { id: "entry-marca", value: entryForm.marca, onChange: (e) => setEntryForm((f) => ({ ...f, marca: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-modelo" }, "Modelo"), /* @__PURE__ */ React.createElement("input", { id: "entry-modelo", value: entryForm.modelo, onChange: (e) => setEntryForm((f) => ({ ...f, modelo: e.target.value })) })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "entry-preco" }, "Pre\xE7o (R$)"), /* @__PURE__ */ React.createElement(
       "input",
       {
@@ -13944,7 +13984,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     } }, "desconectar"), supaSaved && /* @__PURE__ */ React.createElement("span", { className: "saved-note" }, "salvo \u2713")), supaUrl && /* @__PURE__ */ React.createElement("div", { className: "stats-box" }, /* @__PURE__ */ React.createElement("div", { className: "admin-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: loadStats, disabled: statsLoading }, statsLoading ? "Carregando\u2026" : "Atualizar estat\xEDsticas"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: exportarBaseCSV, disabled: statsLoading }, "exportar base inteira (.csv)")), stats && /* @__PURE__ */ React.createElement("div", { className: "stats-grid" }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "sites diferentes"))), stats && stats.moedaEstrangeiraCount > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.8rem" } }, stats.moedaEstrangeiraCount, " observa\xE7\xF5es em moeda estrangeira (EUR/USD/GBP) \u2014 convertidas para R$ na cota\xE7\xE3o atual pra entrar nessas m\xE9dias.", stats.moedaSemCotacaoCount > 0 && ` ${stats.moedaSemCotacaoCount} ficaram de fora por falha ao buscar a cota\xE7\xE3o agora \u2014 tenta atualizar de novo em instantes.`), stats && stats.categorias && stats.categorias.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "categoria-stats" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Pre\xE7o m\xE9dio por categoria (base pr\xF3pria, em R$) \u2014 clica pra ver a tend\xEAncia ao longo do tempo"), /* @__PURE__ */ React.createElement("div", { className: "bar-chart" }, (() => {
       const maxMedia = Math.max(...stats.categorias.map((c) => c.media));
       return stats.categorias.map((c, i) => /* @__PURE__ */ React.createElement(React.Fragment, { key: i }, /* @__PURE__ */ React.createElement("div", { className: "bar-row", onClick: () => carregarTendencia(c.categoria), style: { cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { className: "bar-row-label" }, /* @__PURE__ */ React.createElement("span", { className: "bar-nome" }, c.categoria), /* @__PURE__ */ React.createElement("span", { className: "bar-qtd" }, c.quantidade, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "bar-track" }, /* @__PURE__ */ React.createElement("div", { className: "bar-fill", style: { width: `${Math.max(4, c.media / maxMedia * 100)}%` } }, /* @__PURE__ */ React.createElement("span", { className: "bar-valor" }, formatBRL(c.media)))), /* @__PURE__ */ React.createElement("span", { className: "bar-range" }, formatBRL(c.min), " \u2013 ", formatBRL(c.max))), tendenciaCategoria === c.categoria && /* @__PURE__ */ React.createElement("div", { className: "tendencia-wrapper" }, tendenciaLoading ? /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Carregando tend\xEAncia\u2026") : /* @__PURE__ */ React.createElement(TendenciaChart, { pontos: tendenciaDados }))));
-    })()))))), tab === "single" && error && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, error), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "nova-avaliacao-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => { setResult(null); setError(null); } }, t("\u2190 Nova Avalia\u00E7\u00E3o", "\u2190 New Evaluation"))), tab === "single" && result && /* @__PURE__ */ React.createElement(ResultCard, { item: form, result, lang }), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "exportar-pdf-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn-exportar-pdf", onClick: () => setPdfModalAberto(true) }, t("\u{1F4C4} Exportar PDF", "\u{1F4C4} Export PDF"))), pdfModalAberto && /* @__PURE__ */ React.createElement(PersonalizarPdfModal, {
+    })()))))), tab === "single" && error && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, error), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "nova-avaliacao-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => { setResult(null); setError(null); } }, t("\u2190 Nova Avalia\u00E7\u00E3o", "\u2190 New Evaluation"))), tab === "single" && result && /* @__PURE__ */ React.createElement(ResultCard, { item: form, result, lang, isAdmin, onCompletar: () => { setResult(null); setError(null); setMostrarMaisDetalhes(true); window.scrollTo({ top: 0, behavior: "smooth" }); } }), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "exportar-pdf-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn-exportar-pdf", onClick: () => setPdfModalAberto(true) }, t("\u{1F4C4} Exportar PDF", "\u{1F4C4} Export PDF"))), pdfModalAberto && /* @__PURE__ */ React.createElement(PersonalizarPdfModal, {
       pdfConfig,
       setPdfConfig,
       onFechar: () => setPdfModalAberto(false),
