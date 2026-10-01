@@ -5728,7 +5728,12 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   // a correção definitiva no servidor.
   function limparResumo(texto) {
     if (!texto) return texto;
-    return String(texto).replace(/\s*[\u2014\u2013-]\s*sem custo de IA\.?/gi, ".").replace(/\.{2,}/g, ".").trim();
+    return String(texto)
+      .replace(/\s*[\u2014\u2013-]\s*sem custo de IA\.?/gi, ".")
+      // a origem do dado (base própria) não aparece pro cliente
+      .replace(/\s*(j\xE1\s+)?registradas\s+na\s+sua\s+(pr\xF3pria\s+)?base/gi, " de mercado")
+      .replace(/\s*\(ponderada por compatibilidade\)/gi, "")
+      .replace(/\.{2,}/g, ".").trim();
   }
   function SkeletonResultCard() {
     return /* @__PURE__ */ React.createElement("div", { className: "skeleton-card", "aria-hidden": "true" },
@@ -5761,7 +5766,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
         /* @__PURE__ */ React.createElement("span", { className: "loading-etapa-label" }, e.label)
       ))),
       /* @__PURE__ */ React.createElement("div", { className: "loading-premium-track" }, /* @__PURE__ */ React.createElement("div", { className: "loading-premium-fill", style: { width: Math.min(96, (etapaAtual + 1) / ETAPAS.length * 100) + "%" } })),
-      /* @__PURE__ */ React.createElement("span", { className: "loading-premium-tempo" }, t(`${elapsed}s \u2014 instant\xE2neo se j\xE1 tiver dado parecido na sua base, sen\xE3o 20-60s`, `${elapsed}s \u2014 instant if you already have similar data, otherwise 20-60s`))
+      /* @__PURE__ */ React.createElement("span", { className: "loading-premium-tempo" }, t(`${elapsed}s \u2014 costuma levar de 20 a 60s`, `${elapsed}s \u2014 usually takes 20-60s`))
     );
   }
 
@@ -7541,6 +7546,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   function ResultCard({ item, result, lang }) {
     const t = (pt, en) => lang === "en" ? en : pt;
     const [mostrarTodosComparaveis, setMostrarTodosComparaveis] = (0, import_react.useState)(false);
+    const [mostrarQualidade, setMostrarQualidade] = (0, import_react.useState)(false);
     const titulo = [normalizarMarca(item.marca), item.modelo].filter(Boolean).join(" ") || item.categoria;
     const qtdComparaveisExibida = typeof result.qtd_comparaveis_usados === "number" ? result.qtd_comparaveis_usados : (result.comparaveis || []).length;
     const notaQualidade = calcularNotaQualidade(result);
@@ -7628,7 +7634,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             /* @__PURE__ */ React.createElement("h3", { className: "resultado-premium-titulo" }, titulo)
           )
         ),
-        result.origem === "base_propria" && /* @__PURE__ */ React.createElement("span", { className: "badge-instantaneo" }, "\u26A1 ", t("instant\xE2neo \u2014 sua base", "instant \u2014 your base")),
         /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-valor-label" }, t("Valor estimado", "Estimated value")),
         /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-valor-grande" }, formatBRL(result.faixa_media)),
         /* @__PURE__ */ React.createElement("div", { className: "resultado-premium-faixa-bar" },
@@ -7642,7 +7647,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, t("confian\xE7a ", "confidence "), result.confianca_avaliacao),
           equipInfo && /* @__PURE__ */ React.createElement("span", { className: "chip liquidez-" + equipInfo.liquidez.toLowerCase() }, t("Liquidez: ", "Liquidity: "), equipInfo.liquidez),
           /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, qtdComparaveisExibida, " ", t(qtdComparaveisExibida === 1 ? "compar\xE1vel" : "compar\xE1veis", qtdComparaveisExibida === 1 ? "comparable" : "comparables")),
-          /* @__PURE__ */ React.createElement("span", { className: "resultado-premium-meta-item" }, result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("IA + mercado", "AI + market"))
         )
       ),
 
@@ -7651,19 +7655,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("div", { className: "qualidade2-header" },
           /* @__PURE__ */ React.createElement("div", { className: "qualidade2-header-top" },
             /* @__PURE__ */ React.createElement("span", { className: "qualidade2-titulo" }, t("Qualidade da Avalia\xE7\xE3o", "Evaluation Quality")),
-            /* @__PURE__ */ React.createElement("span", { className: "qualidade2-base-badge" }, t("Base: ", "Source: "), result.origem === "base_propria" ? t("Base pr\xF3pria", "Own base") : t("Pesquisa em mercado", "Market research"))
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "qualidade2-toggle", onClick: () => setMostrarQualidade((v) => !v) }, mostrarQualidade ? t("Ocultar detalhes \u25B4", "Hide details \u25B4") : t("Ver detalhes \u25BE", "See details \u25BE"))
           ),
           /* @__PURE__ */ React.createElement("div", { className: "qualidade2-nota-row" },
             /* @__PURE__ */ React.createElement("span", { className: "qualidade2-nota" }, notaV2.nota),
             /* @__PURE__ */ React.createElement("span", { className: "qualidade2-nota-max" }, "/100"),
             result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + result.confianca_avaliacao }, result.confianca_avaliacao === "alta" ? t("Alta confian\xE7a", "High confidence") : result.confianca_avaliacao === "m\xE9dia" ? t("M\xE9dia confian\xE7a", "Medium confidence") : t("Baixa confian\xE7a", "Low confidence"))
           ),
-          FATORES_NOTA && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-breakdown" }, FATORES_NOTA.map((f, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "qualidade2-breakdown-item" },
+          mostrarQualidade && FATORES_NOTA && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-breakdown" }, FATORES_NOTA.map((f, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "qualidade2-breakdown-item" },
             /* @__PURE__ */ React.createElement("span", { className: "qualidade2-breakdown-label" }, f.label),
             /* @__PURE__ */ React.createElement("span", { className: "qualidade2-breakdown-pontos" }, f.pontos, "/", f.max)
           )))
         ),
-        /* @__PURE__ */ React.createElement("div", { className: "qualidade2-corpo" },
+        mostrarQualidade && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-corpo" },
 
           // ---- O que aumentaria a precisão desta avaliação ----
           sugestoesPrecisao.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "qualidade2-secao qualidade2-precisao" },
@@ -12783,6 +12787,21 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* Coluna lateral de comparáveis sem conteúdo (base própria não traz
            lista) não aparece mais como caixa bege vazia. */
         .tag-card > .tag-report-kicker { padding-left: 0.9rem; }
+        /* Qualidade da avaliação discreta (01/10): uma linha clara com nota +
+           "Ver detalhes"; breakdown e seções só aparecem ao expandir. */
+        .qualidade2-painel { border-radius: 10px; box-shadow: none; margin: 0 0 1rem; }
+        .qualidade2-header { background: #FAFAF8; border-bottom: none; padding: 0.7rem 1.1rem; display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem 0.9rem; }
+        .qualidade2-header-top { display: contents; }
+        .qualidade2-titulo { order: 1; color: #6B7280; font-size: 0.68rem; }
+        .qualidade2-nota-row { order: 2; margin: 0; display: flex; align-items: baseline; gap: 0.2rem; }
+        .qualidade2-nota { font-size: 1.05rem; color: #1F5C3F; }
+        .qualidade2-nota-max { font-size: 0.78rem; color: #8A8D91; }
+        .qualidade2-toggle { order: 3; margin-left: auto; background: none; border: none; padding: 0.2rem 0; font-size: 0.78rem; color: #96650B; cursor: pointer; font-family: inherit; letter-spacing: 0; text-transform: none; box-shadow: none; }
+        .qualidade2-toggle:hover { text-decoration: underline; background: none; }
+        .qualidade2-breakdown { order: 4; flex-basis: 100%; margin-top: 0.5rem; }
+        .qualidade2-breakdown-item { color: #4B5058; }
+        .qualidade2-breakdown-pontos { color: #1B1D1F; }
+        .qualidade2-corpo { border-top: 1px solid #EFEDE6; padding: 1.1rem 1.1rem; }
         .tag-card-sidebar:empty { display: none; }
         .tag-card-columns:has(> .tag-card-sidebar:empty) { grid-template-columns: 1fr; }
         @media (min-width: 1280px) {
