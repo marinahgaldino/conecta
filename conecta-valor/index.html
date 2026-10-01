@@ -2464,7 +2464,14 @@
     if (/gal[pn][ãa]o|terreno|im[óo]vel|[áa]rea constru[íi]da|\bm[²2]\b/i.test([item.modelo, item.categoria].filter(Boolean).join(" "))) return true;
     if (item.marca && (item.modelo || /n[uú]mero de s[ée]rie/i.test(item.detalhes || ""))) return true;
     const texto = [item.modelo, item.capacidade, item.detalhes].filter(Boolean).join(" ");
-    return /\d+[\s.,]*\d*\s*(cv|hp|kw|rpm|kg\/h|kgv\/h|ton(?:elada)?s?(?:\/h(?:oras?)?|\s*por\s*hora)?|l\/h|litros?(?:\/h(?:oras?)?)?|m[³3](?:\/h)?|mm\b|kg\b|bar|kgf\/cm|v(?:olts?)?\b|polos?|hz|frascos?(?:\s*\/?\s*hora?s?)?|garrafas?(?:\s*\/?\s*hora?s?)?|unidades?(?:\s*\/?\s*hora?s?)?|pe[çc]as?(?:\s*\/?\s*hora?s?)?|T\s*por\s*Hora)/i.test(texto) || /\d[\d.,]*\s*[Ll]\b/.test(texto);
+    // kVA/MVA (potência aparente) faltava na lista - é a unidade padrão de
+    // transformador ("500 kVA", "300 kVA" etc). Sem isso, um anúncio de
+    // transformador com capacidade corretamente extraída (ex: capacidade:
+    // "150 kVA") ainda era descartado como "sem dado técnico" (achado
+    // real: busca de "Transformador" no MF Rural, 24 anúncios únicos após
+    // dedupe, só 4 sobreviviam ao filtro - os 20 restantes tinham kVA/kV
+    // como única especificação técnica, não reconhecida).
+    return /\d+[\s.,]*\d*\s*(cv|hp|kw|kva|mva|rpm|kg\/h|kgv\/h|ton(?:elada)?s?(?:\/h(?:oras?)?|\s*por\s*hora)?|l\/h|litros?(?:\/h(?:oras?)?)?|m[³3](?:\/h)?|mm\b|kg\b|bar|kgf\/cm|k?v(?:olts?)?\b|polos?|hz|frascos?(?:\s*\/?\s*hora?s?)?|garrafas?(?:\s*\/?\s*hora?s?)?|unidades?(?:\s*\/?\s*hora?s?)?|pe[çc]as?(?:\s*\/?\s*hora?s?)?|T\s*por\s*Hora)/i.test(texto) || /\d[\d.,]*\s*[Ll]\b/.test(texto);
   }
   function filtrarSemDadoTecnico(items) {
     const mantidos = [];
@@ -5372,12 +5379,16 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     if (cotacoes && cotacoes[m]) return preco * cotacoes[m];
     return null;
   }
+  // Só usa a base própria (rápido/grátis) se houver observações RECENTES o
+  // suficiente pra essa categoria/marca; senão cai pra IA, porque preço de
+  // ativo industrial muda com o tempo e dado velho pode enganar o cliente.
+  const BASE_PROPRIA_VALIDADE_DIAS = 90;
   async function buscarNaBasePropria(item, supaUrl, supaKey) {
     if (!supaUrl || !supaKey || !item.categoria) return null;
     try {
       const catId = item.categoria_id || resolverCategoriaId(item.categoria);
       const params = new URLSearchParams();
-      params.set("select", "preco,moeda");
+      params.set("select", "preco,moeda,data_observacao");
       if (catId) {
         params.set("categoria_id", `eq.${catId}`);
       } else {
@@ -5385,6 +5396,8 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       }
       if (item.marca) params.set("marca", `ilike.*${item.marca.trim()}*`);
       params.set("preco", "not.is.null");
+      const limiteData = new Date(Date.now() - BASE_PROPRIA_VALIDADE_DIAS * 24 * 60 * 60 * 1e3).toISOString();
+      params.set("data_observacao", `gte.${limiteData}`);
       params.set("limit", "50");
       const [res, cotacoes] = await Promise.all([
         fetch(`${supaUrl}/rest/v1/observacoes_mercado?${params.toString()}`, {
@@ -5404,7 +5417,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       const media = precos.reduce((a, b) => a + b, 0) / precos.length;
       return {
         origem: "base_propria",
-        resumo: `Estimativa instant\xE2nea baseada em ${precos.length} observa\xE7\xF5es j\xE1 registradas na sua pr\xF3pria base para essa categoria/marca \u2014 sem espera, sem custo de IA.`,
+        resumo: `Estimativa baseada em ${precos.length} observa\xE7\xF5es j\xE1 registradas para essa categoria/marca.`,
         faixa_min: Math.round(min),
         faixa_media: Math.round(media),
         faixa_max: Math.round(max),
@@ -5734,6 +5747,27 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   function PanelTitle({ children, style }) {
     return /* @__PURE__ */ React.createElement("div", { className: "panel-title-row", style }, /* @__PURE__ */ React.createElement("span", { className: "rivet rivet-inline", "aria-hidden": "true" }), /* @__PURE__ */ React.createElement("h3", { className: "admin-title" }, children));
   }
+  // v22.0: subnav de agrupamento - usado dentro dos grupos "Pesquisar" (Item
+  // único/Lote) e "Painel" (Histórico/Assinatura/Empresa), pra não precisar
+  // voltar pra barra lateral pra trocar de seção dentro do mesmo grupo.
+  function SubnavSegment({ opcoes, atual, onSelect }) {
+    return /* @__PURE__ */ React.createElement(
+      "div",
+      { className: "subnav-segment", role: "tablist" },
+      opcoes.map((op) => /* @__PURE__ */ React.createElement(
+        "button",
+        {
+          key: op.id,
+          type: "button",
+          role: "tab",
+          "aria-selected": atual === op.id,
+          className: "subnav-segment-btn" + (atual === op.id ? " active" : ""),
+          onClick: () => onSelect(op.id)
+        },
+        op.label
+      ))
+    );
+  }
   var LIMIAR_CONFIANCA_REVISAO = 0.85;
   function AttributeReviewPanel({ resultado, valores, onChangeValor, setores, onChangeSetores }) {
     if (!resultado) return null;
@@ -5920,7 +5954,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           res.leilao_min || res.leilao_max ? ["Faixa de leil\xE3o", `${formatBRL(res.leilao_min)} \u2013 ${formatBRL(res.leilao_max)}`] : null,
           res.reais_por_kg ? ["R$/kg", formatBRL(res.reais_por_kg)] : null,
           res.reais_por_cv ? ["R$/CV", formatBRL(res.reais_por_cv)] : null,
-          ["Origem", res.origem === "base_propria" ? "Base pr\xF3pria (sem custo de IA)" : "IA + busca de mercado"],
+          ["Origem", res.origem === "base_propria" ? "Base pr\xF3pria" : "An\xE1lise de mercado"],
           res.resumo ? ["Resumo", res.resumo] : null
         ].filter(Boolean);
         doc.autoTable({
@@ -8224,6 +8258,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         return "dashboard";
       }
     });
+    const [ultimoModoPesquisa, setUltimoModoPesquisa] = (0, import_react.useState)("single");
+    const [ultimaSecaoPainel, setUltimaSecaoPainel] = (0, import_react.useState)("historico");
     const [lang, setLang] = (0, import_react.useState)("pt");
     const t = (pt, en) => lang === "en" ? en : pt;
     const [form, setForm] = (0, import_react.useState)(EMPTY_FORM);
@@ -8236,6 +8272,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [pdfModalAberto, setPdfModalAberto] = (0, import_react.useState)(false);
     const [buscaInteligente, setBuscaInteligente] = (0, import_react.useState)("");
     const [sugestoesAbertas, setSugestoesAbertas] = (0, import_react.useState)(false);
+    const [buscaHistoricoAberta, setBuscaHistoricoAberta] = (0, import_react.useState)(false);
     const [avisoPrecisaoAberto, setAvisoPrecisaoAberto] = (0, import_react.useState)(false);
     // ===== v20.0: Área do Cliente (Minha Assinatura) =====
     // IMPORTANTE: tudo nesta seção é estrutura visual/mock, preparada pra
@@ -10176,6 +10213,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .pill-tab:hover:not(.active):not(:disabled) { background: #E7E5DF; }
         .pill-tab.active { background: #1B1D1F; color: #EDECE6; border-color: #1B1D1F; box-shadow: 0 2px 6px rgba(27,29,31,0.2); }
         .pill-tab:disabled { opacity: 0.5; cursor: not-allowed; }
+        .pill-tab .nav-icon { width: 18px; height: 18px; flex-shrink: 0; vertical-align: -4px; margin-right: 0.2rem; }
         .header h1 {
           font-family: 'Manrope', sans-serif;
           font-weight: 700;
@@ -10243,8 +10281,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         @media (min-width: 1024px) {
           .item-layout-desktop { flex-direction: row; align-items: stretch; gap: 1.75rem; }
+          .item-layout-desktop .entrada-atalhos-col { flex: 0 0 320px; }
           .item-layout-desktop .photo-highlight-block {
-            flex: 0 0 320px;
             margin-bottom: 0;
             background: #FFFFFF;
             border: 1px solid #E2DFD6;
@@ -10592,7 +10630,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           font-family: 'IBM Plex Mono', monospace;
           font-size: clamp(2.4rem, 5vw, 3.4rem);
           font-weight: 700;
-          color: #4ADE80;
+          color: #D89A00;
           letter-spacing: -0.01em;
           line-height: 1.1;
           margin-top: 0.2rem;
@@ -10605,10 +10643,10 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           top: 50%;
           width: 14px; height: 14px;
           border-radius: 50%;
-          background: #4ADE80;
+          background: #D89A00;
           border: 2px solid #080808;
           transform: translate(-50%, -50%);
-          box-shadow: 0 0 0 2px #4ADE80;
+          box-shadow: 0 0 0 2px #D89A00;
         }
         .resultado-premium-meta {
           display: flex;
@@ -11369,7 +11407,32 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .breadcrumb-atual { color: #1B1D1F; font-weight: 600; }
 
         /* ===== v19.3: Busca inteligente ===== */
-        .busca-inteligente-wrap { position: relative; margin: 0 1.5rem 1.2rem; }
+        .busca-inteligente-wrap, .busca-historico-wrap { position: relative; margin: 0 1.5rem 1.2rem; }
+        .busca-historico-link {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.5rem;
+          background: transparent;
+          border: none;
+          color: #8A8D91;
+          font-size: 0.82rem;
+          cursor: pointer;
+          padding: 0.2rem 0;
+        }
+        .busca-historico-link:hover { color: #4A5568; }
+        .busca-historico-link .nav-icon { width: 15px; height: 15px; flex-shrink: 0; }
+        .entrada-atalhos-col { display: flex; flex-direction: column; gap: 1rem; }
+        .entrada-atalhos-col .photo-highlight-block { margin-bottom: 0; }
+        .paste-highlight-header { cursor: pointer; }
+        .paste-toggle-seta {
+          margin-left: auto;
+          font-size: 1.1rem;
+          color: #8A8D91;
+          flex-shrink: 0;
+          align-self: flex-start;
+        }
+        .paste-block-inline { margin-top: 0.9rem; }
+        .paste-block-inline .paste-area { min-height: 110px; }
         .busca-inteligente-input-row { position: relative; display: flex; align-items: center; }
         .busca-lupa { position: absolute; left: 0.9rem; pointer-events: none; }
         .busca-inteligente-input {
@@ -11664,6 +11727,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
         /* ===== v18.0: Exportar PDF + modal Personalizar PDF ===== */
         .exportar-pdf-row { margin: 0.8rem 1.5rem 0; }
+        .nova-avaliacao-row { margin: 0.5rem 1.5rem 0; }
         .btn-exportar-pdf {
           background: #FFFFFF;
           border: 1.5px solid #1B1D1F;
@@ -12461,12 +12525,12 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .stats-grid { grid-template-columns: repeat(2, 1fr); }
         }
         @media (min-width: 901px) and (max-width: 1279px) {
-          .app { max-width: 900px; margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); }
+          .app { max-width: 100%; margin: 0; box-shadow: none; }
         }
         .sidebar-logo { display: none; }
         .sidebar-credits { display: none; }
         @media (min-width: 1280px) {
-          .app { max-width: min(1600px, 92vw); margin: 0 auto; box-shadow: 0 0 40px rgba(0,0,0,0.12); position: relative; }
+          .app { max-width: 100%; margin: 0; box-shadow: none; position: relative; }
           .panel, .tag-card, .review-panel { padding: 2rem; }
           .panel, .tag-card { margin-top: 1.5rem; margin-bottom: 1.5rem; }
           .stats-grid { grid-template-columns: repeat(4, 1fr); }
@@ -12476,7 +12540,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           .tabs-row {
             position: fixed;
             top: 0;
-            left: calc((100vw - min(1600px, 92vw)) / 2);
+            left: 0;
             width: 210px;
             height: 100vh;
             flex-direction: column;
@@ -12536,6 +12600,93 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           }
           .header-logo-col, .navbar-right .credit-badge { display: none; }
         }
+        /* ===== v22.0: Hero de abertura (Início) ===== */
+        .valor-hero {
+          background: linear-gradient(135deg, rgba(216,154,0,0.14), rgba(216,154,0,0.02) 60%), #1B1C1F;
+          border: 1px solid rgba(216,154,0,0.28);
+          border-radius: 14px;
+          padding: 2rem 2.2rem;
+          margin: 0 0 1.8rem;
+        }
+        .valor-hero-titulo {
+          font-size: 1.7rem;
+          font-weight: 700;
+          color: #F4F4F5;
+          margin: 0 0 0.6rem;
+          letter-spacing: -0.01em;
+        }
+        .valor-hero-sub {
+          font-size: 1rem;
+          color: #B7B9BE;
+          max-width: 620px;
+          line-height: 1.55;
+          margin: 0 0 1.4rem;
+        }
+        .valor-hero-props {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 1.1rem;
+          margin-bottom: 1.5rem;
+        }
+        .valor-hero-prop {
+          display: flex;
+          align-items: flex-start;
+          gap: 0.6rem;
+        }
+        .valor-hero-prop .nav-icon { width: 20px; height: 20px; flex-shrink: 0; color: #D89A00; margin-top: 0.15rem; }
+        .valor-hero-prop-texto strong { display: block; color: #E8E9EB; font-size: 0.88rem; }
+        .valor-hero-prop-texto span { display: block; color: #8A8D91; font-size: 0.8rem; margin-top: 0.15rem; }
+        .valor-hero-botoes { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+        .valor-hero-btn-primario {
+          background: #D89A00;
+          color: #1B1C1F;
+          border: none;
+          border-radius: 8px;
+          padding: 0.7rem 1.3rem;
+          font-weight: 600;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+        .valor-hero-btn-secundario {
+          background: transparent;
+          color: #E8E9EB;
+          border: 1px solid rgba(255,255,255,0.18);
+          border-radius: 8px;
+          padding: 0.7rem 1.3rem;
+          font-weight: 500;
+          font-size: 0.9rem;
+          cursor: pointer;
+        }
+        @media (max-width: 720px) {
+          .valor-hero { padding: 1.4rem 1.2rem; }
+          .valor-hero-props { grid-template-columns: 1fr; }
+        }
+        /* ===== v22.0: Subnav de agrupamento (Pesquisar / Painel) ===== */
+        .subnav-segment {
+          display: inline-flex;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.09);
+          border-radius: 9px;
+          padding: 0.25rem;
+          margin-bottom: 1.4rem;
+          gap: 0.2rem;
+        }
+        .subnav-segment-btn {
+          background: transparent;
+          border: none;
+          color: #9296A0;
+          font-size: 0.86rem;
+          font-weight: 500;
+          padding: 0.5rem 1.1rem;
+          border-radius: 6px;
+          cursor: pointer;
+        }
+        .subnav-segment-btn:hover:not(.active) { color: #D8D9DC; }
+        .subnav-segment-btn.active { background: rgba(216,154,0,0.16); color: #F0C868; font-weight: 600; }
+        @media (max-width: 480px) {
+          .subnav-segment { width: 100%; }
+          .subnav-segment-btn { flex: 1; text-align: center; padding: 0.55rem 0.4rem; }
+        }
       `), tab === "ativos" ? React.createElement(MarketplaceAtivosFullScreen, ativosScreenProps) : React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("header", { className: "header" }, /* @__PURE__ */ React.createElement("div", { className: "header-inner" }, /* @__PURE__ */ React.createElement("div", { className: "header-logo-col" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "header-logo-full" })), /* @__PURE__ */ React.createElement("div", { className: "header-content-col" }, /* @__PURE__ */ React.createElement("div", { className: "navbar-right" }, authStore.isAuthenticated && /* @__PURE__ */ React.createElement("div", { className: "user-menu-wrap" },
       /* @__PURE__ */ React.createElement("button", { type: "button", className: "user-menu-trigger", onClick: () => setMenuUsuarioAberto((v) => !v) },
         /* @__PURE__ */ React.createElement("span", { className: "user-avatar" }, iniciaisDoNome(authStore.currentUser.nome || authStore.currentUser.email)),
@@ -12582,7 +12733,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         title: "Sair"
       },
       "\u23FB"
-    )), /* @__PURE__ */ React.createElement("div", { className: "hero" }, config.headerBgImage && /* @__PURE__ */ React.createElement("img", { className: "hero-bg-graphic", "aria-hidden": "true", alt: "", src: config.headerBgImage }), config.headerBgImage && /* @__PURE__ */ React.createElement("div", { className: "hero-bg-fade" }), /* @__PURE__ */ React.createElement("h1", { className: "page-heading" }, t("Quanto vale este item?", "What is this item worth?")), /* @__PURE__ */ React.createElement("p", null, t("Descreva o equipamento e busque compar\xE1veis reais no mercado", "Describe the equipment and search for real market comparables")))))), /* @__PURE__ */ React.createElement("div", { className: "tabs-row" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "sidebar-logo" }), /* @__PURE__ */ React.createElement(
+    )), (tab === "single" || tab === "batch") && /* @__PURE__ */ React.createElement("div", { className: "hero" }, config.headerBgImage && /* @__PURE__ */ React.createElement("img", { className: "hero-bg-graphic", "aria-hidden": "true", alt: "", src: config.headerBgImage }), config.headerBgImage && /* @__PURE__ */ React.createElement("div", { className: "hero-bg-fade" }), /* @__PURE__ */ React.createElement("h1", { className: "page-heading" }, t("Quanto vale este item?", "What is this item worth?")), /* @__PURE__ */ React.createElement("p", null, tab === "single" ? t("Descreva o equipamento manualmente, cole a ficha t\xE9cnica ou envie uma foto da placa — escolha o jeito mais f\xE1cil pra voc\xEA.", "Describe the equipment manually, paste the spec sheet or send a nameplate photo — pick whichever is easiest for you.") : t("Descreva o equipamento e busque compar\xE1veis reais no mercado", "Describe the equipment and search for real market comparables")))))), /* @__PURE__ */ React.createElement("div", { className: "tabs-row" }, /* @__PURE__ */ React.createElement("img", { src: `data:image/jpeg;base64,${LOGO_FULL_B64}`, alt: config.titulo, className: "sidebar-logo" }), /* @__PURE__ */ React.createElement(
       "button",
       {
         className: "pill-tab" + (tab === "dashboard" ? " active" : ""),
@@ -12593,59 +12744,19 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
-        className: "pill-tab" + (tab === "single" ? " active" : ""),
-        onClick: () => setTab("single")
+        className: "pill-tab" + ((tab === "single" || tab === "batch") ? " active" : ""),
+        onClick: () => setTab(ultimoModoPesquisa)
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ITEM }),
-      t("Item \xFAnico", "Single item")
+      t("Pesquisar", "Search")
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
-        className: "pill-tab" + (tab === "batch" ? " active" : ""),
-        onClick: () => setTab("batch")
-      },
-      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BATCH }),
-      t("Lote", "Batch")
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "pill-tab" + (tab === "historico" ? " active" : ""),
-        onClick: () => setTab("historico")
+        className: "pill-tab" + ((tab === "historico" || tab === "empresa" || tab === "assinatura") ? " active" : ""),
+        onClick: () => setTab(ultimaSecaoPainel)
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HISTORY }),
-      t("Hist\xF3rico", "History")
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "pill-tab" + (tab === "ativos" ? " active" : ""),
-        onClick: () => setTab("ativos")
-      },
-      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOXES }),
-      t("Conecta Ativos", "Conecta Ativos")
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "pill-tab" + (tab === "empresa" ? " active" : ""),
-        onClick: () => setTab("empresa")
-      },
-      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_EMPRESA }),
-      t("Empresa", "Company")
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "pill-tab" + (tab === "assinatura" ? " active" : ""),
-        onClick: () => setTab("assinatura")
-      },
-      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ASSINATURA }),
-      t("Minha Assinatura", "My Subscription")
-    ), isAdmin && /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        className: "pill-tab" + (tab === "admin_backoffice" ? " active" : ""),
-        onClick: () => setTab("admin_backoffice")
-      },
-      /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SHIELD }),
-      t("Administra\xE7\xE3o", "Administration")
+      t("Painel", "Panel")
     ), isAdmin && /* @__PURE__ */ React.createElement(
       "button",
       {
@@ -12662,7 +12773,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CONFIG }),
       t("Config", "Config")
-    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), (() => {
+    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+      /* @__PURE__ */ React.createElement("div", { className: "valor-hero" },
+        /* @__PURE__ */ React.createElement("h1", { className: "valor-hero-titulo" }, t("Quanto vale o seu ativo industrial?", "What is your industrial asset worth?")),
+        /* @__PURE__ */ React.createElement("p", { className: "valor-hero-sub" }, t(
+          "O Conecta Valor pesquisa an\xFAncios reais no mercado — motores, m\xE1quinas, linhas de produ\xE7\xE3o e outros ativos industriais — e monta uma estimativa de valor baseada em compar\xE1veis de verdade, n\xE3o em tabelas gen\xE9ricas.",
+          "Conecta Valor searches real market listings — motors, machines, production lines and other industrial assets — and builds a value estimate based on real comparables, not generic tables."
+        )),
+        /* @__PURE__ */ React.createElement("div", { className: "valor-hero-props" },
+          /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop-texto" }, /* @__PURE__ */ React.createElement("strong", null, t("Compar\xE1veis reais", "Real comparables")), /* @__PURE__ */ React.createElement("span", null, t("Busca ativa no mercado, n\xE3o tabela fixa", "Live market search, not a fixed table")))),
+          /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ITEM }), /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop-texto" }, /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico ou em lote", "Single item or batch")), /* @__PURE__ */ React.createElement("span", null, t("Avalie um ativo ou uma planilha inteira", "Evaluate one asset or a whole spreadsheet")))),
+          /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop-texto" }, /* @__PURE__ */ React.createElement("strong", null, t("Relat\xF3rio pronto", "Ready-to-use report")), /* @__PURE__ */ React.createElement("span", null, t("Exporte em PDF com sua marca", "Export as a branded PDF"))))
+        ),
+        /* @__PURE__ */ React.createElement("div", { className: "valor-hero-botoes" },
+          /* @__PURE__ */ React.createElement("button", { type: "button", className: "valor-hero-btn-primario", onClick: () => { setUltimoModoPesquisa("single"); setTab("single"); } }, t("Come\xE7ar uma pesquisa", "Start a search")),
+          history.length > 0 && /* @__PURE__ */ React.createElement("button", { type: "button", className: "valor-hero-btn-secundario", onClick: () => { setUltimaSecaoPainel("historico"); setTab("historico"); } }, t("Ver meu hist\xF3rico", "View my history"))
+        )
+      ),
+      /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), (() => {
         if (history.length === 0) return null;
         const nomeUsuario = session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : "";
         const historicoOrdenadoDash = history.slice().sort((a, b) => b.id - a.id);
@@ -12816,7 +12944,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       })(), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
       "A Conecta Valor usa Intelig\xEAncia Artificial e dados reais de mercado para gerar refer\xEAncias de valor para ativos industriais \u2014 m\xE1quinas, linhas de produ\xE7\xE3o, galp\xF5es e mais.",
       "Conecta Valor uses Artificial Intelligence and real market data to generate value references for industrial assets \u2014 machines, production lines, warehouses and more."
-    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null),
+    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "single", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement("div", { className: "breadcrumb" },
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-link", onClick: () => setTab("dashboard") }, t("In\xEDcio", "Home")),
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-sep" }, "\u2192"),
@@ -12824,60 +12952,60 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-sep" }, "\u2192"),
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-atual" }, result ? t("Resultado", "Result") : t("Nova Avalia\xE7\xE3o", "New Evaluation"))
       ),
-      !result && /* @__PURE__ */ React.createElement("div", { className: "busca-inteligente-wrap" },
-        /* @__PURE__ */ React.createElement("div", { className: "busca-inteligente-input-row" },
-          /* @__PURE__ */ React.createElement("svg", { className: "busca-lupa", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "#8A8D91", strokeWidth: "2" }, /* @__PURE__ */ React.createElement("circle", { cx: "11", cy: "11", r: "7" }), /* @__PURE__ */ React.createElement("path", { d: "M20 20l-3.5-3.5" })),
-          /* @__PURE__ */ React.createElement("input", {
-            type: "text",
-            className: "busca-inteligente-input",
-            placeholder: t("Digite fabricante, modelo ou equipamento\u2026", "Enter manufacturer, model or equipment\u2026"),
-            value: buscaInteligente,
-            onChange: (e) => { setBuscaInteligente(e.target.value); setSugestoesAbertas(true); },
-            onFocus: () => setSugestoesAbertas(true),
-            onBlur: () => setTimeout(() => setSugestoesAbertas(false), 150)
-          }),
-          buscaInteligente && /* @__PURE__ */ React.createElement("button", { type: "button", className: "busca-limpar-btn", onClick: () => { setBuscaInteligente(""); setSugestoesAbertas(false); } }, t("Limpar", "Clear"))
-        ),
-        sugestoesAbertas && buscaInteligente.trim().length >= 2 && (() => {
-          const sugestoes = sugestoesBuscaInteligente(buscaInteligente);
-          return sugestoes.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "busca-dropdown" }, sugestoes.map((s, i) => /* @__PURE__ */ React.createElement("button", { key: i, type: "button", className: "busca-sugestao", onMouseDown: () => preencherComSugestao(s) },
-            /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ENGRENAGEM }),
-            /* @__PURE__ */ React.createElement("div", null,
-              /* @__PURE__ */ React.createElement("span", { className: "busca-sugestao-titulo" }, [normalizarMarca(s.marca), s.modelo].filter(Boolean).join(" ") || s.categoria),
-              /* @__PURE__ */ React.createElement("span", { className: "busca-sugestao-cat" }, s.categoria)
-            )
-          ))) : /* @__PURE__ */ React.createElement("div", { className: "busca-dropdown" }, /* @__PURE__ */ React.createElement("p", { className: "busca-sem-resultado" }, t("Nenhuma avalia\xE7\xE3o anterior encontrada com esse termo.", "No previous evaluation found with that term.")));
-        })(),
-        /* @__PURE__ */ React.createElement("div", { className: "busca-exemplos" },
-          /* @__PURE__ */ React.createElement("span", null, t("Exemplos: ", "Examples: ")),
-          "WEG W22 10 CV \xB7 Motorredutor SEW WA20 \xB7 Compressor Atlas Copco GA75"
+      !result && history.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "busca-historico-wrap" },
+        buscaHistoricoAberta ? /* @__PURE__ */ React.createElement(React.Fragment, null,
+          /* @__PURE__ */ React.createElement("div", { className: "busca-inteligente-input-row" },
+            /* @__PURE__ */ React.createElement("svg", { className: "busca-lupa", width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "#8A8D91", strokeWidth: "2" }, /* @__PURE__ */ React.createElement("circle", { cx: "11", cy: "11", r: "7" }), /* @__PURE__ */ React.createElement("path", { d: "M20 20l-3.5-3.5" })),
+            /* @__PURE__ */ React.createElement("input", {
+              type: "text",
+              className: "busca-inteligente-input",
+              autoFocus: true,
+              placeholder: t("Digite fabricante, modelo ou equipamento\u2026", "Enter manufacturer, model or equipment\u2026"),
+              value: buscaInteligente,
+              onChange: (e) => { setBuscaInteligente(e.target.value); setSugestoesAbertas(true); },
+              onFocus: () => setSugestoesAbertas(true),
+              onBlur: () => setTimeout(() => setSugestoesAbertas(false), 150)
+            }),
+            /* @__PURE__ */ React.createElement("button", { type: "button", className: "busca-limpar-btn", onClick: () => { setBuscaInteligente(""); setSugestoesAbertas(false); setBuscaHistoricoAberta(false); } }, t("Fechar", "Close"))
+          ),
+          sugestoesAbertas && buscaInteligente.trim().length >= 2 && (() => {
+            const sugestoes = sugestoesBuscaInteligente(buscaInteligente);
+            return sugestoes.length > 0 ? /* @__PURE__ */ React.createElement("div", { className: "busca-dropdown" }, sugestoes.map((s, i) => /* @__PURE__ */ React.createElement("button", { key: i, type: "button", className: "busca-sugestao", onMouseDown: () => preencherComSugestao(s) },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ENGRENAGEM }),
+              /* @__PURE__ */ React.createElement("div", null,
+                /* @__PURE__ */ React.createElement("span", { className: "busca-sugestao-titulo" }, [normalizarMarca(s.marca), s.modelo].filter(Boolean).join(" ") || s.categoria),
+                /* @__PURE__ */ React.createElement("span", { className: "busca-sugestao-cat" }, s.categoria)
+              )
+            ))) : /* @__PURE__ */ React.createElement("div", { className: "busca-dropdown" }, /* @__PURE__ */ React.createElement("p", { className: "busca-sem-resultado" }, t("Nenhuma avalia\xE7\xE3o anterior encontrada com esse termo.", "No previous evaluation found with that term.")));
+          })()
+        ) : /* @__PURE__ */ React.createElement("button", { type: "button", className: "busca-historico-link", onClick: () => setBuscaHistoricoAberta(true) },
+          /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HISTORY }),
+          t("J\xE1 avaliei algo parecido antes \u2014 reaproveitar dados", "I already evaluated something similar \u2014 reuse data")
         )
       ),
-      /* @__PURE__ */ React.createElement("div", { className: "input-mode-tabs" }, /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "mode-btn" + (inputMode === "form" ? " active" : ""),
-        onClick: () => setInputMode("form")
-      },
-      "Descrever o item"
-    ), /* @__PURE__ */ React.createElement(
-      "button",
-      {
-        type: "button",
-        className: "mode-btn" + (inputMode === "paste" ? " active" : ""),
-        onClick: () => setInputMode("paste")
-      },
-      "J\xE1 tenho a ficha t\xE9cnica/placa"
-    )), inputMode === "paste" && /* @__PURE__ */ React.createElement("div", { className: "paste-block" }, /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: 0 } }, "Use isso se voc\xEA j\xE1 tem um texto com os dados do equipamento \xE0 m\xE3o \u2014 por exemplo, o texto de uma placa de identifica\xE7\xE3o, uma ficha t\xE9cnica, ou um laudo/relat\xF3rio anterior. Cole aqui que a IA organiza nos campos certos, sem voc\xEA digitar campo por campo."), /* @__PURE__ */ React.createElement("div", { className: "paste-header" }, /* @__PURE__ */ React.createElement("span", { className: "rivet rivet-inline" }), /* @__PURE__ */ React.createElement("span", { className: "tag-label paste-label" }, config.pasteLabel)), /* @__PURE__ */ React.createElement(
-      "textarea",
-      {
-        className: "paste-area",
-        placeholder: config.pastePlaceholder,
-        value: pasteText,
-        onChange: (e) => setPasteText(e.target.value)
-      }
-    ), /* @__PURE__ */ React.createElement("label", { className: "checkbox-row" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: ignoreInternal, onChange: (e) => setIgnoreInternal(e.target.checked) }), "H\xE1 infos internas s\xF3 para controle de identifica\xE7\xE3o (lote, c\xF3digo de etiqueta, n\xBA do item) que devem ser ignoradas?"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: handleParsePaste, disabled: parsing || !pasteText.trim() }, parsing ? "Interpretando\u2026" : "Preencher formul\xE1rio com esses dados"), parseError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, parseError), ignoredFields.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ignored-note" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Ignorado (identifica\xE7\xE3o interna)"), /* @__PURE__ */ React.createElement("ul", null, ignoredFields.map((f, i) => /* @__PURE__ */ React.createElement("li", { key: i }, f)))), /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Depois de colar e interpretar, os campos abaixo j\xE1 v\xEAm preenchidos \u2014 revise e ajuste se precisar.")), /* @__PURE__ */ React.createElement("div", { className: "item-layout-desktop" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-block" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-header" }, /* @__PURE__ */ React.createElement("span", { className: "photo-highlight-icon", "aria-hidden": "true" }, "\u{1F4F7}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, t("Tem foto da placa de identifica\xE7\xE3o?", "Do you have a photo of the nameplate?")), /* @__PURE__ */ React.createElement("p", null, t("\xC9 o jeito mais r\xE1pido \u2014 a IA l\xEA os dados sozinha, at\xE9 sem voc\xEA digitar nada abaixo.", "It's the fastest way \u2014 the AI reads the data on its own, even without typing anything below.")))), /* @__PURE__ */ React.createElement("div", { className: "photo-row" }, photos.length < 3 && /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", multiple: true, onChange: handlePhotoChange }), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "photo-grid" }, photos.map((p, i) => /* @__PURE__ */ React.createElement("div", { className: "photo-preview", key: i }, /* @__PURE__ */ React.createElement("img", { src: p.preview, alt: p.name }), /* @__PURE__ */ React.createElement("span", { className: "photo-size-tag" }, tamanhoAproximadoKB(p.base64), " KB"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => removerFoto(i) }, "remover"))))), photos.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("At\xE9 3 fotos \u2014 inclua a da placa de identifica\xE7\xE3o com prioridade, se tiver.", "Up to 3 photos \u2014 include the nameplate photo first, if you have one."))), /* @__PURE__ */ React.createElement("div", { className: "item-form" }, /* @__PURE__ */ React.createElement("h3", { className: "item-card-title field-full" }, t("Identifica\xE7\xE3o do equipamento", "Equipment identification")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "categoria" }, t("Categoria", "Category")), /* @__PURE__ */ React.createElement(
+      !result && /* @__PURE__ */ React.createElement("div", { className: "item-layout-desktop" }, /* @__PURE__ */ React.createElement("div", { className: "entrada-atalhos-col" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-block paste-highlight-block" },
+        /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-header paste-highlight-header", style: { cursor: "pointer" }, onClick: () => setInputMode(inputMode === "paste" ? "form" : "paste") },
+          /* @__PURE__ */ React.createElement("span", { className: "photo-highlight-icon", "aria-hidden": "true" }, "\u{1F4CB}"),
+          /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement("strong", null, t("J\xE1 tem a ficha t\xE9cnica ou texto da placa?", "Already have the datasheet or nameplate text?")),
+            /* @__PURE__ */ React.createElement("p", null, t("Cole o texto que a IA organiza nos campos certos, sem digitar um por um.", "Paste the text and the AI fills in the right fields for you."))
+          ),
+          /* @__PURE__ */ React.createElement("span", { className: "paste-toggle-seta", "aria-hidden": "true" }, inputMode === "paste" ? "\u2212" : "+")
+        ),
+        inputMode === "paste" && /* @__PURE__ */ React.createElement("div", { className: "paste-block-inline" },
+          /* @__PURE__ */ React.createElement("textarea", {
+            className: "paste-area",
+            placeholder: config.pastePlaceholder,
+            value: pasteText,
+            onChange: (e) => setPasteText(e.target.value)
+          }),
+          /* @__PURE__ */ React.createElement("label", { className: "checkbox-row" }, /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: ignoreInternal, onChange: (e) => setIgnoreInternal(e.target.checked) }), t("H\xE1 infos internas s\xF3 para controle de identifica\xE7\xE3o (lote, c\xF3digo de etiqueta, n\xBA do item) que devem ser ignoradas?", "There\u2019s internal ID info (batch, tag code, item number) that should be ignored?")),
+          /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: handleParsePaste, disabled: parsing || !pasteText.trim() }, parsing ? t("Interpretando\u2026", "Reading\u2026") : t("Preencher formul\xE1rio com esses dados", "Fill the form with this data")),
+          parseError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, parseError),
+          ignoredFields.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "ignored-note" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Ignorado (identifica\xE7\xE3o interna)", "Ignored (internal ID)")), /* @__PURE__ */ React.createElement("ul", null, ignoredFields.map((f, i) => /* @__PURE__ */ React.createElement("li", { key: i }, f)))),
+          /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("Depois de colar e interpretar, os campos ao lado j\xE1 v\xEAm preenchidos \u2014 revise e ajuste se precisar.", "After pasting and parsing, the fields to the side come pre-filled \u2014 review and adjust as needed."))
+        )
+      ), /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-block" }, /* @__PURE__ */ React.createElement("div", { className: "photo-highlight-header" }, /* @__PURE__ */ React.createElement("span", { className: "photo-highlight-icon", "aria-hidden": "true" }, "\u{1F4F7}"), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("strong", null, t("Tem foto da placa de identifica\xE7\xE3o?", "Do you have a photo of the nameplate?")), /* @__PURE__ */ React.createElement("p", null, t("\xC9 o jeito mais r\xE1pido \u2014 a IA l\xEA os dados sozinha, at\xE9 sem voc\xEA digitar nada abaixo.", "It's the fastest way \u2014 the AI reads the data on its own, even without typing anything below.")))), /* @__PURE__ */ React.createElement("div", { className: "photo-row" }, photos.length < 3 && /* @__PURE__ */ React.createElement("input", { type: "file", accept: "image/*", multiple: true, onChange: handlePhotoChange }), photos.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "photo-grid" }, photos.map((p, i) => /* @__PURE__ */ React.createElement("div", { className: "photo-preview", key: i }, /* @__PURE__ */ React.createElement("img", { src: p.preview, alt: p.name }), /* @__PURE__ */ React.createElement("span", { className: "photo-size-tag" }, tamanhoAproximadoKB(p.base64), " KB"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: () => removerFoto(i) }, "remover"))))), photos.length === 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, t("At\xE9 3 fotos \u2014 inclua a da placa de identifica\xE7\xE3o com prioridade, se tiver.", "Up to 3 photos \u2014 include the nameplate photo first, if you have one.")))), /* @__PURE__ */ React.createElement("div", { className: "item-form" }, /* @__PURE__ */ React.createElement("h3", { className: "item-card-title field-full" }, t("Identifica\xE7\xE3o do equipamento", "Equipment identification")), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("label", { htmlFor: "categoria" }, t("Categoria", "Category")), /* @__PURE__ */ React.createElement(
       "input",
       {
         id: "categoria",
@@ -13062,7 +13190,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           )
         )
       )
-    ) : tab === "empresa" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+    ) : tab === "empresa" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "empresa", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Empresa", "Company")),
 
       // ---- Hero superior ----
@@ -13175,7 +13303,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       ),
 
       toastMensagem && /* @__PURE__ */ React.createElement("div", { className: "toast-confirmacao" }, "\u2713 ", toastMensagem)
-    ) : tab === "assinatura" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+    ) : tab === "assinatura" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "assinatura", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Minha Assinatura", "My Subscription")),
 
       /* @__PURE__ */ React.createElement(SubscriptionHero, { plan: planoAtual, subscription: billingStore.currentSubscription, t, lang }),
@@ -13390,7 +13518,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         t,
         lang
       })
-    ) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+    ) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "historico", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Hist\xF3rico de Avalia\xE7\xF5es", "Evaluation History")),
       /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, t("Consulte e reabra avalia\xE7\xF5es realizadas anteriormente.", "Review and reopen previously performed evaluations.")),
       /* @__PURE__ */ React.createElement("div", { className: "historico-search-row" },
@@ -13433,7 +13561,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn-abrir-avaliacao", onClick: () => { setForm(h.item); setResult(h.result); setError(null); setTab("single"); } }, t("Abrir Avalia\xE7\xE3o", "Open Evaluation"))
         )));
       })()
-    ) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
+    ) : tab === "batch" ? /* @__PURE__ */ React.createElement("div", { className: "panel" }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "batch", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }), /* @__PURE__ */ React.createElement("div", { className: "batch-mode-tabs" }, /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -13693,7 +13821,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     } }, "desconectar"), supaSaved && /* @__PURE__ */ React.createElement("span", { className: "saved-note" }, "salvo \u2713")), supaUrl && /* @__PURE__ */ React.createElement("div", { className: "stats-box" }, /* @__PURE__ */ React.createElement("div", { className: "admin-actions" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: loadStats, disabled: statsLoading }, statsLoading ? "Carregando\u2026" : "Atualizar estat\xEDsticas"), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", onClick: exportarBaseCSV, disabled: statsLoading }, "exportar base inteira (.csv)")), stats && /* @__PURE__ */ React.createElement("div", { className: "stats-grid" }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "sites diferentes"))), stats && stats.moedaEstrangeiraCount > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "0.8rem" } }, stats.moedaEstrangeiraCount, " observa\xE7\xF5es em moeda estrangeira (EUR/USD/GBP) \u2014 convertidas para R$ na cota\xE7\xE3o atual pra entrar nessas m\xE9dias.", stats.moedaSemCotacaoCount > 0 && ` ${stats.moedaSemCotacaoCount} ficaram de fora por falha ao buscar a cota\xE7\xE3o agora \u2014 tenta atualizar de novo em instantes.`), stats && stats.categorias && stats.categorias.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "categoria-stats" }, /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, "Pre\xE7o m\xE9dio por categoria (base pr\xF3pria, em R$) \u2014 clica pra ver a tend\xEAncia ao longo do tempo"), /* @__PURE__ */ React.createElement("div", { className: "bar-chart" }, (() => {
       const maxMedia = Math.max(...stats.categorias.map((c) => c.media));
       return stats.categorias.map((c, i) => /* @__PURE__ */ React.createElement(React.Fragment, { key: i }, /* @__PURE__ */ React.createElement("div", { className: "bar-row", onClick: () => carregarTendencia(c.categoria), style: { cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { className: "bar-row-label" }, /* @__PURE__ */ React.createElement("span", { className: "bar-nome" }, c.categoria), /* @__PURE__ */ React.createElement("span", { className: "bar-qtd" }, c.quantidade, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "bar-track" }, /* @__PURE__ */ React.createElement("div", { className: "bar-fill", style: { width: `${Math.max(4, c.media / maxMedia * 100)}%` } }, /* @__PURE__ */ React.createElement("span", { className: "bar-valor" }, formatBRL(c.media)))), /* @__PURE__ */ React.createElement("span", { className: "bar-range" }, formatBRL(c.min), " \u2013 ", formatBRL(c.max))), tendenciaCategoria === c.categoria && /* @__PURE__ */ React.createElement("div", { className: "tendencia-wrapper" }, tendenciaLoading ? /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, "Carregando tend\xEAncia\u2026") : /* @__PURE__ */ React.createElement(TendenciaChart, { pontos: tendenciaDados }))));
-    })()))))), tab === "single" && error && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, error), tab === "single" && result && /* @__PURE__ */ React.createElement(ResultCard, { item: form, result, lang }), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "exportar-pdf-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn-exportar-pdf", onClick: () => setPdfModalAberto(true) }, t("\u{1F4C4} Exportar PDF", "\u{1F4C4} Export PDF"))), pdfModalAberto && /* @__PURE__ */ React.createElement(PersonalizarPdfModal, {
+    })()))))), tab === "single" && error && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, error), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "nova-avaliacao-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: () => { setResult(null); setError(null); } }, t("\u2190 Nova Avalia\u00E7\u00E3o", "\u2190 New Evaluation"))), tab === "single" && result && /* @__PURE__ */ React.createElement(ResultCard, { item: form, result, lang }), tab === "single" && result && /* @__PURE__ */ React.createElement("div", { className: "exportar-pdf-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "btn-exportar-pdf", onClick: () => setPdfModalAberto(true) }, t("\u{1F4C4} Exportar PDF", "\u{1F4C4} Export PDF"))), pdfModalAberto && /* @__PURE__ */ React.createElement(PersonalizarPdfModal, {
       pdfConfig,
       setPdfConfig,
       onFechar: () => setPdfModalAberto(false),
