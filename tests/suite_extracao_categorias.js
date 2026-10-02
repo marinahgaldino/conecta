@@ -84,4 +84,16 @@ var SUITE_TESTES = [
   { categoria_esperada: "transformador", texto: "Transformador a óleo 500 kVA 13,8 kV / 380 V", campos_esperados: {"potencia_kva": 500, "tensao_primaria_v": 13800, "tensao_secundaria_v": 380} },
   { categoria_esperada: "torno", texto: "Torno mecânico Romi Tormax 20A distância entre pontas 2000 mm ano 1998", campos_esperados: {"distancia_pontas_mm": 2000, "ano": 1998} },
   { categoria_esperada: "empilhadeira", texto: "Empilhadeira Toyota 8FG25 ano 2015 a gás capacidade 2500 kg", campos_esperados: {"capacidade_carga_kg": 2500, "ano": 2015} },
+  // 02/10 - classificação: complemento "para/com" e categorias novas (títulos reais da base)
+  { categoria_esperada: "motor_eletrico", texto: "Motor elétrico trifásico WEG IP21 para bomba de piscina 1 CV", campos_esperados: {} },
+  { categoria_esperada: "envasadora", texto: "Envasadora Saumec 12 bicos com inversor", campos_esperados: {} },
+  { categoria_esperada: "tanque_misturador", texto: "Tanque com agitador inox 2000 litros", campos_esperados: {} },
+  { categoria_esperada: "dobradeira", texto: "Prensa dobradeira HESSE by DURMA AD-Servo 60320", campos_esperados: {} },
+  { categoria_esperada: "centro_usinagem_cnc", texto: "Centro de torneamento e fresagem CNC Hyundai LM 1600 TTSM", campos_esperados: {} },
+  { categoria_esperada: "torno", texto: "Torno automático multifuso CNC INDEX MS52C", campos_esperados: {} },
+  { categoria_esperada: "vaso_pressao", texto: "Recipiente sob pressão filtro tanque de aço inoxidável", campos_esperados: {} },
+  { categoria_esperada: "motovibrador", texto: "Motovibrador vibrador carrapato concreto monofásico 220v", campos_esperados: {} },
+  { categoria_esperada: "maquina_corte_laser", texto: "Laser de fibra KK-Industries FLC-P 2040", campos_esperados: {} },
+  { categoria_esperada: "pulverizador_agricola", texto: "Pulverizador autopropelido Stara Imperador 4000 ano 2021", campos_esperados: {} },
+  { categoria_esperada: "peca_acessorio_maquina", texto: "Placa para torno mecânico Romi", campos_esperados: {} },
 ];
