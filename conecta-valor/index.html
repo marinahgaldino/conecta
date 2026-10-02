@@ -11259,6 +11259,25 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
 
         /* ===== v19.2: Dashboard Executivo ===== */
         .exec-dashboard { margin: 0.5rem 1.5rem 1.5rem; }
+        .exec-tabela .exec-num { text-align: right; white-space: nowrap; }
+        .exec-uma-coluna { margin-top: 1.2rem; }
+        .exec-data-mobile { display: none; }
+        .exec-bloco + .exec-duas-colunas { margin-top: 1.2rem; }
+        @media (max-width: 640px) {
+          .exec-dashboard { margin: 0.5rem 0.75rem 1rem; }
+          .exec-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 0.6rem !important; }
+          .exec-kpi-card { padding: 0.9rem !important; min-width: 0; }
+          .exec-kpi-num { font-size: 1.05rem !important; overflow-wrap: anywhere; }
+          .exec-tabela th:nth-child(2), .exec-tabela td:nth-child(2) { display: none; }
+          .exec-tabela { width: 100%; table-layout: fixed; }
+          .exec-tabela th, .exec-tabela td { padding-left: 0.3rem !important; padding-right: 0.3rem !important; font-size: 0.8rem; overflow-wrap: anywhere; }
+          .exec-tabela th:nth-child(1), .exec-tabela td:nth-child(1) { width: 58%; }
+          .exec-tabela th:nth-child(4), .exec-tabela td:nth-child(4) { display: none; }
+          .exec-tabela td.exec-num { font-size: 0.8rem; }
+          .exec-data-mobile { display: block; font-weight: 400; font-size: 0.72rem; color: #8A8D91; margin-top: 0.15rem; }
+        }
+        .exec-tabela .exec-valor { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: #1B1D1F; }
+        .exec-tabela .exec-equip { font-weight: 600; color: #1B1D1F; }
         .exec-aviso-amostra { font-size: 0.72rem; color: #9CA0A6; margin-bottom: 0.8rem; }
         .exec-header {
           background: #FFFFFF;
@@ -13216,6 +13235,29 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .valor-hero-prop-texto strong { display: block; color: #E8E9EB; font-size: 0.88rem; }
         .valor-hero-prop-texto span { display: block; color: #8A8D91; font-size: 0.8rem; margin-top: 0.15rem; }
         .valor-hero-botoes { display: flex; gap: 0.8rem; flex-wrap: wrap; }
+        /* 02/10: no desktop o texto ocupava só metade e a direita ficava vazia -
+           texto + botões à esquerda, os 3 destaques empilhados à direita. */
+        @media (min-width: 1100px) {
+          .valor-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1.35fr) minmax(280px, 1fr);
+            grid-template-areas: "titulo props" "sub props" "botoes props";
+            column-gap: 3rem;
+            align-items: start;
+          }
+          .valor-hero-titulo { grid-area: titulo; }
+          .valor-hero-sub { grid-area: sub; max-width: none; }
+          .valor-hero-botoes { grid-area: botoes; }
+          .valor-hero-props {
+            grid-area: props;
+            grid-template-columns: 1fr;
+            gap: 1.1rem;
+            margin: 0;
+            padding-left: 2rem;
+            border-left: 1px solid rgba(216,154,0,0.25);
+            align-self: center;
+          }
+        }
         .valor-hero-btn-primario {
           background: #D89A00;
           color: #1B1C1F;
@@ -13456,7 +13498,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           history.length > 0 && /* @__PURE__ */ React.createElement("button", { type: "button", className: "valor-hero-btn-secundario", onClick: () => { setUltimaSecaoPainel("historico"); setTab("historico"); } }, t("Ver meu hist\xF3rico", "View my history"))
         )
       ),
-      /* @__PURE__ */ React.createElement(PanelTitle, null, t("Bem-vinda", "Welcome"), ", ", session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : ""), /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, isAdmin ? t("Resumo da sua base e atalhos r\xE1pidos.", "Summary of your database and quick shortcuts.") : t("Descubra a refer\xEAncia de mercado do seu ativo industrial em minutos.", "Find the market reference for your industrial asset in minutes.")), (() => {
+      (() => {
         if (history.length === 0) return null;
         const nomeUsuario = session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : "";
         const historicoOrdenadoDash = history.slice().sort((a, b) => b.id - a.id);
@@ -13469,14 +13511,26 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const notaMediaGeral = notasDash.length > 0 ? Math.round(notasDash.reduce((a, b) => a + b, 0) / notasDash.length) : null;
         const confiancaMediaBadge = notaMediaGeral === null ? null : notaMediaGeral >= 80 ? "alta" : notaMediaGeral >= 55 ? "m\xE9dia" : "baixa";
         const ultimas5Dash = historicoOrdenadoDash.slice(0, 5);
+        // 02/10: categoria padronizada ("motor elétrico" e "motor eletrico" = Motor)
+        // e nome do equipamento sem repetir a categoria como se fosse modelo.
+        const categoriaDash = (item) => normalizarCategoria(item.categoria) || "";
+        const nomeEquipamentoDash = (item) => {
+          const cat = categoriaDash(item);
+          const marcaBruta = normalizarMarca(item.marca) || "";
+          const marcaConhecida = marcaBruta && MARCAS_CONHECIDAS.find((m) => m.toLowerCase() === marcaBruta.toLowerCase());
+          const marca = marcaConhecida || marcaBruta;
+          const modelo = item.modelo && normalizarCategoria(item.modelo) !== cat ? item.modelo : "";
+          if (modelo) return [marca, modelo].filter(Boolean).join(" ");
+          return [cat, marca].filter(Boolean).join(" \xB7 ") || t("Equipamento sem identifica\xE7\xE3o", "Unidentified equipment");
+        };
         const contagemCategorias = {};
-        history.forEach((h) => { const cat = h.item.categoria; if (cat) contagemCategorias[cat] = (contagemCategorias[cat] || 0) + 1; });
+        history.forEach((h) => { const cat = categoriaDash(h.item); if (cat) contagemCategorias[cat] = (contagemCategorias[cat] || 0) + 1; });
+        const ultimaData = historicoOrdenadoDash[0] && historicoOrdenadoDash[0].data;
         const topCategorias = Object.entries(contagemCategorias).sort((a, b) => b[1] - a[1]).slice(0, 5);
         const maxCategoriaCount = topCategorias.length > 0 ? topCategorias[0][1] : 1;
         const donutDeg = totalAvaliacoes > 0 ? basePropriaCount / totalAvaliacoes * 360 : 0;
 
         return /* @__PURE__ */ React.createElement("div", { className: "exec-dashboard" },
-          /* @__PURE__ */ React.createElement("p", { className: "exec-aviso-amostra" }, t("Painel calculado com base nas avalia\xE7\xF5es recentes salvas neste dispositivo.", "Panel calculated from recent evaluations saved on this device.")),
 
           // ---- Cabeçalho executivo ----
           /* @__PURE__ */ React.createElement("div", { className: "exec-header" },
@@ -13502,7 +13556,17 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num verde" }, formatBRL(valorTotalAvaliado)),
               /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, t("Valor total avaliado", "Total value evaluated"))
             ),
-            /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+            !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOXES }),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num" }, Object.keys(contagemCategorias).length),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, t("Categorias avaliadas", "Categories evaluated"))
+            ),
+            !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+              /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HISTORY }),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num" }, ultimaData ? new Date(ultimaData).toLocaleDateString("pt-BR") : "\u2014"),
+              /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, t("\xDAltima avalia\xE7\xE3o", "Latest evaluation"))
+            ),
+            isAdmin && /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
               /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }),
               /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-economia" },
                 /* @__PURE__ */ React.createElement("span", null, t("Base pr\xF3pria: ", "Own base: "), basePropriaCount),
@@ -13510,7 +13574,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
               ),
               /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-label" }, economiaPct, "% ", t("economia de IA", "AI savings"))
             ),
-            /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
+            isAdmin && /* @__PURE__ */ React.createElement("div", { className: "exec-kpi-card" },
               /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }),
               notaMediaGeral !== null ? /* @__PURE__ */ React.createElement(React.Fragment, null,
                 /* @__PURE__ */ React.createElement("span", { className: "exec-kpi-num" }, notaMediaGeral, "/100"),
@@ -13520,63 +13584,40 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             )
           ),
 
-          // ---- Atalhos rápidos ----
-          /* @__PURE__ */ React.createElement("div", { className: "exec-atalhos" },
+          // ---- Atalhos rápidos (só admin: pro cliente repetiam os botões do topo) ----
+          isAdmin && /* @__PURE__ */ React.createElement("div", { className: "exec-atalhos" },
             [
               { icon: ICON_ENGRENAGEM, label: t("Item \xDAnico", "Single Item"), tab: "single" },
               { icon: ICON_BATCH, label: t("Avalia\xE7\xE3o em Lote", "Batch Evaluation"), tab: "batch" },
               { icon: ICON_HISTORY, label: t("Hist\xF3rico", "History"), tab: "historico" },
-              { icon: ICON_COLETOR, label: t("Coletor de Mercado", "Market Collector"), tab: "coletor" }
-            ].map((a, i) => /* @__PURE__ */ React.createElement("button", { key: i, type: "button", className: "exec-atalho-card", onClick: () => setTab(a.tab) },
+              isAdmin && { icon: ICON_COLETOR, label: t("Coletor de Mercado", "Market Collector"), tab: "coletor" }
+            ].filter(Boolean).map((a, i) => /* @__PURE__ */ React.createElement("button", { key: i, type: "button", className: "exec-atalho-card", onClick: () => setTab(a.tab) },
               /* @__PURE__ */ React.createElement(NavIcon, { d: a.icon }),
               /* @__PURE__ */ React.createElement("span", null, a.label)
             ))
           ),
 
-          // ---- Últimas avaliações + Qualidade das últimas (lado a lado) ----
-          /* @__PURE__ */ React.createElement("div", { className: "exec-duas-colunas" },
-            /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
-              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("\xDAltimas Avalia\xE7\xF5es", "Latest Evaluations")),
-              /* @__PURE__ */ React.createElement("table", { className: "exec-tabela" },
-                /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null,
-                  /* @__PURE__ */ React.createElement("th", null, t("Equipamento", "Equipment")),
-                  /* @__PURE__ */ React.createElement("th", null, t("Marca", "Brand")),
-                  /* @__PURE__ */ React.createElement("th", null, t("Categoria", "Category")),
-                  /* @__PURE__ */ React.createElement("th", null, t("Valor", "Value")),
-                  /* @__PURE__ */ React.createElement("th", null, t("Qualidade", "Quality")),
-                  /* @__PURE__ */ React.createElement("th", null, t("Data", "Date"))
-                )),
-                /* @__PURE__ */ React.createElement("tbody", null, ultimas5Dash.map((h) => {
-                  const notaLinha = calcularNotaQualidadeV2(h.item, h.result);
-                  return /* @__PURE__ */ React.createElement("tr", { key: h.id, className: "exec-tabela-linha", onClick: () => { setForm(h.item); setResult(h.result); setError(null); setTab("single"); } },
-                    /* @__PURE__ */ React.createElement("td", null, h.item.modelo || h.item.categoria || "\u2014"),
-                    /* @__PURE__ */ React.createElement("td", null, normalizarMarca(h.item.marca) || "\u2014"),
-                    /* @__PURE__ */ React.createElement("td", null, h.item.categoria || "\u2014"),
-                    /* @__PURE__ */ React.createElement("td", null, formatBRL(h.result.faixa_media)),
-                    /* @__PURE__ */ React.createElement("td", null, notaLinha ? `${notaLinha.nota}/100` : "\u2014"),
-                    /* @__PURE__ */ React.createElement("td", null, h.data ? ( /* @__PURE__ */ new Date(h.data)).toLocaleDateString("pt-BR") : "\u2014")
-                  );
-                }))
-              )
-            ),
-            /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
-              /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Qualidade das \xDAltimas Avalia\xE7\xF5es", "Quality of Latest Evaluations")),
-              /* @__PURE__ */ React.createElement("div", { className: "exec-qualidade-lista" }, ultimas5Dash.map((h) => {
-                const notaLinha = calcularNotaQualidadeV2(h.item, h.result);
-                return /* @__PURE__ */ React.createElement("div", { key: h.id, className: "exec-qualidade-item" },
-                  /* @__PURE__ */ React.createElement("span", { className: "exec-qualidade-nome" }, h.item.modelo || h.item.categoria || "\u2014"),
-                  /* @__PURE__ */ React.createElement("div", { className: "exec-qualidade-direita" },
-                    notaLinha && /* @__PURE__ */ React.createElement("span", { className: "exec-qualidade-nota" }, notaLinha.nota),
-                    h.result.confianca_avaliacao && /* @__PURE__ */ React.createElement("span", { className: "confianca-tag confianca-" + h.result.confianca_avaliacao }, h.result.confianca_avaliacao),
-                    /* @__PURE__ */ React.createElement("span", { className: "exec-qualidade-valor" }, formatBRL(h.result.faixa_media))
-                  )
-                );
-              }))
+          // ---- Últimas avaliações (02/10: sem nota de qualidade, largura total) ----
+          /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
+            /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("\xDAltimas Avalia\xE7\xF5es", "Latest Evaluations")),
+            /* @__PURE__ */ React.createElement("table", { className: "exec-tabela" },
+              /* @__PURE__ */ React.createElement("thead", null, /* @__PURE__ */ React.createElement("tr", null,
+                /* @__PURE__ */ React.createElement("th", null, t("Equipamento", "Equipment")),
+                /* @__PURE__ */ React.createElement("th", null, t("Categoria", "Category")),
+                /* @__PURE__ */ React.createElement("th", { className: "exec-num" }, t("Valor estimado", "Estimated value")),
+                /* @__PURE__ */ React.createElement("th", { className: "exec-num" }, t("Data", "Date"))
+              )),
+              /* @__PURE__ */ React.createElement("tbody", null, ultimas5Dash.map((h) => /* @__PURE__ */ React.createElement("tr", { key: h.id, className: "exec-tabela-linha", onClick: () => { setForm(h.item); setResult(h.result); setError(null); setTab("single"); } },
+                /* @__PURE__ */ React.createElement("td", { className: "exec-equip" }, nomeEquipamentoDash(h.item), h.data && /* @__PURE__ */ React.createElement("span", { className: "exec-data-mobile" }, ( /* @__PURE__ */ new Date(h.data)).toLocaleDateString("pt-BR"))),
+                /* @__PURE__ */ React.createElement("td", null, categoriaDash(h.item) || "\u2014"),
+                /* @__PURE__ */ React.createElement("td", { className: "exec-num exec-valor" }, formatBRL(h.result.faixa_media)),
+                /* @__PURE__ */ React.createElement("td", { className: "exec-num" }, h.data ? ( /* @__PURE__ */ new Date(h.data)).toLocaleDateString("pt-BR") : "\u2014")
+              )))
             )
           ),
 
           // ---- Categorias mais avaliadas + Distribuição ----
-          /* @__PURE__ */ React.createElement("div", { className: "exec-duas-colunas" },
+          /* @__PURE__ */ React.createElement("div", { className: isAdmin ? "exec-duas-colunas" : "exec-uma-coluna" },
             topCategorias.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
               /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Categorias Mais Avaliadas", "Most Evaluated Categories")),
               /* @__PURE__ */ React.createElement("div", { className: "exec-bar-chart" }, topCategorias.map(([cat, count], i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "exec-bar-row" },
@@ -13585,7 +13626,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
                 /* @__PURE__ */ React.createElement("span", { className: "exec-bar-num" }, count)
               )))
             ),
-            /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
+            isAdmin && /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
               /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Distribui\xE7\xE3o das Avalia\xE7\xF5es", "Evaluation Distribution")),
               /* @__PURE__ */ React.createElement("div", { className: "exec-donut-wrap" },
                 /* @__PURE__ */ React.createElement("div", { className: "exec-donut", style: { background: `conic-gradient(#D89A00 0deg ${donutDeg}deg, #E4E2DC ${donutDeg}deg 360deg)` } }, /* @__PURE__ */ React.createElement("div", { className: "exec-donut-centro" }, totalAvaliacoes)),
@@ -13595,22 +13636,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
                 )
               )
             )
-          ),
-
-          // ---- Atividade recente ----
-          /* @__PURE__ */ React.createElement("div", { className: "exec-bloco" },
-            /* @__PURE__ */ React.createElement("span", { className: "tag-label" }, t("Atividade Recente", "Recent Activity")),
-            /* @__PURE__ */ React.createElement("div", { className: "exec-timeline" }, historicoOrdenadoDash.slice(0, 8).map((h, i) => /* @__PURE__ */ React.createElement("div", { key: h.id, className: "exec-timeline-item" },
-              /* @__PURE__ */ React.createElement("span", { className: "exec-timeline-dot" }),
-              /* @__PURE__ */ React.createElement("span", { className: "exec-timeline-texto" }, t("Avalia\xE7\xE3o criada: ", "Evaluation created: "), h.item.modelo || h.item.categoria || t("equipamento", "equipment")),
-              /* @__PURE__ */ React.createElement("span", { className: "exec-timeline-data" }, h.data ? ( /* @__PURE__ */ new Date(h.data)).toLocaleDateString("pt-BR") : "")
-            )))
           )
         );
-      })(), !isAdmin && /* @__PURE__ */ React.createElement("div", { className: "intro-cliente" }, /* @__PURE__ */ React.createElement("p", null, t(
-      "A Conecta Valor usa Intelig\xEAncia Artificial e dados reais de mercado para gerar refer\xEAncias de valor para ativos industriais \u2014 m\xE1quinas, linhas de produ\xE7\xE3o, galp\xF5es e mais.",
-      "Conecta Valor uses Artificial Intelligence and real market data to generate value references for industrial assets \u2014 machines, production lines, warehouses and more."
-    )), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.7rem" } }, /* @__PURE__ */ React.createElement("strong", null, t("Como pesquisar:", "How to search:"))), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2460 N\xE3o sabe os detalhes t\xE9cnicos? V\xE1 em ", "\u2460 Don't know the technical details? Go to "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" e descreva o que souber \u2014 a IA busca compar\xE1veis reais e monta a an\xE1lise.", " and describe what you know \u2014 the AI searches for real comparables and builds the analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2461 J\xE1 tem fabricante, modelo e outros dados? Melhor ainda \u2014 informe tudo em ", "\u2461 Already have manufacturer, model and other details? Even better \u2014 enter it all in "), /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico", "Single item")), t(" para uma an\xE1lise ainda mais precisa.", " for an even more precise analysis.")), /* @__PURE__ */ React.createElement("p", { style: { marginTop: "0.3rem" } }, t("\u2462 Precisa avaliar v\xE1rios ativos de uma vez? Use ", "\u2462 Need to evaluate several assets at once? Use "), /* @__PURE__ */ React.createElement("strong", null, t("Lote", "Batch")), t(" para subir uma planilha e processar tudo junto.", " to upload a spreadsheet and process everything together."))), stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026")) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" + (result ? " panel-compacto" : "") }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "single", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }),
+      })(), isAdmin && (stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026"))) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" + (result ? " panel-compacto" : "") }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "single", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement("div", { className: "breadcrumb" },
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-link", onClick: () => setTab("dashboard") }, t("In\xEDcio", "Home")),
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-sep" }, "\u2192"),
