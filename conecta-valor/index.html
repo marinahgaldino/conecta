@@ -155,7 +155,7 @@
     { id: "prensa", nome: "Prensa", grupo: "maquinas_ferramenta", synonyms: ["prensa hidráulica", "prensa excêntrica"], re: /prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i, excludeRe: /imprensa|filtro|dobradeira/i, comum: true, ativo: true },
     { id: "guilhotina", nome: "Guilhotina", grupo: "maquinas_ferramenta", synonyms: ["guilhotina hidráulica", "tesoura guilhotina"], re: /guilhotina/i, comum: true, ativo: true },
     { id: "paletizador", nome: "Paletizador", grupo: "envase_embalagem", synonyms: ["paletizadora automática", "palletizer"], re: /paletizador(a)?/i, comum: false, ativo: true },
-    { id: "empilhadeira", nome: "Empilhadeira", grupo: "movimentacao", synonyms: ["empilhadeira a gás", "empilhadeira elétrica", "forklift"], re: /empilhadeira/i, comum: true, ativo: true },
+    { id: "empilhadeira", nome: "Empilhadeira", grupo: "movimentacao", synonyms: ["empilhadeira a gás", "empilhadeira elétrica", "empilhador", "forklift"], re: /empilhadeira|\bempilhador\b/i, comum: true, ativo: true },
     { id: "esteira_transportadora", nome: "Esteira Transportadora", grupo: "movimentacao", synonyms: ["esteira de correia", "transportador de rolos", "conveyor"], re: /esteira (transportadora|de envase)|transportador(a)? de (correia|rolos)/i, comum: true, ativo: true },
     { id: "ponte_rolante", nome: "Ponte Rolante", grupo: "movimentacao", synonyms: ["ponte rolante biviga", "overhead crane"], re: /ponte rolante/i, comum: false, ativo: true },
     { id: "talha", nome: "Talha", grupo: "movimentacao", synonyms: ["talha elétrica", "hoist"], re: /\btalha\b/i, comum: false, ativo: true },
@@ -164,7 +164,7 @@
     { id: "clp", nome: "CLP", grupo: "eletrica_automacao", synonyms: ["controlador lógico programável", "PLC"], re: /\bCLP\b|controlador l[óo]gico program[áa]vel|\bPLC\b/i, comum: false, ativo: true },
     { id: "inversor", nome: "Inversor", grupo: "eletrica_automacao", synonyms: ["inversor de frequência", "VFD", "variador de velocidade"], re: /inversor de frequ[êe]ncia|\bVFD\b|\binversor\b/i, comum: false, ativo: true },
     { id: "instrumentacao", nome: "Instrumentação", grupo: "eletrica_automacao", synonyms: ["transmissor de pressão", "transmissor de nível", "transmissor de temperatura"], re: /instrumenta[çc][ãa]o|transmissor de (press[ãa]o|n[íi]vel|temperatura)/i, comum: false, ativo: true },
-    { id: "caminhao", nome: "Caminhão", grupo: "veiculos", synonyms: ["caminhão truck", "caminhão toco"], re: /caminh[ãa]o\b/i, comum: false, ativo: true },
+    { id: "caminhao", nome: "Caminhão", grupo: "veiculos", synonyms: ["caminhão truck", "caminhão toco", "camião"], re: /caminh[ãa]o\b|\bcami[ãa]o\b/i, comum: false, ativo: true },
     { id: "carreta", nome: "Carreta", grupo: "veiculos", synonyms: ["carreta graneleira", "semirreboque"], re: /\bcarreta\b/i, comum: false, ativo: true },
     { id: "veiculo_leve", nome: "Veículo Leve", grupo: "veiculos", synonyms: ["veículo utilitário", "carro de passeio"], re: /ve[íi]culo leve|utilit[áa]rio\b/i, comum: false, ativo: true },
     { id: "predio_administrativo", nome: "Prédio Administrativo", grupo: "imoveis", synonyms: ["escritório comercial", "prédio comercial"], re: /pr[ée]dio administrativo|escrit[óo]rio comercial/i, comum: false, ativo: true },
@@ -196,7 +196,7 @@
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
     { id: "envasadora", nome: "Envasadora", grupo: "envase_embalagem", synonyms: ["envasadora automática"], re: /envasador(a)?\b/i, comum: false, ativo: true },
     { id: "transformador", nome: "Transformador", grupo: "eletrica_automacao", synonyms: ["trafo", "transformador de potência"], re: /transformador|\btrafo\b/i, comum: true, ativo: true },
-    { id: "motorredutor", nome: "Motorredutor", grupo: "mecanica", synonyms: ["gearmotor", "motoredutor"], re: /motor\s*redutor/i, comum: true, ativo: true },
+    { id: "motorredutor", nome: "Motorredutor", grupo: "mecanica", synonyms: ["gearmotor", "motoredutor"], re: /motor\s*redutor|motoredutor|moto[\s-]redutor/i, comum: true, ativo: true },
     { id: "redutor", nome: "Redutor", grupo: "mecanica", synonyms: ["redutor de velocidade", "caixa redutora", "gearbox"], re: /\bredutor(es)?\b/i, comum: false, ativo: true },
     { id: "unidade_hidraulica", nome: "Unidade Hidráulica", grupo: "mecanica", synonyms: ["central hidráulica", "power unit"], re: /unidade hidr[áa]ulica/i, comum: true, ativo: true },
     // 02/10 - categorias novas, com evidência real na base (itens que ficavam sem categoria ou em categoria errada)
@@ -216,7 +216,7 @@
     { id: "checkweigher", nome: "Checkweigher", grupo: "instrumentos_utilidades", synonyms: ["balança checadora", "balança dinâmica de linha"], re: /checkweigher|balan[çc]a checadora|balan[çc]a din[âa]mica/i, comum: false, ativo: true },
     { id: "balanca", nome: "Balança", grupo: "instrumentos_utilidades", synonyms: ["balança industrial", "balança de plataforma", "balança rodoviária"], re: /balan[çc]a/i, comum: true, ativo: true },
     { id: "lavadora_piso", nome: "Lavadora de Piso", grupo: "instrumentos_utilidades", synonyms: ["lavadora varredora"], re: /lavadora de piso|lavadora varredora|varredora autopropelida/i, comum: false, ativo: true },
-    { id: "filtro_industrial", nome: "Filtro Industrial", grupo: "instrumentos_utilidades", synonyms: ["filtro de areia", "filtro prensa"], re: /filtro de areia|filtro industrial|filtro prensa/i, comum: true, ativo: true },
+    { id: "filtro_industrial", nome: "Filtro Industrial", grupo: "instrumentos_utilidades", synonyms: ["filtro de areia", "filtro prensa", "sistema de filtração"], re: /filtro de areia|filtro industrial|filtro prensa|sistema de filtra[çc][ãa]o/i, comum: true, ativo: true },
     { id: "forno_industrial", nome: "Forno Industrial", grupo: "utilidades", synonyms: ["forno de secagem", "estufa industrial"], re: /forno industrial|forno de secagem|estufa industrial/i, comum: true, ativo: true },
     { id: "valvula_industrial", nome: "Válvula Industrial", grupo: "instrumentos_utilidades", synonyms: ["válvula de esfera", "válvula borboleta", "válvula gaveta"], re: /v[áa]lvula/i, comum: true, ativo: true },
     { id: "atuador_eletrico", nome: "Atuador Elétrico", grupo: "mecanica", synonyms: ["atuador pneumático", "atuador elétrico"], re: /atuador/i, comum: false, ativo: true },
@@ -5461,18 +5461,13 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   // Modelo = só o modelo (ex: "Tormax 20A", "GA 37"), nunca o título inteiro
   // do anúncio. Tira marca, categoria, especificações com unidade e palavras
   // de anúncio; o título original vai pra "detalhes" pra não perder nada.
-  var PALAVRAS_TITULO_ANUNCIO = /^(usad[oa]s?|nov[oa]s?|seminov[oa]s?|vendo|venda|vende-se|[óo]timo|otimo|excelente|bom|estado|funcionando|revisad[oa]|reformad[oa]|completo|completa|marca|modelo|industrial|industriais|trif[áa]sic[oa]|monof[áa]sic[oa]|el[ée]tric[oa]|mec[âa]nic[oa]|m[áa]quina|equipamento|linha|ano|de|do|da|dos|das|com|para|em|e|a|o|sem|tipo|parafuso|pist[ãa]o|universal|autom[áa]tic[oa]|hidr[áa]ulic[oa]|pneum[áa]tic[oa]|inox|a[çc]o|entre|pontas|di[âa]metro|admiss[íi]vel|dist[âa]ncia|capacidade|pot[êe]ncia|vaz[ãa]o|press[ãa]o|torre|g[áa]s|glp|diesel|lenha|vapor|leil[ãa]o|lote|oportunidade|imperd[íi]vel|urgente|barato|[óo]leo|seco|seca|plana|cil[íi]ndrica|horizontal|vertical|mesa|magn[ée]tica|cnc|pe[çc]as|reposi[çc][ãa]o)$/i;
+  var PALAVRAS_TITULO_ANUNCIO = /^(usad[oa]s?|nov[oa]s?|seminov[oa]s?|vendo|venda|vende-se|[óo]timo|otimo|excelente|bom|estado|funcionando|revisad[oa]|reformad[oa]|completo|completa|marca|modelo|industrial|industriais|trif[áa]sic[oa]|monof[áa]sic[oa]|el[ée]tric[oa]|mec[âa]nic[oa]|m[áa]quina|equipamento|linha|ano|de|do|da|dos|das|com|para|em|e|a|o|sem|tipo|parafuso|pist[ãa]o|universal|autom[áa]tic[oa]|hidr[áa]ulic[oa]|pneum[áa]tic[oa]|inox|a[çc]o|entre|pontas|di[âa]metro|admiss[íi]vel|dist[âa]ncia|capacidade|pot[êe]ncia|vaz[ãa]o|press[ãa]o|torre|g[áa]s|glp|diesel|lenha|vapor|leil[ãa]o|lote|oportunidade|imperd[íi]vel|urgente|barato|[óo]leo|seco|seca|plana|cil[íi]ndrica|horizontal|vertical|mesa|magn[ée]tica|cnc|pe[çc]as|reposi[çc][ãa]o|tamanho|eleva[çc][ãa]o|rota[çc][ãa]o|polos|entrega|dias|completa|completo|unidades?|caixas|eixos?|m[áa]quinas|toneladas|for[çc]a|produ[çc][ãa]o|alta|baixa|precis[ãa]o|padr[ãa]o|residencial|port[áa]til|eficiente|flange|blindado|carrapato|concreto|mangote|universal|bivolt|direto|pintura|cabe[çc]ote|m[óo]vel|alimentador|multitarefa|fogotubular|aquatubular|girat[óo]ria|base|mini|fixa|reciclagem|saquinho|moldados|pr[ée]|auto|clave|autoclave|carrinhos|bicos|l[íi]quidos|bebidas|janelas|portas|chapas?|armaz[ée]m|monof[áa]sico|bif[áa]sico|refor[çc]ad[oa]|nova|novas|semi|r[áa]pid[oa]|seguro|garantia|frete|gr[áa]tis|pre[çc]o|valor|em|no|na|por|motor|motores|aberta|fechada|tank|tanque|guincho|leite|metros)$/i;
   // Número só conta como especificação se não fizer parte de um código
   // (lookbehind): "8FG25" e "Tormax 20A" ficam intactos.
-  var RE_ESPEC_COM_UNIDADE = /(?<![\w-])\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)*\s*(?:mil\s*)?(?:mm|cm|km|kgf\/cm[²2]|kgf|kg\/h|kg|ton\/h|t\/h|ton|toneladas?|cv|hp|kw|kva|kv|v|rpm|bar|psi|mca|m[³3]\/(?:min|h)|m[³3]|m[²2]|l\/h|l\/min|litros?|polos?|p[ée]s|bph|unid(?:ades)?\/h|garrafas\/h|%)(?![\w])/gi;
+  var RE_ESPEC_COM_UNIDADE = /(?<![\w-])\d+(?:[.,]\d+)?(?:\s*[\/-]\s*\d+(?:[.,]\d+)?)*\s*(?:mil\s*)?(?:metros?|mm|cm|km|kgf\/cm[²2]|kgf|kg\/h|kg|ton\/h|t\/h|ton|toneladas?|cv|hp|kw|kva|kv|v|rpm|bar|psi|mca|m[³3]\/(?:min|h)|m[³3]|m[²2]|l\/h|l\/min|litros?|polos?|p[ée]s|bph|unid(?:ades)?\/h|garrafas\/h|ml|lts?|mbar|kcal|m|%)(?![\w])/gi;
   function extrairModeloCurto(modelo, marca, categoria) {
     if (!modelo) return modelo;
     const original = String(modelo).trim();
-    const palavrasOriginais = original.split(/\s+/);
-    if (palavrasOriginais.length <= 3 && original.length <= 25 && /\d/.test(original) && !RE_ESPEC_COM_UNIDADE.test(original)) {
-      RE_ESPEC_COM_UNIDADE.lastIndex = 0;
-      return original;
-    }
     RE_ESPEC_COM_UNIDADE.lastIndex = 0;
     let s = " " + original + " ";
     if (marca) s = s.replace(new RegExp(String(marca).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ");
@@ -5482,21 +5477,40 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     termosCat.sort((a, b) => b.length - a.length).forEach((termo) => {
       s = s.replace(new RegExp(termo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ");
     });
+    // Preço, norma, grau de proteção, polos, relação, frequência, dimensões e
+    // quantidades com milhar não são modelo (vistos na base real em 02/10).
+    s = s.replace(/(?:€|R\$|US\$|USD|EUR)\s*[\d.,]+/gi, " ");
+    s = s.replace(/\b(?:IP\s?\d{2}|NR[\s-]?\d{1,2}|NEMA)\b/gi, " ");
+    s = s.replace(/(?<![\w-])\d+\s*p(?:olos)?\b/gi, " ");
+    s = s.replace(/(?<![\w-])\d+\s*:\s*\d+\b/g, " ");
+    s = s.replace(/(?<![\w-])\/?\s*\d+\s*hz\b/gi, " ");
+    s = s.replace(/(?<![\w-])\d+(?:[.,]\d+)?\s+(?:a|t)\b/gi, " ");
+    s = s.replace(/(?<![\w-])\d+(?:[.,]\d+)?t\b/gi, " ");
+    s = s.replace(/\b(?:inox|a[çc]o)\s*(?:aisi\s*)?(?:304|316l?|430)\b/gi, " ");
+    s = s.replace(/(?<![\w-])\d+(?:[.,]\d+)?(?:\s*\d\/\d)?\s*(?:"|''|pol(?:egadas?)?\b)/gi, " ");
+    s = s.replace(/(?<![\w-])\d+(?:[.,]\d+)?\s*(?:mm|cm|m)?\s*[xX]\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)?\b/g, " ");
+    s = s.replace(/(?<![\w-])\d{1,3}(?:\.\d{3})+(?:,\d+)?(?![\w])/g, " ");
+    s = s.replace(/(?<![\w-])\d{3}\s*\/\s*\d{3}(?:\s*\/\s*\d{3})?(?![\w])/g, " ");
     s = s.replace(RE_ESPEC_COM_UNIDADE, " ");
     s = s.replace(/\b(?:19|20)\d{2}\b/g, " ");
     s = s.replace(/[,;:()|]+/g, " ").replace(/\s[-–—/]+\s/g, " ");
-    const tokens = s.split(/\s+/).filter((tk) => tk && !PALAVRAS_TITULO_ANUNCIO.test(tk) && !/^[-–—/.]+$/.test(tk));
+    const tokens = s.split(/\s+/).filter((tk) => tk && !PALAVRAS_TITULO_ANUNCIO.test(tk) && !/^[-–—/.]+$/.test(tk) && !/^[\/\d.,:-]*(\d+\s*(v|hz|w|kw|cv|hp))+$/i.test(tk));
     if (tokens.length === 0) return null;
-    const temDigito = (tk) => /\d/.test(tk);
-    const ehCodigo = (tk) => temDigito(tk) || /^[A-Z]{2,5}$/.test(tk);
-    const iCod = tokens.findIndex(temDigito);
+    // Código de modelo: letra+número ("20A", "GA37", "V70-GB"), número com
+    // "/" ou "-" ("100/3", "50-200") ou número de 3+ dígitos ("810").
+    // Número de 2 dígitos só vale logo depois de um nome ("GA 37", "Accord 40").
+    // Número solto de 1 dígito nunca é modelo (costuma ser quantidade).
+    const ehCod = (tk) => /\d/.test(tk) && (/[A-Za-zÀ-ÿ]/.test(tk) || /\d[\/-]\d/.test(tk) || /^\d{3,}$/.test(tk));
+    const ehNum2ComNome = (tk, i) => /^\d{2}$/.test(tk) && i > 0 && /^[A-ZÀ-Ÿ]/.test(tokens[i - 1]);
+    const ehCodigo = (tk) => ehCod(tk) || /^[A-Z]{2,4}$/.test(tk);
+    const iCod = tokens.findIndex((tk, i) => ehCod(tk) || ehNum2ComNome(tk, i));
     // Sem nenhum número não é modelo (mesma regra de limparModeloAposExtracao,
     // pedida por ela) - fica vazio em vez de virar pedaço de título.
     if (iCod === -1) return null;
     let ini = iCod;
-    if (ini > 0 && /^[A-ZÀ-Ÿ]/.test(tokens[ini - 1])) ini -= 1;
+    if (ini > 0 && /^\d/.test(tokens[iCod]) && /^[A-ZÀ-Ÿ]/.test(tokens[ini - 1])) ini -= 1;
     let fim = iCod + 1;
-    while (fim < tokens.length && fim - ini < 3 && ehCodigo(tokens[fim])) fim++;
+    while (fim < tokens.length && fim - ini < 3 && ehCodigo(tokens[fim]) && tokens[fim].length <= 12) fim++;
     return tokens.slice(ini, fim).join(" ");
   }
   // Aluguel não entra na base (02/10): preço de locação não é valor de mercado.

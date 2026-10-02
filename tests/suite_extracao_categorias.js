@@ -96,4 +96,9 @@ var SUITE_TESTES = [
   { categoria_esperada: "maquina_corte_laser", texto: "Laser de fibra KK-Industries FLC-P 2040", campos_esperados: {} },
   { categoria_esperada: "pulverizador_agricola", texto: "Pulverizador autopropelido Stara Imperador 4000 ano 2021", campos_esperados: {} },
   { categoria_esperada: "peca_acessorio_maquina", texto: "Placa para torno mecânico Romi", campos_esperados: {} },
+  // 02/10 - grafias reais da base
+  { categoria_esperada: "motorredutor", texto: "Motoredutor eixo 25mm 1:10", campos_esperados: {} },
+  { categoria_esperada: "empilhadeira", texto: "Empilhador reutilizável Hubtex DS 27", campos_esperados: {} },
+  { categoria_esperada: "caminhao", texto: "Camião de lixo Mercedes-Benz Econic 6X4", campos_esperados: {} },
+  { categoria_esperada: "filtro_industrial", texto: "Sistema de filtração inox", campos_esperados: {} },
 ];
