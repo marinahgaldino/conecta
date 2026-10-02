@@ -1887,7 +1887,9 @@
     else if (/recondicionad/i.test(t)) estado = "Recondicionado";
     else if (/seminovo|semi.novo/i.test(t)) estado = "Seminovo";
     else if (/\busado\b/i.test(t)) estado = "Usado";
-    const capacidadeMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?(litros|l\b|m³|m3)/i);
+    const capacidadeMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?(litros|l\b|m³|m3)(\s*\/\s*(?:min|h(?:ora)?)\b)?/i);
+    // Taxa (vazão) junto da unidade: "6,5 m³/min" não pode virar "6,5 m³".
+    const taxaCapacidade = capacidadeMatch && capacidadeMatch[4] ? (/min/i.test(capacidadeMatch[4]) ? "/min" : "/h") : "";
     const kgHoraMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?kg\s*[.\s]*\/?\s*v?\.?\s*\/?\s*h(?:ora)?\b/i) || t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?kg\s+vapor\s*[\/\s]*h(?:ora)?\b/i);
     const tonHoraMatch = t.match(/(\d+(?:[.,]\d+)?)\s*ton(?:elada)?s?\s*[\/\s]*h(?:ora)?\b/i);
     const barMatch = t.match(/at[ée]\s*(\d+(?:[.,]\d+)?)\s*bar\b/i);
@@ -1914,7 +1916,7 @@
     if (capacidadeMatch) {
       const num = capacidadeMatch[1] + (capacidadeMatch[2] || "");
       const unidade = /m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L";
-      detalhesPartes.push(`Capacidade: ${num}${unidade}`);
+      detalhesPartes.push(`Capacidade: ${num}${unidade}${taxaCapacidade}`);
     }
     if (capacidadeProdMatch) detalhesPartes.push(`Produ\xE7\xE3o: ${capacidadeProdMatch[1]} un/h`);
     if (barMatch) detalhesPartes.push(`Press\xE3o: at\xE9 ${barMatch[1]} bar`);
@@ -1928,7 +1930,7 @@
     else if (kvaMatch) capacidade = `${kvaMatch[1]} kVA`;
     else if (kgHoraMatch) capacidade = `${kgHoraMatch[1]}${kgHoraMatch[2] || ""} kg/h`;
     else if (tonHoraMatch) capacidade = `${tonHoraMatch[1]} ton/h`;
-    else if (capacidadeMatch) capacidade = `${capacidadeMatch[1]}${capacidadeMatch[2] || ""} ${/m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L"}`;
+    else if (capacidadeMatch) capacidade = `${capacidadeMatch[1]}${capacidadeMatch[2] || ""} ${/m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L"}${taxaCapacidade}`;
     const potenciaCvFinal = nova.atributos.potencia_cv != null ? nova.atributos.potencia_cv : potenciaCvFracao != null ? potenciaCvFracao : cvMatch ? Number(cvMatch[1].replace(",", ".")) : null;
     const rpmFinal = nova.atributos.rpm != null ? nova.atributos.rpm : rpmMatch ? Number(rpmMatch[1]) : null;
     const anoFinal = nova.atributos.ano != null ? String(nova.atributos.ano) : anoMatch ? anoMatch[0] : null;
@@ -2182,7 +2184,7 @@
     m = m.replace(/\d+(?:[.,]\d+)?\s*ton(?:elada)?s?\s*[\/\s]*h(?:ora)?\b/gi, " ");
     m = m.replace(/at[ée]\s*\d+(?:[.,]\d+)?\s*bar\b/gi, " ");
     m = m.replace(/\d+(?:[.,]\d+)?\s*kgf\s*\/\s*cm[²2]/gi, " ");
-    m = m.replace(/\d+(?:[.,]\d+)?\s*(mil\s*)?(litros|l\b|m³|m3)/gi, " ");
+    m = m.replace(/\d+(?:[.,]\d+)?\s*(mil\s*)?(litros|l\b|m³|m3)(\s*\/\s*(?:min|h(?:ora)?)\b)?/gi, " ");
     m = m.replace(/\s*[-–—]\s*(Oportunidade( Única)?|[ÀA] Venda|Excelente Neg[óo]cio|Pronta Entrega)\s*$/gi, "");
     {
       const NAO_LOCAL = /^(Funcionamento|Opera[çc][ãa]o|Produ[çc][ãa]o|Andamento|Atividade|Plena Produ[çc][ãa]o)$/i;
@@ -5404,6 +5406,47 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     if (Object.keys(novos).length === 0) return it;
     return { ...it, atributos_normalizados: { ...novos, ...doParser }, _atributosExtraidos: novos };
   }
+  // Modelo = só o modelo (ex: "Tormax 20A", "GA 37"), nunca o título inteiro
+  // do anúncio. Tira marca, categoria, especificações com unidade e palavras
+  // de anúncio; o título original vai pra "detalhes" pra não perder nada.
+  var PALAVRAS_TITULO_ANUNCIO = /^(usad[oa]s?|nov[oa]s?|seminov[oa]s?|vendo|venda|vende-se|[óo]timo|otimo|excelente|bom|estado|funcionando|revisad[oa]|reformad[oa]|completo|completa|marca|modelo|industrial|industriais|trif[áa]sic[oa]|monof[áa]sic[oa]|el[ée]tric[oa]|mec[âa]nic[oa]|m[áa]quina|equipamento|linha|ano|de|do|da|dos|das|com|para|em|e|a|o|sem|tipo|parafuso|pist[ãa]o|universal|autom[áa]tic[oa]|hidr[áa]ulic[oa]|pneum[áa]tic[oa]|inox|a[çc]o|entre|pontas|di[âa]metro|admiss[íi]vel|dist[âa]ncia|capacidade|pot[êe]ncia|vaz[ãa]o|press[ãa]o|torre|g[áa]s|glp|diesel|lenha|vapor|leil[ãa]o|lote|oportunidade|imperd[íi]vel|urgente|barato|[óo]leo|seco|seca|plana|cil[íi]ndrica|horizontal|vertical|mesa|magn[ée]tica|cnc|pe[çc]as|reposi[çc][ãa]o)$/i;
+  // Número só conta como especificação se não fizer parte de um código
+  // (lookbehind): "8FG25" e "Tormax 20A" ficam intactos.
+  var RE_ESPEC_COM_UNIDADE = /(?<![\w-])\d+(?:[.,]\d+)?(?:\s*\/\s*\d+(?:[.,]\d+)?)*\s*(?:mil\s*)?(?:mm|cm|km|kgf\/cm[²2]|kgf|kg\/h|kg|ton\/h|t\/h|ton|toneladas?|cv|hp|kw|kva|kv|v|rpm|bar|psi|mca|m[³3]\/(?:min|h)|m[³3]|m[²2]|l\/h|l\/min|litros?|polos?|p[ée]s|bph|unid(?:ades)?\/h|garrafas\/h|%)(?![\w])/gi;
+  function extrairModeloCurto(modelo, marca, categoria) {
+    if (!modelo) return modelo;
+    const original = String(modelo).trim();
+    const palavrasOriginais = original.split(/\s+/);
+    if (palavrasOriginais.length <= 3 && original.length <= 25 && /\d/.test(original) && !RE_ESPEC_COM_UNIDADE.test(original)) {
+      RE_ESPEC_COM_UNIDADE.lastIndex = 0;
+      return original;
+    }
+    RE_ESPEC_COM_UNIDADE.lastIndex = 0;
+    let s = " " + original + " ";
+    if (marca) s = s.replace(new RegExp(String(marca).replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ");
+    const catId = resolverCategoriaId(categoria);
+    const cat = catId && CATEGORIA_CANONICA.find((c) => c.id === catId);
+    const termosCat = cat ? [cat.nome, ...(cat.synonyms || [])] : categoria ? [categoria] : [];
+    termosCat.sort((a, b) => b.length - a.length).forEach((termo) => {
+      s = s.replace(new RegExp(termo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), " ");
+    });
+    s = s.replace(RE_ESPEC_COM_UNIDADE, " ");
+    s = s.replace(/\b(?:19|20)\d{2}\b/g, " ");
+    s = s.replace(/[,;:()|]+/g, " ").replace(/\s[-–—/]+\s/g, " ");
+    const tokens = s.split(/\s+/).filter((tk) => tk && !PALAVRAS_TITULO_ANUNCIO.test(tk) && !/^[-–—/.]+$/.test(tk));
+    if (tokens.length === 0) return null;
+    const temDigito = (tk) => /\d/.test(tk);
+    const ehCodigo = (tk) => temDigito(tk) || /^[A-Z]{2,5}$/.test(tk);
+    const iCod = tokens.findIndex(temDigito);
+    // Sem nenhum número não é modelo (mesma regra de limparModeloAposExtracao,
+    // pedida por ela) - fica vazio em vez de virar pedaço de título.
+    if (iCod === -1) return null;
+    let ini = iCod;
+    if (ini > 0 && /^[A-ZÀ-Ÿ]/.test(tokens[ini - 1])) ini -= 1;
+    let fim = iCod + 1;
+    while (fim < tokens.length && fim - ini < 3 && ehCodigo(tokens[fim])) fim++;
+    return tokens.slice(ini, fim).join(" ");
+  }
   function classificarQualidadeColeta(it, medianasPorCategoria, cotacoes) {
     const motivos = [];
     let status = "ok";
@@ -5823,16 +5866,21 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   function QualidadeColetaBadge({ it, onToggle }) {
     const q = it._qualidade;
     const extras = it._atributosExtraidos ? Object.entries(it._atributosExtraidos) : [];
+    const ehLeilao = /leil/i.test(it.tipo_mercado || "");
+    if (ehLeilao) extras.unshift(["__leilao", null]);
     if ((!q || q.status === "ok") && extras.length === 0) return null;
     const incluido = it._incluir !== false;
-    const textoExtras = extras.map(([k, v]) => {
+    const textoExtras = extras.filter(([k]) => k !== "__leilao").map(([k, v]) => {
       const rot = rotuloAtributo(k);
       const un = rot.match(/\(([^)]*)\)$/);
-      return `${rot.replace(/\s*\([^)]*\)$/, "")} ${v}${un && !/ ou /.test(un[1]) ? " " + un[1] : ""}`;
+      const vTxt = typeof v === "number" ? v.toLocaleString("pt-BR") : v;
+      return `${rot.replace(/\s*\([^)]*\)$/, "")} ${vTxt}${un && !/ ou /.test(un[1]) ? " " + un[1] : ""}`;
     }).join(" \xB7 ");
-    if (!q || q.status === "ok") return /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade coleta-ok" }, /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras));
+    const chipLeilao = ehLeilao && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-leilao" }, "Leil\xE3o");
+    if (!q || q.status === "ok") return /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade coleta-ok" }, chipLeilao, textoExtras && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras));
     return /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade coleta-" + q.status },
-      extras.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras),
+      chipLeilao,
+      textoExtras && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras),
       /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-motivo", title: q.motivos.join(" \xB7 ") }, q.status === "bloqueado" ? "\u26D4 " : q.status === "suspeito" ? "\u26A0 " : "\u2139 ", q.motivos.join(" \xB7 ")),
       (q.status === "bloqueado" || q.status === "suspeito") && /* @__PURE__ */ React.createElement("label", { className: "coleta-qualidade-incluir" },
         /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: incluido, onChange: onToggle }),
@@ -9208,7 +9256,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         console.warn("N\xE3o consegui calcular a mediana das categorias, seguindo s\xF3 com o pre\xE7o m\xEDnimo:", e);
       }
       const anotados = items.map((itOriginal) => {
-        const it = enriquecerAtributosColeta(itOriginal);
+        const enr = enriquecerAtributosColeta(itOriginal);
+        const modeloCurto = extrairModeloCurto(enr.modelo, enr.marca, enr.categoria);
+        const tituloOriginal = enr.modelo && modeloCurto !== enr.modelo ? enr.modelo : null;
+        const it = tituloOriginal ? {
+          ...enr,
+          modelo: modeloCurto,
+          detalhes: enr.detalhes && enr.detalhes.includes(tituloOriginal) ? enr.detalhes : [`Modelo original: ${tituloOriginal}`, enr.detalhes].filter(Boolean).join("; ")
+        } : enr;
         const q = classificarQualidadeColeta(it, medianas, cotacoes);
         const precoBRL = it.preco === null || it.preco === undefined || it.preco === "" ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
         return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && precoBRL <= COLETA_PRECO_SIMBOLICO_BRL };
@@ -9728,7 +9783,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           tipo: it.tipo || null,
           aplicacao: it.aplicacao || null,
           fonte: it.fonte || null,
-          tipo_mercado: manualTipoMercado,
+          // O parser marca leilão/locação item a item - isso vale mais que o
+          // campo geral da tela (que vem como "Venda Direta" por padrão).
+          tipo_mercado: it.tipo_mercado && it.tipo_mercado !== "Venda Direta" ? it.tipo_mercado : manualTipoMercado,
           data_observacao: it.data_observacao || (/* @__PURE__ */ new Date()).toISOString().slice(0, 10)
         }));
         rows.forEach((row) => {
@@ -13007,6 +13064,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .coleta-suspeito .coleta-qualidade-motivo { background: #FBF0DC; color: #96650B; }
         .coleta-alerta .coleta-qualidade-motivo { background: #F1F1EE; color: #5C6068; }
         .coleta-qualidade-extras { color: #1F5C3F; }
+        .coleta-qualidade-leilao { background: #EAF0F7; color: #2C4A6E; border-radius: 4px; padding: 0.1rem 0.5rem; font-weight: 600; }
         .coleta-qualidade-incluir { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; color: #4B5058; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
         .tag-card-sidebar:empty { display: none; }
         .tag-card-columns:has(> .tag-card-sidebar:empty) { grid-template-columns: 1fr; }
