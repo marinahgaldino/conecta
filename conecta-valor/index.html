@@ -13528,15 +13528,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           history.length > 0 && /* @__PURE__ */ React.createElement("button", { type: "button", className: "valor-hero-btn-secundario", onClick: () => { setUltimaSecaoPainel("historico"); setTab("historico"); } }, t("Ver meu hist\xF3rico", "View my history"))
         )
       ),
-      tab === "dashboard" && history.length > 0 && (() => {
-        const ultima = history.slice().sort((a, b) => b.id - a.id)[0];
-        return /* @__PURE__ */ React.createElement("button", { type: "button", className: "inicio-ultima", onClick: () => { setUltimaSecaoPainel("resumo"); setTab("resumo"); } },
-          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-rotulo" }, t("\xDAltima avalia\xE7\xE3o", "Latest evaluation")),
-          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-nome" }, nomeEquipamentoHistorico(ultima.item, t)),
-          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-valor" }, formatBRL(ultima.result.faixa_media)),
-          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-link" }, t("Ver painel \u2192", "View panel \u2192"))
-        );
-      })(),
       tab === "resumo" && (() => {
         if (history.length === 0) return /* @__PURE__ */ React.createElement("div", { className: "resumo-vazio" },
           /* @__PURE__ */ React.createElement("p", null, t("Voc\xEA ainda n\xE3o fez nenhuma avalia\xE7\xE3o. Quando fizer, o resumo aparece aqui.", "You have not made any evaluations yet. When you do, the overview shows up here.")),
