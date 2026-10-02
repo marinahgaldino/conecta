@@ -2600,6 +2600,7 @@
     if (item.potencia_cv || item.potenciaCv || item.potencia_kw || item.potenciaKw || item.rpm || item.tensao) return true;
     if (/gal[pn][ãa]o|terreno|im[óo]vel|[áa]rea constru[íi]da|\bm[²2]\b/i.test([item.modelo, item.categoria].filter(Boolean).join(" "))) return true;
     if (item.marca && (item.modelo || /n[uú]mero de s[ée]rie/i.test(item.detalhes || ""))) return true;
+    if (item.atributos_normalizados && item.atributos_normalizados.num_bicos) return true;
     const texto = [item.modelo, item.capacidade, item.detalhes].filter(Boolean).join(" ");
     // kVA/MVA (potência aparente) faltava na lista - é a unidade padrão de
     // transformador ("500 kVA", "300 kVA" etc). Sem isso, um anúncio de
@@ -2608,7 +2609,7 @@
     // real: busca de "Transformador" no MF Rural, 24 anúncios únicos após
     // dedupe, só 4 sobreviviam ao filtro - os 20 restantes tinham kVA/kV
     // como única especificação técnica, não reconhecida).
-    return /\d+[\s.,]*\d*\s*(cv|hp|kw|kva|mva|rpm|kg\/h|kgv\/h|ton(?:elada)?s?(?:\/h(?:oras?)?|\s*por\s*hora)?|l\/h|litros?(?:\/h(?:oras?)?)?|m[³3](?:\/h)?|mm\b|kg\b|bar|kgf\/cm|k?v(?:olts?)?\b|polos?|hz|frascos?(?:\s*\/?\s*hora?s?)?|garrafas?(?:\s*\/?\s*hora?s?)?|unidades?(?:\s*\/?\s*hora?s?)?|pe[çc]as?(?:\s*\/?\s*hora?s?)?|T\s*por\s*Hora)/i.test(texto) || /\d[\d.,]*\s*[Ll]\b/.test(texto);
+    return /\d+[\s.,]*\d*\s*(cv|hp|kw|kva|mva|rpm|kg\/h|kgv\/h|ton(?:elada)?s?(?:\/h(?:oras?)?|\s*por\s*hora)?|l\/h|litros?(?:\/h(?:oras?)?)?|m[³3](?:\/h)?|mm\b|kg\b|bar|kgf\/cm|k?v(?:olts?)?\b|polos?|hz|bicos?|vias|ml\b|frascos?(?:\s*\/?\s*hora?s?)?|garrafas?(?:\s*\/?\s*hora?s?)?|unidades?(?:\s*\/?\s*hora?s?)?|pe[çc]as?(?:\s*\/?\s*hora?s?)?|T\s*por\s*Hora)/i.test(texto) || /\d[\d.,]*\s*[Ll]\b/.test(texto);
   }
   function filtrarSemDadoTecnico(items) {
     const mantidos = [];
@@ -3078,7 +3079,7 @@
     const capacidadeRotuloMatch = texto.match(/Capacidade:\s*\n?\s*([\d.,]+\s*(?:l|litros?|kg|ton(?:elada)?s?|m[³3])\s*\/?\s*h(?:ora)?)/i);
     const marcaRotuloMatch = texto.match(/Marca:\s*\n?\s*([^\n]+)/i);
     const modeloRotuloMatch = texto.match(/Modelo:\s*\n?\s*([^\n]+)/i);
-    const capacidadeMatch = texto.match(/at[ée]\s*([\d.,]+)\s*(kg\/h|ton(?:elada)?s?\/h|l\/h|litros?\/h|m[³3]\/h)(?:\s*(?:com|a)\s*([\d.,]+)\s*bar\s*(?:\(g\))?)?/i) || texto.match(/([\d.,]+)\s*(kgv?\/h)/i) || texto.match(/([\d.,]+)\s*(T\s*por\s*Hora)/i) || texto.match(/(de\s+[\d.,]+\s*a\s*[\d.,]+)\s*(ton(?:elada)?s?\s*por\s*hora)/i) || texto.match(/at[ée]\s*([\d.,]+)\s*(unidades?\s*\/\s*hora|frascos?\s*\/\s*hora|garrafas?\s*\/\s*hora|sach[êe]s?\s*\/\s*hora|pe[çc]as?\s*\/\s*hora)/i) || texto.match(/([\d.,]+)\s*(litros|l\b|m[³3])\b/i);
+    const capacidadeMatch = texto.match(/at[ée]\s*([\d.,]+)\s*(kg\/h|ton(?:elada)?s?\/h|l\/h|litros?\/h|m[³3]\/h)(?:\s*(?:com|a)\s*([\d.,]+)\s*bar\s*(?:\(g\))?)?/i) || texto.match(/([\d.,]+)\s*(kgv?\/h)/i) || texto.match(/([\d.,]+)\s*(T\s*por\s*Hora)/i) || texto.match(/(de\s+[\d.,]+\s*a\s*[\d.,]+)\s*(ton(?:elada)?s?\s*por\s*hora)/i) || (blocoDescricao ? blocoDescricao[1] : texto).match(/at[ée]\s*([\d.,]+)\s*((?:unidades?|frascos?|garrafas?|sach[êe]s?|pe[çc]as?|embalagens?|pouch(?:es)?)\s*(?:\/|por)\s*h(?:ora)?)\b/i) || texto.match(/([\d.,]+)\s*(litros|l\b|m[³3])\b/i);
     const potenciaPublicadaMatch = texto.match(/Pot[êe]ncia publicada:?\s*([\d.,]+)\s*kw/i);
     const marcaMatch = marcaRotuloMatch || texto.match(/\bda\s+([A-Z][\wà-ÿ]+)\s+s[ãa]o\b/) || texto.match(/\bpela\s+([A-Z][\wà-ÿ]+)\b/);
     let codigoModeloDescricao = null;
@@ -3107,8 +3108,8 @@
     let capacidadeFinal;
     if (capacidadeMatch) {
       const brutoCapacidade = capacidadeMatch[0].trim();
-      if (/^at[ée]\b/i.test(brutoCapacidade)) {
-        capacidadeFinal = `at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2]}`;
+      if (/^at[ée](?=\s)/i.test(brutoCapacidade)) {
+        capacidadeFinal = `at\xE9 ${capacidadeMatch[1]} ${capacidadeMatch[2].replace(/\s*por\s*h(?:ora)?$/i, "/h")}`;
       } else if (/^de\s+/i.test(brutoCapacidade)) {
         capacidadeFinal = brutoCapacidade;
       } else {
@@ -3127,6 +3128,7 @@
       grau_protecao: norm.grau_protecao,
       refrigeracao_motor: norm.refrigeracao_motor,
       capacidade_unidade: separarCapacidadeUnidade(capacidadeFinal),
+      num_bicos: extrairNumBicos(titulo + " " + (blocoDescricao ? blocoDescricao[1] : "")),
       cidade: localizacaoGeral ? localizacaoGeral.split("/")[0] : null,
       uf: localizacaoGeral ? localizacaoGeral.split("/")[1] : null,
       ...extras
@@ -3143,17 +3145,53 @@
       tensao: norm.tensao_titulo || fatos.tensao,
       rpm: fatos.rpm,
       carcaca: norm.carcaca,
-      detalhes: topicosTecnicos.length ? topicosTecnicos.join("; ") : null,
+      detalhes: [
+        topicosTecnicos.length ? topicosTecnicos.join("; ") : null,
+        // "o valor é definido conforme a configuração" = preço de referência
+        /valor[^.\n]{0,40}definido conforme/i.test(textoEscopo) ? "Pre\xE7o de refer\xEAncia do fabricante (varia conforme configura\xE7\xE3o)" : null
+      ].filter(Boolean).join("; ") || null,
       estado: estadoGeral || fatos.estado,
       localizacao: localizacaoGeral,
       preco: parsePrecoBR(precoMatch[1]),
       moeda: "BRL",
-      canal: "Revenda/Terceiro",
+      // Loja Oficial no MF Rural = o próprio fabricante vendendo (02/10)
+      canal: /Loja oficial/i.test(texto) ? "Fabricante Direto" : "Revenda/Terceiro",
       tipo_mercado: "Venda Direta",
       atributos_normalizados
     }].filter((item) => validateObservationMFRural(item));
   }
 
+  // MF Rural (02/10): marca desconhecida seguida de código com hífen no
+  // título (ex: "Tecnox TNX-170") -> marca = palavra, modelo = código.
+  var RE_MARCA_CODIGO_TITULO = /\b([A-Z][a-z\u00E0-\u00FF]{2,}|[A-Z]{3,})\s+([A-Z]{1,5}-\d{2,5}[A-Z]?)\b/;
+  function marcaCodigoDoTitulo(titulo) {
+    const m = String(titulo || "").match(RE_MARCA_CODIGO_TITULO);
+    if (!m || PALAVRAS_TITULO_ANUNCIO.test(m[1])) return null;
+    return { marca: m[1], modelo: m[2] };
+  }
+  // Número de bicos/vias (envasadora, linha de envase) - é o dado técnico
+  // principal desses equipamentos.
+  function extrairNumBicos(texto) {
+    const m = String(texto || "").match(/\b(\d{1,3})\s*(bicos?|vias|cabe[\u00E7c]otes?\s+de\s+envase)\b/i);
+    return m ? Number(m[1]) : null;
+  }
+  // Mesmo vendedor publica a MESMA máquina várias vezes, só trocando a
+  // aplicação no título ("...para Temperos", "...para Grãos"). Mesma
+  // categoria + mesmo preço + mesma cidade = um anúncio só; os dados que
+  // faltam em um são completados pelos repetidos.
+  function juntarAnunciosRepetidosMFRural(itens) {
+    const grupos = new Map();
+    const saida = [];
+    for (const it of itens) {
+      const chave = [it.categoria || "", it.preco || "", (it.localizacao || "").toLowerCase()].join("|");
+      if (!it.preco || !it.localizacao) { saida.push(it); continue; }
+      const existente = grupos.get(chave);
+      if (!existente) { grupos.set(chave, it); saida.push(it); continue; }
+      ["marca", "modelo", "capacidade", "ano", "estado"].forEach((k) => { if (!existente[k] && it[k]) existente[k] = it[k]; });
+      existente._repetidos = (existente._repetidos || 1) + 1;
+    }
+    return saida;
+  }
   function parseMFRuralLocal(rawText) {
     const blocos = extractListingsMFRural(rawText);
     const itens = [];
@@ -3164,7 +3202,8 @@
       const categoriaFinal = comuns.categoria || fatos.categoria;
       const norm = normalizeEquipmentMFRural(bloco.tituloBruto, categoriaFinal);
       const extras = extractCategorySpecsMFRural(categoriaFinal, bloco.textoBlocoCompleto);
-      const marca = norm.marca || fatos.marca;
+      const marcaCodigo = !(norm.marca || fatos.marca) ? marcaCodigoDoTitulo(bloco.tituloBruto) : null;
+      const marca = norm.marca || fatos.marca || (marcaCodigo && marcaCodigo.marca);
       const atributos_normalizados = limparAtributosExtras({
         linha_modelo: norm.linha_modelo,
         polos: norm.polos,
@@ -3172,6 +3211,7 @@
         grau_protecao: norm.grau_protecao,
         refrigeracao_motor: norm.refrigeracao_motor,
         capacidade_unidade: separarCapacidadeUnidade(fatos.capacidade),
+        num_bicos: extrairNumBicos(bloco.textoBlocoCompleto),
         cidade: comuns.cidade,
         uf: comuns.uf,
         ...extras
@@ -3180,7 +3220,7 @@
         categoria: categoriaFinal,
         categoria_id: fatos.categoria_id,
         marca,
-        modelo: norm.modelo,
+        modelo: marcaCodigo ? marcaCodigo.modelo : norm.modelo,
         capacidade: fatos.capacidade,
         material: fatos.material,
         finalidade: fatos.finalidade,
@@ -3200,7 +3240,7 @@
       };
       if (validateObservationMFRural(item)) itens.push(item);
     }
-    return itens;
+    return juntarAnunciosRepetidosMFRural(itens);
   }
 
   // ==========================================================================
