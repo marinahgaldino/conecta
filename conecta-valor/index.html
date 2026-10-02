@@ -203,7 +203,7 @@
     { id: "motovibrador", nome: "Motovibrador/Vibrador", grupo: "mecanica", synonyms: ["motovibrador", "vibrador de concreto", "vibrador de imersão"], re: /motovibrador|\bvibrador(es)?\b/i, comum: false, ativo: true },
     { id: "maquina_corte_laser", nome: "Máquina de Corte a Laser", grupo: "maquinas_ferramenta", synonyms: ["laser de fibra", "corte a laser", "laser CO2"], re: /\blaser\b/i, excludeRe: /n[íi]vel a laser|n[íi]vel laser|medidor|trena|term[ôo]metro|mira laser/i, comum: false, ativo: true },
     { id: "pulverizador_agricola", nome: "Pulverizador Agrícola", grupo: "veiculos", synonyms: ["pulverizador autopropelido", "pulverizador de arrasto"], re: /pulverizador/i, excludeRe: /^\s*tanque/i, comum: false, ativo: true },
-    { id: "motor_eletrico", nome: "Motor Elétrico", grupo: "mecanica", synonyms: ["motor elétrico trifásico", "motor de indução"], re: /\bmotor\b|\bW22\b/i, comum: true, ativo: true },
+    { id: "motor_eletrico", nome: "Motor", grupo: "mecanica", synonyms: ["motor elétrico", "motor elétrico trifásico", "motor de indução", "motor a diesel", "motor a combustão", "motor estacionário"], re: /\bmotor\b|\bW22\b/i, comum: true, ativo: true },
     { id: "vaso_pressao", nome: "Vaso de Pressão", grupo: "tanques_processo", synonyms: ["vaso de pressão vertical", "recipiente sob pressão", "pressure vessel"], re: /vaso de press[ãa]o|recipiente sob press[ãa]o/i, comum: false, ativo: true },
     { id: "silo", nome: "Silo", grupo: "tanques_processo", synonyms: ["silo metálico", "silo de grãos"], re: /\bsilo\b/i, comum: false, ativo: true },
     { id: "tanque_misturador", nome: "Tanque Misturador", grupo: "tanques_processo", synonyms: ["tanque com agitador", "tanque de mistura"], re: /tanque.{0,20}(misturador|agitador)|misturador.{0,20}tanque/i, comum: false, ativo: true },
@@ -1058,8 +1058,9 @@
       valuation: { obrigatorios: ["capacidade_paletes_hora", "fabricante", "estado"], complementares: ["tipo", "altura_max_pallet_m", "ano"] }
     },
     "motor_eletrico": {
-      campos_obrigatorios: ["potencia_cv", "fabricante"],
-      campos_opcionais: ["modelo", "rpm", "tensao_v", "polaridade", "carcaca", "ano", "peso_kg"],
+      // 02/10: categoria "Motor" - combustível (Eletricidade, Diesel, Gasolina...) é dado do item
+      campos_obrigatorios: ["combustivel", "potencia_cv", "fabricante"],
+      campos_opcionais: ["modelo", "rpm", "tensao_v", "polaridade", "carcaca", "ano", "peso_kg", "potencia_kw"],
       campos_normalizados: {"potencia_cv": "CV", "peso_kg": "kg", "tensao_v": "V"},
       campos_ocr_prioritarios: ["fabricante", "potencia_cv", "rpm", "tensao_v", "carcaca", "polaridade"],
       faixas_esperadas: {"potencia_cv": [0.25, 3000], "rpm": [300, 3600]},
@@ -1070,7 +1071,7 @@
         { campo: "potencia_cv", tipo: "max", valor: 3000, nivel: "suave", mensagem: "potência acima de 3000 CV é incomum, confira" },
         { campo: "rpm", tipo: "faixa", valor: [300, 3600], nivel: "suave", mensagem: "RPM fora da faixa usual, confira" },
       ],
-      valuation: { obrigatorios: ["potencia_cv", "fabricante", "estado"], complementares: ["ano", "rpm", "tensao_v", "carcaca"] }
+      valuation: { obrigatorios: ["combustivel", "potencia_cv", "fabricante", "estado"], complementares: ["ano", "rpm", "tensao_v", "carcaca"] }
     },
     "motorredutor": {
       campos_obrigatorios: ["potencia_cv", "relacao_reducao", "fabricante"],
@@ -1499,8 +1500,68 @@
   }
 
   // extrai UM campo, decidindo a estratégia pelo nome
+  // 02/10: combustível como dado do item (lista definida por ela + os de caldeira).
+  // Ordem importa: biodiesel antes de diesel, biogás/GNV antes de gás.
+  var COMBUSTIVEIS = [
+    [/\bbiodiesel\b/i, "Biodiesel"],
+    [/\bbiometano\b/i, "Biometano"],
+    [/\bbiog[áa]s\b/i, "Biog\xE1s"],
+    [/\bGNV\b|g[áa]s natural veicular/i, "GNV"],
+    [/\bhidrog[êe]nio\b/i, "Hidrog\xEAnio"],
+    [/\bdiesel\b/i, "Diesel"],
+    [/\bgasolina\b/i, "Gasolina"],
+    [/\betanol\b/i, "Etanol"],
+    [/\bcavaco\b/i, "Cavaco"],
+    [/\blenha\b/i, "Lenha"],
+    [/biomassa/i, "Biomassa"],
+    [/\bg[áa]s\b|\bglp\b/i, "G\xE1s"],
+    [/(?<![A-Za-zÀ-ÿ])[óo]leo(?![A-Za-zÀ-ÿ])|\bbpf\b/i, "\xD3leo"],
+    [/\bel[ée]tric[oa]s?\b|\beletricidade\b|\btrif[áa]sico\b|\bmonof[áa]sico\b|\bbivolt\b|\bservomotor\b|\bbateria\b|\bIP\s?\d{2}\b|\b\d{3}\s*\/\s*\d{3}\s*v\b|\b\d{3}\s*v\b/i, "Eletricidade"]
+  ];
+  function extrairCombustivel(texto) {
+    if (!texto) return null;
+    const achados = [];
+    for (const [re, nome] of COMBUSTIVEIS) {
+      const m = String(texto).match(re);
+      if (m && !achados.some((a) => a.valor === nome)) achados.push({ valor: nome, original: m[0].trim() });
+    }
+    // Biodiesel também casa "diesel"; biogás/GNV também casam "gás".
+    const queimaveis = achados.filter((a) => a.valor !== "Eletricidade").filter((a, _, arr) =>
+      !(a.valor === "Diesel" && arr.some((b) => b.valor === "Biodiesel")) &&
+      !(a.valor === "G\xE1s" && arr.some((b) => ["Biog\xE1s", "GNV", "Biometano"].includes(b.valor))));
+    // Mais de um combustível ("lenha ou cavaco", "gás, lenha e óleo") =
+    // multicombustível: não escolhe um só (02/10).
+    if (queimaveis.length > 1) return null;
+    const escolhido = queimaveis[0] || achados.find((a) => a.valor === "Eletricidade");
+    return escolhido ? { valor: escolhido.valor, confianca: escolhido.valor === "Eletricidade" ? 0.86 : 0.92, original: escolhido.original } : null;
+  }
+  // Potência em qualquer unidade (kW, CV, HP) convertida pra unidade pedida.
+  // 1 CV = 0,7355 kW; 1 HP = 0,7457 kW (tabela dela arredonda HP pra 0,75).
+  var KW_POR_UNIDADE_POTENCIA = { kW: 1, CV: 0.7355, HP: 0.7457 };
+  function extrairPotenciaConvertida(texto, unidadeAlvo, cursorPorUnidade) {
+    const direto = extrairNumeroComUnidade(texto, unidadeAlvo, cursorPorUnidade[unidadeAlvo] || 0);
+    if (direto) {
+      cursorPorUnidade[unidadeAlvo] = direto.fimMatch;
+      return direto;
+    }
+    const fontes = ["CV", "kW", "HP"].filter((u) => u !== unidadeAlvo);
+    for (const u of fontes) {
+      const r = u === "HP"
+        ? (() => { const m = String(texto).match(/(?<![\w.,])(\d+(?:[.,]\d+)?)\s*hp\b/i); return m ? { valor: parseNumeroBR(m[1]), original: m[0].trim() } : null; })()
+        : extrairNumeroComUnidade(texto, u, 0);
+      if (r && r.valor) {
+        const kw = r.valor * KW_POR_UNIDADE_POTENCIA[u];
+        const valor = Math.round(kw / KW_POR_UNIDADE_POTENCIA[unidadeAlvo] * 100) / 100;
+        return { valor, confianca: 0.86, original: r.original };
+      }
+    }
+    return null;
+  }
   function extrairCampo(campo, texto, cursorPorUnidade) {
     cursorPorUnidade = cursorPorUnidade || {};
+    if (campo === "combustivel" || campo === "tipo_combustivel" || campo === "tipo_energia") return extrairCombustivel(texto);
+    if (campo === "potencia_cv") return extrairPotenciaConvertida(texto, "CV", cursorPorUnidade);
+    if (campo === "potencia_kw") return extrairPotenciaConvertida(texto, "kW", cursorPorUnidade);
     if (campo === "fabricante") return extrairFabricante(texto);
     if (campo === "rpm" || campo === "rpm_agitador") return extrairRPM(texto);
     if (campo === "ano" || campo === "ano_construcao") return extrairAno(texto);
@@ -2097,6 +2158,7 @@
   }
   var POTENCIA_KW_RANGES = {
     "Motor El\xE9trico": [0.05, 1e3],
+    "Motor": [0.05, 1e3],
     "Motorredutor": [0.05, 500],
     "Compressor": [0.5, 1e3],
     "Bomba": [0.1, 500],
@@ -2111,6 +2173,7 @@
   // e potencia_cv=30 nunca era barrado por nada).
   var POTENCIA_CV_RANGES = {
     "Motor El\xE9trico": [0.05, 1400],
+    "Motor": [0.05, 1400],
     "Motorredutor": [0.05, 700],
     "Compressor": [0.5, 1400],
     "Bomba": [0.1, 700],
@@ -2121,6 +2184,7 @@
   };
   var PESO_KG_RANGES = {
     "Motor El\xE9trico": [1, 8e3],
+    "Motor": [1, 8e3],
     "Motorredutor": [1, 3e3],
     "Torno": [200, 8e4],
     "Tanque": [10, 2e5],
@@ -2348,7 +2412,7 @@
     if (r.modelo) r.modelo = dedupeSeDobrado(r.modelo);
     if (r.marca) r.marca = dedupeSeDobrado(r.marca);
     if (r.marca && r.modelo) r.modelo = limparModeloDuplicado(r.modelo, r.marca);
-    if (r.categoria === "Motor El\xE9trico" && r.modelo) {
+    if ((r.categoria === "Motor El\xE9trico" || r.categoria === "Motor") && r.modelo) {
       r.modelo = r.modelo.replace(/^motor\s*(el[ée]tric[oa])?\s*(trif[áa]sico|monof[áa]sico)?\s*/i, "").trim() || r.modelo;
     }
     if (r.marca) r.marca = normalizarMarca(r.marca);
@@ -5172,7 +5236,7 @@ ${instrucaoInterna}
 REGRAS CR\xCDTICAS DE PRECIS\xC3O \u2014 siga rigorosamente, para n\xE3o inventar dado:
 - "marca": s\xF3 preencha se o texto MENCIONAR EXPLICITAMENTE o nome do fabricante. NUNCA infira marca a partir de cor, formato, tipo de equipamento ou "parecido com". Se n\xE3o estiver escrito, deixe null \u2014 mesmo que voc\xEA "reconhe\xE7a" o tipo de equipamento.
 - "modelo": nunca preencha com um nome de cidade, bairro ou localiza\xE7\xE3o (ex: "Paul\xEDnia/SP", "Curitiba/PR") \u2014 isso \xE9 localiza\xE7\xE3o, n\xE3o modelo. Se o texto s\xF3 tiver localiza\xE7\xE3o e nenhum c\xF3digo/nome de modelo, deixe modelo null.
-- "categoria": use um termo curto e t\xE9cnico (ex: "Motor El\xE9trico", "Transformador"). Nunca uma frase longa ou uma descri\xE7\xE3o gen\xE9rica sem sentido de categoria \u2014 nesse caso, null.
+- "categoria": use um termo curto e t\xE9cnico (ex: "Motor", "Transformador"). Nunca uma frase longa ou uma descri\xE7\xE3o gen\xE9rica sem sentido de categoria \u2014 nesse caso, null.
 - Nunca escreva "N/A", "N\xE3o informado", "-" ou similar em nenhum campo \u2014 use null.
 
 Texto colado:
@@ -5639,7 +5703,16 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       params.set("preco", "not.is.null");
       // Aluguel não é valor de mercado (02/10). "or" porque neq sozinho
       // também descartaria linhas com tipo_mercado vazio.
-      params.set("or", "(tipo_mercado.is.null,tipo_mercado.neq.Loca\xE7\xE3o)");
+      const condicoes = ["or(tipo_mercado.is.null,tipo_mercado.neq.Loca\xE7\xE3o)"];
+      if (catId === "motor_eletrico") {
+        // Motor elétrico e a combustão não são comparáveis entre si (02/10).
+        const textoItem = [item.modelo, item.obs, item.atributosExtras && item.atributosExtras.combustivel].filter(Boolean).join(" ");
+        const comb = (item.atributosExtras && item.atributosExtras.combustivel) || (extrairCombustivel(textoItem) || {}).valor || "Eletricidade";
+        condicoes.push(comb === "Eletricidade"
+          ? "or(atributos_normalizados->>combustivel.is.null,atributos_normalizados->>combustivel.eq.Eletricidade)"
+          : `atributos_normalizados->>combustivel.eq.${comb}`);
+      }
+      params.set("and", `(${condicoes.join(",")})`);
       const limiteData = new Date(Date.now() - BASE_PROPRIA_VALIDADE_DIAS * 24 * 60 * 60 * 1e3).toISOString();
       params.set("data_observacao", `gte.${limiteData}`);
       params.set("limit", "50");
@@ -6838,8 +6911,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
   // vago ou impreciso.
   var EQUIPMENT_INFO = {
     motor_eletrico: {
-      titulo: "Motor El\xE9trico",
-      descricao_curta: "Motor el\xE9trico de indu\xE7\xE3o utilizado para acionamento de m\xE1quinas industriais.",
+      titulo: "Motor",
+      descricao_curta: "Motor el\xE9trico ou a combust\xE3o (diesel, gasolina, g\xE1s) utilizado para acionamento de m\xE1quinas industriais.",
       aplicacoes: ["Bombas", "Ventiladores", "Esteiras", "Misturadores"],
       liquidez: "Alta"
     },
@@ -9383,12 +9456,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const itOriginal = !catVeio && catTitulo ? { ...itColetado, categoria: catTitulo.category_name, categoria_id: catTitulo.category_id, _categoriaPeloTitulo: true } : itColetado;
         const enr = enriquecerAtributosColeta(itOriginal);
         const modeloCurto = extrairModeloCurto(enr.modelo, enr.marca, enr.categoria);
-        const tituloOriginal = enr.modelo && modeloCurto !== enr.modelo ? enr.modelo : null;
-        const it = tituloOriginal ? {
-          ...enr,
-          modelo: modeloCurto,
-          detalhes: enr.detalhes && enr.detalhes.includes(tituloOriginal) ? enr.detalhes : [`Modelo original: ${tituloOriginal}`, enr.detalhes].filter(Boolean).join("; ")
-        } : enr;
+        // Adjetivos e texto de anúncio não vão pra base (pedido dela, 02/10):
+        // fica só o modelo curto; specs já foram extraídas em atributos.
+        const it = enr.modelo !== modeloCurto ? { ...enr, modelo: modeloCurto } : enr;
         const q = classificarQualidadeColeta(it, medianas, cotacoes);
         const dup = q.status !== "bloqueado" ? verificarDuplicadoNaBase(it, existentes, cotacoes) : null;
         if (dup && dup.tipo === "duplicado") {

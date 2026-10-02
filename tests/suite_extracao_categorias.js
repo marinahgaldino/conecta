@@ -101,4 +101,11 @@ var SUITE_TESTES = [
   { categoria_esperada: "empilhadeira", texto: "Empilhador reutilizável Hubtex DS 27", campos_esperados: {} },
   { categoria_esperada: "caminhao", texto: "Camião de lixo Mercedes-Benz Econic 6X4", campos_esperados: {} },
   { categoria_esperada: "filtro_industrial", texto: "Sistema de filtração inox", campos_esperados: {} },
+  // 02/10 - Motor com combustível como dado + potência convertida (HP/CV/kW)
+  { categoria_esperada: "motor_eletrico", texto: "Motor Diesel 22.0hp", campos_esperados: {"combustivel": "Diesel", "potencia_cv": 22.31, "potencia_kw": 16.41} },
+  { categoria_esperada: "motor_eletrico", texto: "Motor estacionário a gasolina 6,5 HP Toyama", campos_esperados: {"combustivel": "Gasolina", "potencia_cv": 6.59} },
+  { categoria_esperada: "motor_eletrico", texto: "Motor elétrico trifásico WEG W22 10 CV 4 polos", campos_esperados: {"combustivel": "Eletricidade", "potencia_cv": 10, "potencia_kw": 7.36} },
+  { categoria_esperada: "caldeira", texto: "Caldeira a lenha 2000 kg/h", campos_esperados: {"tipo_combustivel": "Lenha", "capacidade_producao_vapor_kgh": 2000} },
+  { categoria_esperada: "caldeira", texto: "Caldeira a lenha ou cavaco 1100 kg/h", campos_esperados: {"capacidade_producao_vapor_kgh": 1100} },
+  { categoria_esperada: "motor_eletrico", texto: "Motor biodiesel 50 hp", campos_esperados: {"combustivel": "Biodiesel"} },
 ];
