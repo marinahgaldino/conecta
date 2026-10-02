@@ -80,4 +80,8 @@ var SUITE_TESTES = [
   { categoria_esperada: "sucata", texto: "Sucata de aço carbono peso 5 toneladas", campos_esperados: {"tipo_material": null, "peso_ton": 5} },
   { categoria_esperada: "centro_usinagem_cnc", texto: "Centro de usinagem CNC Haas VF-2 curso X 762mm Y 406mm Z 508mm", campos_esperados: {} },
   { categoria_esperada: "instrumentacao", texto: "Transmissor de pressão Rosemount faixa 0-100 bar", campos_esperados: {} },
+  // 02/10 - regressões achadas ao ligar o extrator no Coletor
+  { categoria_esperada: "transformador", texto: "Transformador a óleo 500 kVA 13,8 kV / 380 V", campos_esperados: {"potencia_kva": 500, "tensao_primaria_v": 13800, "tensao_secundaria_v": 380} },
+  { categoria_esperada: "torno", texto: "Torno mecânico Romi Tormax 20A distância entre pontas 2000 mm ano 1998", campos_esperados: {"distancia_pontas_mm": 2000, "ano": 1998} },
+  { categoria_esperada: "empilhadeira", texto: "Empilhadeira Toyota 8FG25 ano 2015 a gás capacidade 2500 kg", campos_esperados: {"capacidade_carga_kg": 2500, "ano": 2015} },
 ];

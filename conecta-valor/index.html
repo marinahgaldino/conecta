@@ -1390,6 +1390,14 @@
   // Pega o N-\u00E9simo valor de uma seq\u00FC\u00EAncia tipo "13800/380V" (\u00EDndice 0 = primeiro/prim\u00E1rio,
   // \u00EDndice 1 = segundo/secund\u00E1rio) \u2014 pra n\u00E3o duplicar o mesmo valor nos dois campos.
   function extrairTensaoEm(texto, indice) {
+    // Par com unidades mistas/decimais (ex: "13,8 kV / 380 V", "13,8/0,38 kV"):
+    // cada lado é convertido pra volts; lado sem unidade herda a do outro.
+    var mPar = texto.match(/(\d+(?:[.,]\d+)?)\s*(kV|V)?\s*\/\s*(\d+(?:[.,]\d+)?)\s*(kV|V)\b/i);
+    if (mPar && (/k/i.test(mPar[2] || "") || /k/i.test(mPar[4]) || /[.,]/.test(mPar[1] + mPar[3]))) {
+      var paraVolts = function (num, un) { var v = parseFloat(String(num).replace(",", ".")); return /k/i.test(un) ? Math.round(v * 1e3) : Math.round(v); };
+      var lados = [paraVolts(mPar[1], mPar[2] || mPar[4]), paraVolts(mPar[3], mPar[4])];
+      if (lados[indice] !== void 0 && !Number.isNaN(lados[indice])) return { valor: lados[indice], confianca: 0.9, original: mPar[0].trim() };
+    }
     var m = texto.match(/(\d{2,6}(?:\s*\/\s*\d{2,6}){0,3})\s*V\b/i);
     if (!m) return null;
     var partes = m[1].split("/").map(function (s) { return parseInt(s.trim(), 10); });
@@ -1405,7 +1413,9 @@
 
   function extrairAno(texto) {
     var anoAtual = new Date().getFullYear();
-    var candidatos = texto.match(/\b(19[5-9]\d|20[0-4]\d)\b/g);
+    // Ignora número seguido de unidade (ex: "2000 mm", "1980 kg") - não é ano.
+    var candidatos = (texto.match(/\b(19[5-9]\d|20[0-4]\d)\b(?!\s*(?:mm|cm|km|kgf|kg|kva|kw|kv|cv|hp|rpm|bar|psi|m[²³23]|mca|ton|t\/h|l\/h|l\/min|unid|un\b|pe[çc]as|garrafas|litros|[mltvw]\b|°|ºc|%))/gi) || []);
+    if (!candidatos.length) candidatos = null;
     if (!candidatos || !candidatos.length) return null;
     var ano = parseInt(candidatos[candidatos.length - 1], 10);
     if (ano < 1950 || ano > anoAtual + 1) return null;
@@ -5361,6 +5371,39 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     const m = Math.floor(v.length / 2);
     return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
   }
+  // ===== Coletor fase 2 (02/10): atributos técnicos da categoria =====
+  // Roda o extrator das 80 categorias (o mesmo da suíte permanente) no texto
+  // de cada item coletado e guarda os atributos específicos em
+  // atributos_normalizados. Proteções: (1) só aproveita se o extrator
+  // concordar com a categoria do item (evita "bomba com motor 20 CV" virar
+  // dado de motor); (2) não mexe em campos que já têm coluna própria
+  // (marca, modelo, potência, ano...); (3) ignora campo que o extrator marca
+  // pra revisão; (4) o que o parser do site já entregou tem prioridade.
+  var CHAVES_COM_COLUNA_PROPRIA = ["fabricante", "modelo", "potencia_cv", "potencia_kw", "peso_kg", "ano", "rpm", "tensao_v", "polaridade", "carcaca", "capacidade", "localizacao"];
+  function enriquecerAtributosColeta(it) {
+    const catItem = it.categoria_id || resolverCategoriaId(it.categoria);
+    if (!catItem) return it;
+    const texto = [it.categoria, it.marca, it.modelo, it.capacidade, it.tensao, it.detalhes].filter(Boolean).join(". ");
+    if (!texto.trim()) return it;
+    let local;
+    try {
+      local = processarTextoParaAtributos(texto);
+    } catch (e) {
+      return it;
+    }
+    if (!local || local.category_id !== catItem) return it;
+    const revisar = new Set(local.campos_para_revisao || []);
+    const doParser = it.atributos_normalizados || {};
+    const novos = {};
+    Object.entries(local.atributos || {}).forEach(([k, v]) => {
+      if (CHAVES_COM_COLUNA_PROPRIA.includes(k) || revisar.has(k)) return;
+      if (v === null || v === void 0 || String(v).trim() === "") return;
+      if (doParser[k] !== null && doParser[k] !== void 0 && String(doParser[k]).trim() !== "") return;
+      novos[k] = v;
+    });
+    if (Object.keys(novos).length === 0) return it;
+    return { ...it, atributos_normalizados: { ...novos, ...doParser }, _atributosExtraidos: novos };
+  }
   function classificarQualidadeColeta(it, medianasPorCategoria, cotacoes) {
     const motivos = [];
     let status = "ok";
@@ -5779,9 +5822,17 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   }
   function QualidadeColetaBadge({ it, onToggle }) {
     const q = it._qualidade;
-    if (!q || q.status === "ok") return null;
+    const extras = it._atributosExtraidos ? Object.entries(it._atributosExtraidos) : [];
+    if ((!q || q.status === "ok") && extras.length === 0) return null;
     const incluido = it._incluir !== false;
+    const textoExtras = extras.map(([k, v]) => {
+      const rot = rotuloAtributo(k);
+      const un = rot.match(/\(([^)]*)\)$/);
+      return `${rot.replace(/\s*\([^)]*\)$/, "")} ${v}${un && !/ ou /.test(un[1]) ? " " + un[1] : ""}`;
+    }).join(" \xB7 ");
+    if (!q || q.status === "ok") return /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade coleta-ok" }, /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras));
     return /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade coleta-" + q.status },
+      extras.length > 0 && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras),
       /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-motivo", title: q.motivos.join(" \xB7 ") }, q.status === "bloqueado" ? "\u26D4 " : q.status === "suspeito" ? "\u26A0 " : "\u2139 ", q.motivos.join(" \xB7 ")),
       (q.status === "bloqueado" || q.status === "suspeito") && /* @__PURE__ */ React.createElement("label", { className: "coleta-qualidade-incluir" },
         /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: incluido, onChange: onToggle }),
@@ -9156,7 +9207,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       } catch (e) {
         console.warn("N\xE3o consegui calcular a mediana das categorias, seguindo s\xF3 com o pre\xE7o m\xEDnimo:", e);
       }
-      const anotados = items.map((it) => {
+      const anotados = items.map((itOriginal) => {
+        const it = enriquecerAtributosColeta(itOriginal);
         const q = classificarQualidadeColeta(it, medianas, cotacoes);
         const precoBRL = it.preco === null || it.preco === undefined || it.preco === "" ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
         return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && precoBRL <= COLETA_PRECO_SIMBOLICO_BRL };
@@ -12954,6 +13006,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .coleta-bloqueado .coleta-qualidade-motivo { background: #F5E5E3; color: #A3352A; }
         .coleta-suspeito .coleta-qualidade-motivo { background: #FBF0DC; color: #96650B; }
         .coleta-alerta .coleta-qualidade-motivo { background: #F1F1EE; color: #5C6068; }
+        .coleta-qualidade-extras { color: #1F5C3F; }
         .coleta-qualidade-incluir { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; color: #4B5058; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
         .tag-card-sidebar:empty { display: none; }
         .tag-card-columns:has(> .tag-card-sidebar:empty) { grid-template-columns: 1fr; }
