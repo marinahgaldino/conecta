@@ -1781,6 +1781,7 @@
   DEFAULT_CONFIG.categoriasComuns = CATEGORIA_CANONICA.filter((c) => c.comum).map((c) => c.nome);
   var MARCAS_CONHECIDAS = [
     "Facchini",
+    "MXM",
     "WEG",
     "WEG MOTORES",
     "SEW-EURODRIVE",
@@ -3110,6 +3111,14 @@
     // marca/material/combustível de outros anúncios listados na mesma página).
     const textoEscopo = blocoDescricao ? blocoDescricao[1] : texto;
     const fatos = extrairFatosDeTexto(textoEscopo);
+    // 02/10: medidas ("Diâmetro: 1,85 m", "Altura: 3,75 m") -> dimensoes
+    const medida = (rotulo) => { const m = textoEscopo.match(new RegExp(`${rotulo}:?\\s*([\\d.,]+\\s*(?:mm|cm|m)\\b)`, "i")); return m ? m[1].replace(/\s+/g, " ").trim() : null; };
+    const diametro = medida("Di[\u00E2a]metro"), altura = medida("Altura"), comprimento = medida("Comprimento"), largura = medida("Largura");
+    const dimensoes = [diametro ? `\xD8 ${diametro}` : null, comprimento, largura, altura].filter(Boolean).join(" \xD7 ") || null;
+    // 02/10: "*valor válido até 10/08/2026" já vencido = preço velho
+    const validadeMatch = textoEscopo.match(/valor\s+v[\u00E1a]lido\s+at[\u00E9e]\s*(\d{2})\/(\d{2})\/(\d{4})/i);
+    const validadePreco = validadeMatch ? `${validadeMatch[1]}/${validadeMatch[2]}/${validadeMatch[3]}` : null;
+    const precoVencido = validadeMatch ? new Date(`${validadeMatch[3]}-${validadeMatch[2]}-${validadeMatch[1]}T23:59:59`) < new Date() : false;
     const norm = normalizeEquipmentMFRural(modeloBruto, categoriaFinal);
     const extras = extractCategorySpecsMFRural(categoriaFinal, textoEscopo);
     let capacidadeFinal;
@@ -3136,6 +3145,7 @@
       refrigeracao_motor: norm.refrigeracao_motor,
       capacidade_unidade: separarCapacidadeUnidade(capacidadeFinal),
       num_bicos: extrairNumBicos(titulo + " " + (blocoDescricao ? blocoDescricao[1] : "")),
+      dimensoes,
       cidade: localizacaoGeral ? localizacaoGeral.split("/")[0] : null,
       uf: localizacaoGeral ? localizacaoGeral.split("/")[1] : null,
       ...extras
@@ -3155,8 +3165,10 @@
       detalhes: [
         topicosTecnicos.length ? topicosTecnicos.join("; ") : null,
         // "o valor é definido conforme a configuração" = preço de referência
-        /valor[^.\n]{0,40}definido conforme/i.test(textoEscopo) ? "Pre\xE7o de refer\xEAncia do fabricante (varia conforme configura\xE7\xE3o)" : null
+        /valor[^.\n]{0,40}definido conforme/i.test(textoEscopo) ? "Pre\xE7o de refer\xEAncia do fabricante (varia conforme configura\xE7\xE3o)" : null,
+        validadePreco ? `Pre\xE7o v\xE1lido at\xE9 ${validadePreco}` : null
       ].filter(Boolean).join("; ") || null,
+      _precoVencido: precoVencido ? validadePreco : null,
       estado: estadoGeral || fatos.estado,
       localizacao: localizacaoGeral,
       preco: parsePrecoBR(precoMatch[1]),
@@ -9669,6 +9681,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         } else if (dup && dup.tipo === "discrepante") {
           q.status = "suspeito";
           q.motivos.unshift(`mesmo item j\xE1 na base por ${formatBRL(dup.precoBase)} (${Math.round(dup.diff * 100)}% de diferen\xE7a)`);
+          q.incluirPorPadrao = false;
+        }
+        if (itColetado._precoVencido) {
+          q.motivos.unshift(`pre\xE7o vencido (v\xE1lido at\xE9 ${itColetado._precoVencido}) \u2014 fora por padr\xE3o`);
+          if (q.status === "ok" || q.status === "alerta") q.status = "suspeito";
           q.incluirPorPadrao = false;
         }
         if (itOriginal._categoriaPeloTitulo) {
