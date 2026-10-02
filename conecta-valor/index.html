@@ -5447,6 +5447,39 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     while (fim < tokens.length && fim - ini < 3 && ehCodigo(tokens[fim])) fim++;
     return tokens.slice(ini, fim).join(" ");
   }
+  // Aluguel não entra na base (02/10): preço de locação não é valor de mercado.
+  var RE_TEXTO_ALUGUEL = /\b(aluguel|alugo|alugar|alugam-se|aluga-se|loca[çc][ãa]o|para locar)\b|\/\s*m[êe]s\b|\bpor m[êe]s\b|\bmensal(idade)?\b/i;
+  function ehAluguel(it, tipoMercadoTela) {
+    if (/loca[çc]/i.test(it.tipo_mercado || "") || /loca[çc]/i.test(tipoMercadoTela || "")) return true;
+    return RE_TEXTO_ALUGUEL.test([it.modelo, it.detalhes].filter(Boolean).join(" "));
+  }
+  // Duplicado contra a base (02/10): mesma categoria + marca + modelo.
+  // Preço até 10% de diferença = mesmo anúncio (ignora); acima = discrepante
+  // (não salva por padrão, fica pra revisão).
+  var COLETA_TOLERANCIA_DUPLICADO = 0.1;
+  function normalizarCodigo(v) {
+    return String(v || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+  }
+  function verificarDuplicadoNaBase(it, existentesPorCategoria, cotacoes) {
+    const catId = it.categoria_id || resolverCategoriaId(it.categoria);
+    const marca = normalizarCodigo(normalizarMarca(it.marca));
+    const modelo = normalizarCodigo(it.modelo);
+    if (!catId || !marca || modelo.length < 3) return null;
+    const precoNovo = it.preco === null || it.preco === void 0 ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
+    if (precoNovo === null || isNaN(precoNovo)) return null;
+    // Mesma linha de modelo com potência/capacidade diferente (ex: W22 10 CV x
+    // W22 50 CV) é outro item - só compara quando os dois lados informam.
+    const mesmaEspec = (e) => {
+      if (it.potencia_cv != null && e.potencia_cv != null && Number(it.potencia_cv) !== Number(e.potencia_cv)) return false;
+      if (it.capacidade && e.capacidade && normalizarCodigo(it.capacidade) !== normalizarCodigo(e.capacidade)) return false;
+      return true;
+    };
+    const mesmos = (existentesPorCategoria[catId] || []).filter((e) => normalizarCodigo(normalizarMarca(e.marca)) === marca && normalizarCodigo(e.modelo).includes(modelo) && mesmaEspec(e));
+    if (mesmos.length === 0) return null;
+    const maisProximo = mesmos.reduce((melhor, e) => Math.abs(e.precoBRL - precoNovo) < Math.abs(melhor.precoBRL - precoNovo) ? e : melhor);
+    const diff = Math.abs(maisProximo.precoBRL - precoNovo) / Math.max(maisProximo.precoBRL, 1);
+    return diff <= COLETA_TOLERANCIA_DUPLICADO ? { tipo: "duplicado", precoBase: maisProximo.precoBRL } : { tipo: "discrepante", precoBase: maisProximo.precoBRL, diff };
+  }
   function classificarQualidadeColeta(it, medianasPorCategoria, cotacoes) {
     const motivos = [];
     let status = "ok";
@@ -5524,6 +5557,9 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       }
       if (item.marca) params.set("marca", `ilike.*${item.marca.trim()}*`);
       params.set("preco", "not.is.null");
+      // Aluguel não é valor de mercado (02/10). "or" porque neq sozinho
+      // também descartaria linhas com tipo_mercado vazio.
+      params.set("or", "(tipo_mercado.is.null,tipo_mercado.neq.Loca\xE7\xE3o)");
       const limiteData = new Date(Date.now() - BASE_PROPRIA_VALIDADE_DIAS * 24 * 60 * 60 * 1e3).toISOString();
       params.set("data_observacao", `gte.${limiteData}`);
       params.set("limit", "50");
@@ -5879,9 +5915,10 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     const chipLeilao = ehLeilao && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-leilao" }, "Leil\xE3o");
     if (!q || q.status === "ok") return /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade coleta-ok" }, chipLeilao, textoExtras && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras));
     return /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade coleta-" + q.status },
+      q.status === "duplicado" && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-motivo" }, "\u21BB ", q.motivos.join(" \xB7 ")),
       chipLeilao,
       textoExtras && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-extras" }, "\u2795 ", textoExtras),
-      /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-motivo", title: q.motivos.join(" \xB7 ") }, q.status === "bloqueado" ? "\u26D4 " : q.status === "suspeito" ? "\u26A0 " : "\u2139 ", q.motivos.join(" \xB7 ")),
+      q.status !== "duplicado" && /* @__PURE__ */ React.createElement("span", { className: "coleta-qualidade-motivo", title: q.motivos.join(" \xB7 ") }, q.status === "bloqueado" ? "\u26D4 " : q.status === "suspeito" ? "\u26A0 " : "\u2139 ", q.motivos.join(" \xB7 ")),
       (q.status === "bloqueado" || q.status === "suspeito") && /* @__PURE__ */ React.createElement("label", { className: "coleta-qualidade-incluir" },
         /* @__PURE__ */ React.createElement("input", { type: "checkbox", checked: incluido, onChange: onToggle }),
         " incluir mesmo assim"
@@ -8843,8 +8880,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [manualResults, setManualResults] = (0, import_react.useState)([]);
     const [manualError, setManualError] = (0, import_react.useState)(null);
     const [manualDescartados, setManualDescartados] = (0, import_react.useState)(0);
-    const [removidosSimbolicoManual, setRemovidosSimbolicoManual] = (0, import_react.useState)(0);
-    const [removidosSimbolicoColetor, setRemovidosSimbolicoColetor] = (0, import_react.useState)(0);
+    const [removidosSimbolicoManual, setRemovidosSimbolicoManual] = (0, import_react.useState)({ simbolico: 0, aluguel: 0 });
+    const [removidosSimbolicoColetor, setRemovidosSimbolicoColetor] = (0, import_react.useState)({ simbolico: 0, aluguel: 0 });
     const [manualSavedCount, setManualSavedCount] = (0, import_react.useState)(null);
     const EMPTY_ENTRY = { categoria: "", marca: "", modelo: "", capacidade: "", polaridade: "", tensao: "", carcaca: "", rpm: "", ano: "", localizacao: "", preco: "", detalhes: "" };
     const [entryForm, setEntryForm] = (0, import_react.useState)(EMPTY_ENTRY);
@@ -9227,25 +9264,28 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // Mediana de preço por categoria (BRL), só com categorias que têm
     // amostra suficiente. Se o Supabase não responder, segue sem mediana
     // (o bloqueio de preço irrisório continua valendo).
-    async function anotarQualidadeColeta(items, setRemovidosPrecoSimbolico) {
+    async function anotarQualidadeColeta(items, setRemovidosPrecoSimbolico, tipoMercadoTela) {
       if (!items || items.length === 0) {
-        setRemovidosPrecoSimbolico(0);
+        setRemovidosPrecoSimbolico({ simbolico: 0, aluguel: 0 });
         return items;
       }
       let medianas = {};
+      const existentes = {};
       let cotacoes = null;
       try {
         cotacoes = await buscarCotacoes();
         const client = getSupaClient();
         const ids = [...new Set(items.map((it) => it.categoria_id || resolverCategoriaId(it.categoria)).filter(Boolean))];
         if (client && ids.length > 0) {
-          const { data, error: errMed } = await client.from("observacoes_mercado").select("categoria_id, preco, moeda").in("categoria_id", ids).not("preco", "is", null).limit(5e3);
+          const { data, error: errMed } = await client.from("observacoes_mercado").select("categoria_id, marca, modelo, potencia_cv, capacidade, preco, moeda, tipo_mercado").in("categoria_id", ids).not("preco", "is", null).limit(5e3);
           if (!errMed && data) {
             const porCat = {};
             data.forEach((r) => {
+              if (/loca[çc]/i.test(r.tipo_mercado || "")) return;
               const v = converterParaBRL(Number(r.preco), r.moeda, cotacoes);
               if (v === null || isNaN(v) || v < COLETA_PRECO_MINIMO_BRL) return;
               (porCat[r.categoria_id] = porCat[r.categoria_id] || []).push(v);
+              (existentes[r.categoria_id] = existentes[r.categoria_id] || []).push({ marca: r.marca, modelo: r.modelo, potencia_cv: r.potencia_cv, capacidade: r.capacidade, precoBRL: v });
             });
             Object.entries(porCat).forEach(([id, lista]) => {
               if (lista.length >= COLETA_MIN_AMOSTRAS_MEDIANA) medianas[id] = medianaNumeros(lista);
@@ -9265,12 +9305,25 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           detalhes: enr.detalhes && enr.detalhes.includes(tituloOriginal) ? enr.detalhes : [`Modelo original: ${tituloOriginal}`, enr.detalhes].filter(Boolean).join("; ")
         } : enr;
         const q = classificarQualidadeColeta(it, medianas, cotacoes);
+        const dup = q.status !== "bloqueado" ? verificarDuplicadoNaBase(it, existentes, cotacoes) : null;
+        if (dup && dup.tipo === "duplicado") {
+          q.status = "duplicado";
+          q.motivos.unshift(`j\xE1 est\xE1 na base (${formatBRL(dup.precoBase)}) \u2014 n\xE3o ser\xE1 salvo de novo`);
+          q.incluirPorPadrao = false;
+        } else if (dup && dup.tipo === "discrepante") {
+          q.status = "suspeito";
+          q.motivos.unshift(`mesmo item j\xE1 na base por ${formatBRL(dup.precoBase)} (${Math.round(dup.diff * 100)}% de diferen\xE7a)`);
+          q.incluirPorPadrao = false;
+        }
+        const aluguel = ehAluguel(it, tipoMercadoTela);
         const precoBRL = it.preco === null || it.preco === undefined || it.preco === "" ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
-        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && precoBRL <= COLETA_PRECO_SIMBOLICO_BRL };
+        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && precoBRL <= COLETA_PRECO_SIMBOLICO_BRL, _aluguel: aluguel };
       });
-      const removidos = anotados.filter((it) => it._precoSimbolico).length;
-      setRemovidosPrecoSimbolico(removidos);
-      return anotados.filter((it) => !it._precoSimbolico);
+      setRemovidosPrecoSimbolico({
+        simbolico: anotados.filter((it) => it._precoSimbolico).length,
+        aluguel: anotados.filter((it) => !it._precoSimbolico && it._aluguel).length
+      });
+      return anotados.filter((it) => !it._precoSimbolico && !it._aluguel);
     }
     function getSupaClient() {
       if (!supaUrl || !supaKey) return null;
@@ -9736,7 +9789,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           mantidos = resultado.mantidos;
           descartados = resultado.descartados;
         }
-        items = await anotarQualidadeColeta(mantidos, setRemovidosSimbolicoManual);
+        items = await anotarQualidadeColeta(mantidos, setRemovidosSimbolicoManual, manualTipoMercado);
         setManualDescartados(descartados);
         setManualResults(items);
         if (items.length === 0) {
@@ -13063,6 +13116,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .coleta-bloqueado .coleta-qualidade-motivo { background: #F5E5E3; color: #A3352A; }
         .coleta-suspeito .coleta-qualidade-motivo { background: #FBF0DC; color: #96650B; }
         .coleta-alerta .coleta-qualidade-motivo { background: #F1F1EE; color: #5C6068; }
+        .coleta-duplicado .coleta-qualidade-motivo { background: #EEF0F3; color: #4B5563; }
         .coleta-qualidade-extras { color: #1F5C3F; }
         .coleta-qualidade-leilao { background: #EAF0F7; color: #2C4A6E; border-radius: 4px; padding: 0.1rem 0.5rem; font-weight: 600; }
         .coleta-qualidade-incluir { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; color: #4B5058; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
@@ -14055,7 +14109,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => setCollectorTerm(e.target.value),
         placeholder: "Ex: motor el\xE9trico 30cv, tanque inox 316\u2026"
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.simbolico, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), removidosSimbolicoColetor.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -14092,7 +14146,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarManualCollector, disabled: manualRunning }, manualRunning ? "Salvando\u2026" : `Confirmar e salvar ${manualResults.filter((x) => x._incluir !== false).length} ${manualResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => {
       setManualResults([]);
       setManualText("");
-    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
+    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.simbolico, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), removidosSimbolicoManual.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
