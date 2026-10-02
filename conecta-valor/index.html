@@ -6132,6 +6132,17 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       )
     );
   }
+  // 02/10: nome do equipamento pro painel/início - marca + modelo; sem modelo,
+  // categoria + marca; categoria não se repete como se fosse modelo.
+  function nomeEquipamentoHistorico(item, t) {
+    const cat = normalizarCategoria(item.categoria) || "";
+    const marcaBruta = normalizarMarca(item.marca) || "";
+    const marcaConhecida = marcaBruta && MARCAS_CONHECIDAS.find((m) => m.toLowerCase() === marcaBruta.toLowerCase());
+    const marca = marcaConhecida || marcaBruta;
+    const modelo = item.modelo && normalizarCategoria(item.modelo) !== cat ? item.modelo : "";
+    if (modelo) return [marca, modelo].filter(Boolean).join(" ");
+    return [cat, marca].filter(Boolean).join(" \xB7 ") || t("Equipamento sem identifica\xE7\xE3o", "Unidentified equipment");
+  }
   function SkeletonResultCard() {
     return /* @__PURE__ */ React.createElement("div", { className: "skeleton-card", "aria-hidden": "true" },
       /* @__PURE__ */ React.createElement("div", { className: "skeleton-line skeleton-titulo" }),
@@ -8728,7 +8739,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       }
     });
     const [ultimoModoPesquisa, setUltimoModoPesquisa] = (0, import_react.useState)("single");
-    const [ultimaSecaoPainel, setUltimaSecaoPainel] = (0, import_react.useState)("historico");
+    const [ultimaSecaoPainel, setUltimaSecaoPainel] = (0, import_react.useState)("resumo");
     const [lang, setLang] = (0, import_react.useState)("pt");
     const t = (pt, en) => lang === "en" ? en : pt;
     const [form, setForm] = (0, import_react.useState)(EMPTY_FORM);
@@ -11262,6 +11273,24 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .exec-tabela .exec-num { text-align: right; white-space: nowrap; }
         .exec-uma-coluna { margin-top: 1.2rem; }
         .exec-data-mobile { display: none; }
+        .so-celular { display: none; }
+        .inicio-ultima { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; width: 100%; text-align: left; background: #FFFFFF; border: 1px solid #E4E2DC; border-radius: 10px; padding: 0.85rem 1.2rem; margin: 0 0 1rem; cursor: pointer; font: inherit; color: #1B1D1F; box-shadow: none; text-transform: none; letter-spacing: 0; }
+        .inicio-ultima:hover { border-color: #D89A00; background: #FFFFFF; }
+        .inicio-ultima-rotulo { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: #8A8D91; }
+        .inicio-ultima-nome { font-weight: 600; font-size: 0.9rem; }
+        .inicio-ultima-valor { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 0.9rem; color: #96650B; }
+        .inicio-ultima-link { margin-left: auto; font-size: 0.82rem; color: #96650B; }
+        .resumo-vazio { padding: 2rem 1.5rem; text-align: center; color: #4B5058; }
+        .resumo-vazio p { margin: 0 0 1rem; }
+        @media (max-width: 640px) {
+          .so-desktop { display: none; }
+          .so-celular { display: inline; }
+          .valor-hero { padding: 1.4rem 1.2rem; }
+          .valor-hero-titulo { font-size: 1.35rem; }
+          .valor-hero-props { gap: 0.7rem; margin-bottom: 1.1rem; }
+          .inicio-ultima { gap: 0.3rem 0.8rem; }
+          .inicio-ultima-link { margin-left: 0; }
+        }
         .exec-bloco + .exec-duas-colunas { margin-top: 1.2rem; }
         @media (max-width: 640px) {
           .exec-dashboard { margin: 0.5rem 0.75rem 1rem; }
@@ -13460,7 +13489,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), /* @__PURE__ */ React.createElement(
       "button",
       {
-        className: "pill-tab" + ((tab === "historico" || tab === "empresa" || tab === "assinatura") ? " active" : ""),
+        className: "pill-tab" + ((tab === "resumo" || tab === "historico" || tab === "empresa" || tab === "assinatura") ? " active" : ""),
         onClick: () => setTab(ultimaSecaoPainel)
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_HISTORY }),
@@ -13481,13 +13510,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       },
       /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CONFIG }),
       t("Config", "Config")
-    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), tab === "dashboard" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
-      /* @__PURE__ */ React.createElement("div", { className: "valor-hero" },
+    ), /* @__PURE__ */ React.createElement("div", { className: "sidebar-credits" }, saldoCreditos !== null && /* @__PURE__ */ React.createElement("span", { className: "credit-badge" + (saldoCreditos <= 0 ? " credit-badge-zero" : "") }, saldoCreditos, " ", t("cr\xE9ditos", "credits")))), (tab === "dashboard" || tab === "resumo") ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" },
+      tab === "resumo" && /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "resumo", label: t("Resumo", "Overview") }, { id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "resumo", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
+      tab === "dashboard" && /* @__PURE__ */ React.createElement("div", { className: "valor-hero" },
         /* @__PURE__ */ React.createElement("h1", { className: "valor-hero-titulo" }, t("Quanto vale o seu ativo industrial?", "What is your industrial asset worth?")),
-        /* @__PURE__ */ React.createElement("p", { className: "valor-hero-sub" }, t(
+        /* @__PURE__ */ React.createElement("p", { className: "valor-hero-sub" }, /* @__PURE__ */ React.createElement("span", { className: "so-desktop" }, t(
           "O Conecta Valor pesquisa an\xFAncios reais no mercado — motores, m\xE1quinas, linhas de produ\xE7\xE3o e outros ativos industriais — e monta uma estimativa de valor baseada em compar\xE1veis de verdade, n\xE3o em tabelas gen\xE9ricas.",
           "Conecta Valor searches real market listings — motors, machines, production lines and other industrial assets — and builds a value estimate based on real comparables, not generic tables."
-        )),
+        )), /* @__PURE__ */ React.createElement("span", { className: "so-celular" }, t("Estimativa de valor de ativos industriais com base em an\xFAncios reais de mercado.", "Value estimates for industrial assets based on real market listings."))),
         /* @__PURE__ */ React.createElement("div", { className: "valor-hero-props" },
           /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop-texto" }, /* @__PURE__ */ React.createElement("strong", null, t("Compar\xE1veis reais", "Real comparables")), /* @__PURE__ */ React.createElement("span", null, t("Busca ativa no mercado, n\xE3o tabela fixa", "Live market search, not a fixed table")))),
           /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_ITEM }), /* @__PURE__ */ React.createElement("div", { className: "valor-hero-prop-texto" }, /* @__PURE__ */ React.createElement("strong", null, t("Item \xFAnico ou em lote", "Single item or batch")), /* @__PURE__ */ React.createElement("span", null, t("Avalie um ativo ou uma planilha inteira", "Evaluate one asset or a whole spreadsheet")))),
@@ -13498,8 +13528,20 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           history.length > 0 && /* @__PURE__ */ React.createElement("button", { type: "button", className: "valor-hero-btn-secundario", onClick: () => { setUltimaSecaoPainel("historico"); setTab("historico"); } }, t("Ver meu hist\xF3rico", "View my history"))
         )
       ),
-      (() => {
-        if (history.length === 0) return null;
+      tab === "dashboard" && history.length > 0 && (() => {
+        const ultima = history.slice().sort((a, b) => b.id - a.id)[0];
+        return /* @__PURE__ */ React.createElement("button", { type: "button", className: "inicio-ultima", onClick: () => { setUltimaSecaoPainel("resumo"); setTab("resumo"); } },
+          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-rotulo" }, t("\xDAltima avalia\xE7\xE3o", "Latest evaluation")),
+          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-nome" }, nomeEquipamentoHistorico(ultima.item, t)),
+          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-valor" }, formatBRL(ultima.result.faixa_media)),
+          /* @__PURE__ */ React.createElement("span", { className: "inicio-ultima-link" }, t("Ver painel \u2192", "View panel \u2192"))
+        );
+      })(),
+      tab === "resumo" && (() => {
+        if (history.length === 0) return /* @__PURE__ */ React.createElement("div", { className: "resumo-vazio" },
+          /* @__PURE__ */ React.createElement("p", null, t("Voc\xEA ainda n\xE3o fez nenhuma avalia\xE7\xE3o. Quando fizer, o resumo aparece aqui.", "You have not made any evaluations yet. When you do, the overview shows up here.")),
+          /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: () => { setUltimoModoPesquisa("single"); setTab("single"); } }, t("Come\xE7ar uma pesquisa", "Start a search"))
+        );
         const nomeUsuario = session && session.user ? session.user.user_metadata && session.user.user_metadata.nome || session.user.email : "";
         const historicoOrdenadoDash = history.slice().sort((a, b) => b.id - a.id);
         const totalAvaliacoes = history.length;
@@ -13514,15 +13556,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         // 02/10: categoria padronizada ("motor elétrico" e "motor eletrico" = Motor)
         // e nome do equipamento sem repetir a categoria como se fosse modelo.
         const categoriaDash = (item) => normalizarCategoria(item.categoria) || "";
-        const nomeEquipamentoDash = (item) => {
-          const cat = categoriaDash(item);
-          const marcaBruta = normalizarMarca(item.marca) || "";
-          const marcaConhecida = marcaBruta && MARCAS_CONHECIDAS.find((m) => m.toLowerCase() === marcaBruta.toLowerCase());
-          const marca = marcaConhecida || marcaBruta;
-          const modelo = item.modelo && normalizarCategoria(item.modelo) !== cat ? item.modelo : "";
-          if (modelo) return [marca, modelo].filter(Boolean).join(" ");
-          return [cat, marca].filter(Boolean).join(" \xB7 ") || t("Equipamento sem identifica\xE7\xE3o", "Unidentified equipment");
-        };
+        const nomeEquipamentoDash = (item) => nomeEquipamentoHistorico(item, t);
         const contagemCategorias = {};
         history.forEach((h) => { const cat = categoriaDash(h.item); if (cat) contagemCategorias[cat] = (contagemCategorias[cat] || 0) + 1; });
         const ultimaData = historicoOrdenadoDash[0] && historicoOrdenadoDash[0].data;
@@ -13638,7 +13672,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
             )
           )
         );
-      })(), isAdmin && (stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026"))) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" + (result ? " panel-compacto" : "") }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "single", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }),
+      })(), tab === "resumo" && isAdmin && (stats ? /* @__PURE__ */ React.createElement("div", { className: "stats-grid", style: { marginTop: "1.2rem" } }, /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_BOX }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.itens), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "itens catalogados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_SEARCH }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.buscas), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "buscas realizadas")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_CHART }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.comparaveis), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "an\xFAncios analisados")), /* @__PURE__ */ React.createElement("div", { className: "stat-cell" }, /* @__PURE__ */ React.createElement(NavIcon, { d: ICON_GLOBE }), /* @__PURE__ */ React.createElement("span", { className: "stat-number" }, stats.sites), /* @__PURE__ */ React.createElement("span", { className: "stat-label" }, "fontes"))) : /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, "Carregando estat\xEDsticas\u2026"))) : tab === "single" ? /* @__PURE__ */ React.createElement("div", { className: "panel" + (result ? " panel-compacto" : "") }, /* @__PURE__ */ React.createElement(Rivet, null), /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "single", label: t("Item \xFAnico", "Single item") }, { id: "batch", label: t("Lote", "Batch") }], atual: "single", onSelect: (id) => { setUltimoModoPesquisa(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement("div", { className: "breadcrumb" },
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-link", onClick: () => setTab("dashboard") }, t("In\xEDcio", "Home")),
         /* @__PURE__ */ React.createElement("span", { className: "breadcrumb-sep" }, "\u2192"),
@@ -13884,7 +13918,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           )
         )
       )
-    ) : tab === "empresa" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "empresa", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
+    ) : tab === "empresa" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "resumo", label: t("Resumo", "Overview") }, { id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "empresa", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Empresa", "Company")),
 
       // ---- Hero superior ----
@@ -13997,7 +14031,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       ),
 
       toastMensagem && /* @__PURE__ */ React.createElement("div", { className: "toast-confirmacao" }, "\u2713 ", toastMensagem)
-    ) : tab === "assinatura" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "assinatura", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
+    ) : tab === "assinatura" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "resumo", label: t("Resumo", "Overview") }, { id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "assinatura", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Minha Assinatura", "My Subscription")),
 
       /* @__PURE__ */ React.createElement(SubscriptionHero, { plan: planoAtual, subscription: billingStore.currentSubscription, t, lang }),
@@ -14212,7 +14246,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         t,
         lang
       })
-    ) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "historico", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
+    ) : tab === "historico" ? /* @__PURE__ */ React.createElement("div", { className: "panel panel-open" }, /* @__PURE__ */ React.createElement(SubnavSegment, { opcoes: [{ id: "resumo", label: t("Resumo", "Overview") }, { id: "historico", label: t("Hist\xF3rico", "History") }, { id: "assinatura", label: t("Assinatura", "Subscription") }, { id: "empresa", label: t("Empresa", "Company") }], atual: "historico", onSelect: (id) => { setUltimaSecaoPainel(id); setTab(id); } }),
       /* @__PURE__ */ React.createElement(PanelTitle, null, t("Hist\xF3rico de Avalia\xE7\xF5es", "Evaluation History")),
       /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginLeft: "1.5rem" } }, t("Consulte e reabra avalia\xE7\xF5es realizadas anteriormente.", "Review and reopen previously performed evaluations.")),
       /* @__PURE__ */ React.createElement("div", { className: "historico-search-row" },
