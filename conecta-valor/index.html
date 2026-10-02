@@ -5352,6 +5352,9 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var COLETA_PRECO_MINIMO_BRL = 100;
   var COLETA_FRACAO_MEDIANA_SUSPEITA = 0.1;
   var COLETA_MIN_AMOSTRAS_MEDIANA = 5;
+  // R$ 1,00 (lance simbólico de leilão) é removido da operação: não aparece
+  // na prévia nem pode ser incluído.
+  var COLETA_PRECO_SIMBOLICO_BRL = 1;
   function medianaNumeros(lista) {
     const v = lista.filter((n) => typeof n === "number" && !isNaN(n)).sort((a, b) => a - b);
     if (v.length === 0) return null;
@@ -8741,6 +8744,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [manualResults, setManualResults] = (0, import_react.useState)([]);
     const [manualError, setManualError] = (0, import_react.useState)(null);
     const [manualDescartados, setManualDescartados] = (0, import_react.useState)(0);
+    const [removidosSimbolicoManual, setRemovidosSimbolicoManual] = (0, import_react.useState)(0);
+    const [removidosSimbolicoColetor, setRemovidosSimbolicoColetor] = (0, import_react.useState)(0);
     const [manualSavedCount, setManualSavedCount] = (0, import_react.useState)(null);
     const EMPTY_ENTRY = { categoria: "", marca: "", modelo: "", capacidade: "", polaridade: "", tensao: "", carcaca: "", rpm: "", ano: "", localizacao: "", preco: "", detalhes: "" };
     const [entryForm, setEntryForm] = (0, import_react.useState)(EMPTY_ENTRY);
@@ -9123,8 +9128,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // Mediana de preço por categoria (BRL), só com categorias que têm
     // amostra suficiente. Se o Supabase não responder, segue sem mediana
     // (o bloqueio de preço irrisório continua valendo).
-    async function anotarQualidadeColeta(items) {
-      if (!items || items.length === 0) return items;
+    async function anotarQualidadeColeta(items, setRemovidosPrecoSimbolico) {
+      if (!items || items.length === 0) {
+        setRemovidosPrecoSimbolico(0);
+        return items;
+      }
       let medianas = {};
       let cotacoes = null;
       try {
@@ -9148,10 +9156,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       } catch (e) {
         console.warn("N\xE3o consegui calcular a mediana das categorias, seguindo s\xF3 com o pre\xE7o m\xEDnimo:", e);
       }
-      return items.map((it) => {
+      const anotados = items.map((it) => {
         const q = classificarQualidadeColeta(it, medianas, cotacoes);
-        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao };
+        const precoBRL = it.preco === null || it.preco === undefined || it.preco === "" ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
+        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && precoBRL <= COLETA_PRECO_SIMBOLICO_BRL };
       });
+      const removidos = anotados.filter((it) => it._precoSimbolico).length;
+      setRemovidosPrecoSimbolico(removidos);
+      return anotados.filter((it) => !it._precoSimbolico);
     }
     function getSupaClient() {
       if (!supaUrl || !supaKey) return null;
@@ -9419,7 +9431,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       try {
         const prompt = buildCollectorPrompt(collectorTerm, config.coletorSites, config.coletorUrlsLeilao, config.coletorUrlsVendaDireta);
         const parsed = await callClaude(prompt, null, apiKey, 3e3);
-        const items = await anotarQualidadeColeta(removerDuplicatasInternas((Array.isArray(parsed) ? parsed : []).map(sanitizeResult)));
+        const items = await anotarQualidadeColeta(removerDuplicatasInternas((Array.isArray(parsed) ? parsed : []).map(sanitizeResult)), setRemovidosSimbolicoColetor);
         setCollectorResults(items);
         if (items.length === 0) {
           setCollectorError("N\xE3o encontrei nada relevante pra esse termo, nos sites configurados.");
@@ -9485,7 +9497,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           resultadosLote.forEach((items) => acumulado.push(...items));
           setCollectorResults(removerDuplicatasInternas(acumulado));
         }
-        if (acumulado.length > 0) setCollectorResults(await anotarQualidadeColeta(removerDuplicatasInternas(acumulado)));
+        if (acumulado.length > 0) setCollectorResults(await anotarQualidadeColeta(removerDuplicatasInternas(acumulado), setRemovidosSimbolicoColetor));
         if (acumulado.length === 0) {
           setCollectorError("N\xE3o encontrei nada relevante em nenhuma das categorias, nos sites configurados.");
         }
@@ -9617,7 +9629,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           mantidos = resultado.mantidos;
           descartados = resultado.descartados;
         }
-        items = await anotarQualidadeColeta(mantidos);
+        items = await anotarQualidadeColeta(mantidos, setRemovidosSimbolicoManual);
         setManualDescartados(descartados);
         setManualResults(items);
         if (items.length === 0) {
@@ -13932,7 +13944,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => setCollectorTerm(e.target.value),
         placeholder: "Ex: motor el\xE9trico 30cv, tanque inox 316\u2026"
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -13969,7 +13981,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarManualCollector, disabled: manualRunning }, manualRunning ? "Salvando\u2026" : `Confirmar e salvar ${manualResults.filter((x) => x._incluir !== false).length} ${manualResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => {
       setManualResults([]);
       setManualText("");
-    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
+    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
