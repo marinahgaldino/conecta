@@ -4880,6 +4880,21 @@
     if (/^nov[oa]\b/.test(c)) return "Novo";
     return "Usado";
   }
+  // Veículo no Machineseeker (02/10: caminhão entra como Caminhão): ano
+  // pela 1ª matrícula quando não tem "Ano de fabrico", potência em kW,
+  // quilometragem e carga útil ("Peso máximo de carga" em kg -> ton).
+  function dadosVeiculoMachineseeker(texto) {
+    const t = String(texto || "");
+    const num = (re) => { const m = t.match(re); return m ? parseNumeroBR(m[1]) : null; };
+    const matricula = t.match(/primeira matr[íi]cula:\s*\n?\s*\d{2}\/(\d{4})/i);
+    const cargaKg = num(/peso m[áa]ximo de carga:\s*\n?\s*([\d.,]+)\s*kg/i);
+    return {
+      anoMatricula: matricula ? matricula[1] : null,
+      potencia_kw: num(/pot[êe]ncia(?: instalada)?:\s*\n?\s*([\d.,]+)\s*kW/i),
+      quilometragem_km: num(/quilometragem:\s*\n?\s*([\d.,]+)\s*km/i),
+      capacidade_carga_ton: cargaKg ? Math.round(cargaKg / 10) / 100 : null
+    };
+  }
   function parseMachineseekerLocal(rawText) {
     const texto = rawText || "";
     const itens = [];
@@ -4894,11 +4909,14 @@
     if (fabricanteMatch && !ehPlaceholder(fabricanteMatch[1]) && precoPrincipalMatch) {
       const textoClassificacao = (designacaoMatch ? designacaoMatch[1] : "") + " " + (modeloMatch ? modeloMatch[1] : "");
       const ehLeilao = /leil[ãa]o|auktion|\bauction\b|lance atual|gebot/i.test(texto.slice(0, 1500));
+      const veiculoPrincipal = dadosVeiculoMachineseeker(texto.split(/Enviar pedido|Estes an[úu]ncios tamb[ée]m/i)[0]);
       itens.push({
         categoria: classificarCategoriaGenerica(textoClassificacao) || classificarCategoriaGenerica(texto.slice(0, 500)),
         marca: normalizarMarca(fabricanteMatch[1].trim()) || fabricanteMatch[1].trim(),
         modelo: modeloMatch && !ehPlaceholder(modeloMatch[1]) ? modeloMatch[1].trim() : designacaoMatch ? designacaoMatch[1].trim() : null,
-        ano: anoMatch ? anoMatch[1] : null,
+        ano: anoMatch ? anoMatch[1] : veiculoPrincipal.anoMatricula,
+        potencia_kw: veiculoPrincipal.potencia_kw,
+        atributos_normalizados: limparAtributosExtras({ quilometragem_km: veiculoPrincipal.quilometragem_km, capacidade_carga_ton: veiculoPrincipal.capacidade_carga_ton }),
         estado: estadoMachineseeker(condicaoMatch ? condicaoMatch[1] : ""),
         // cabeçalho "Localização\nBielefeld Alemanha" (sem rua/CEP) tem prioridade
         localizacao: (texto.match(/^Localiza[çc][ãa]o\s*\n\s*([^\n:]+)$/im) || [])[1] || (localMatch ? localMatch[1].trim() : null),
@@ -4973,14 +4991,16 @@
       // começo da descrição (cortado em fim de palavra: "400 l|itros" virava ". l")
       const descricaoInicio = descricao.length > 600 ? descricao.slice(0, 600).replace(/\s+\S*$/, "") : descricao;
       const fatosRel = extrairFatosDeTexto([linhaModelo, descricaoInicio].filter(Boolean).join(" "));
+      const veiculoRel = dadosVeiculoMachineseeker(descricao);
       itens.push({
         categoria: classificarCategoriaGenerica(designacao || "") || classificarCategoriaGenerica(linhaModelo || "") || classificarCategoriaGenerica(textoCurto),
         marca: marcaLinha || (fabricanteRelMatch ? fabricanteRelMatch[1].trim() : null),
         modelo: modeloLinha || null,
         _tituloOriginal: [designacao, linhaModelo].filter(Boolean).join(" "),
-        ano: anoRelMatch ? anoRelMatch[1] : null,
+        ano: anoRelMatch ? anoRelMatch[1] : veiculoRel.anoMatricula,
         capacidade: fatosRel.capacidade,
         potencia_kw: potenciaRelMatch ? parseNumeroBR(potenciaRelMatch[1]) : null,
+        atributos_normalizados: limparAtributosExtras({ quilometragem_km: veiculoRel.quilometragem_km, capacidade_carga_ton: veiculoRel.capacidade_carga_ton }),
         detalhes: null,
         estado: estadoMachineseeker(condRelMatch ? condRelMatch[1] : ""),
         localizacao: localizacaoRel,
@@ -5684,8 +5704,11 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   // lacrado...). Seminovo e todo o resto = "Usado".
   var RE_ESTADO_NOVO = /\bnov[oa]s?\b|\bsem uso\b|\bnunca usad[oa]\b|\b0\s*km\b|\bzero\s*km\b|\blacrad[oa]\b|\bna caixa\b|\bzerad[oa]\b/i;
   var RE_ESTADO_SEMINOVO = /semi[\s-]?nov[oa]|seminov[oa]/i;
+  // "como novo", "estado de novo", "quase novo" descrevem um USADO bem
+  // conservado (regra 02/10) - saem do texto antes de procurar "novo".
+  var RE_PARECE_NOVO = /\b(?:como|estado de|quase|tipo|igual a|parece|praticamente|feito)\s+nov[oa]s?\b/gi;
   function estadoNovoOuUsado(texto) {
-    const t = String(texto || "");
+    const t = String(texto || "").replace(RE_PARECE_NOVO, " ");
     return RE_ESTADO_NOVO.test(t) && !RE_ESTADO_SEMINOVO.test(t) ? "Novo" : "Usado";
   }
   // Peça/acessório avulso não entra na base (02/10): "ou é equipamento ou não é".
