@@ -164,8 +164,8 @@
     { id: "clp", nome: "CLP", grupo: "eletrica_automacao", synonyms: ["controlador lógico programável", "PLC"], re: /\bCLP\b|controlador l[óo]gico program[áa]vel|\bPLC\b/i, comum: false, ativo: true },
     { id: "inversor", nome: "Inversor", grupo: "eletrica_automacao", synonyms: ["inversor de frequência", "VFD", "variador de velocidade"], re: /inversor de frequ[êe]ncia|\bVFD\b|\binversor\b/i, comum: false, ativo: true },
     { id: "instrumentacao", nome: "Instrumentação", grupo: "eletrica_automacao", synonyms: ["transmissor de pressão", "transmissor de nível", "transmissor de temperatura"], re: /instrumenta[çc][ãa]o|transmissor de (press[ãa]o|n[íi]vel|temperatura)/i, comum: false, ativo: true },
-    { id: "caminhao", nome: "Caminhão", grupo: "veiculos", synonyms: ["caminhão truck", "caminhão toco", "camião"], re: /caminh[ãa]o\b|\bcami[ãa]o\b/i, comum: false, ativo: true },
-    { id: "carreta", nome: "Carreta", grupo: "veiculos", synonyms: ["carreta graneleira", "semirreboque"], re: /\bcarreta\b/i, comum: false, ativo: true },
+    { id: "caminhao", nome: "Caminhão", grupo: "veiculos", synonyms: ["caminhão truck", "caminhão toco", "camião"], re: /caminh[ãa]o\b|\bcami[ãa]o\b|\btipper\b|\bkipper\b/i, comum: false, ativo: true },
+    { id: "carreta", nome: "Carreta", grupo: "veiculos", synonyms: ["carreta graneleira", "semirreboque"], re: /\bcarreta\b|semi[\s-]?reboque|semirreboque|auflieger|\bsattelauflieger\b/i, comum: false, ativo: true },
     { id: "veiculo_leve", nome: "Veículo Leve", grupo: "veiculos", synonyms: ["veículo utilitário", "carro de passeio"], re: /ve[íi]culo leve|utilit[áa]rio\b/i, comum: false, ativo: true },
     { id: "predio_administrativo", nome: "Prédio Administrativo", grupo: "imoveis", synonyms: ["escritório comercial", "prédio comercial"], re: /pr[ée]dio administrativo|escrit[óo]rio comercial/i, comum: false, ativo: true },
     { id: "galpao", nome: "Galpão", grupo: "imoveis", synonyms: ["galpão industrial", "galpão logístico"], re: /\bgalp[ãa]o\b/i, comum: true, ativo: true },
@@ -174,7 +174,7 @@
     { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", synonyms: ["retificadora cilíndrica", "retificadora plana"], re: /ret[íi]fic(adora|a)\b|barramento/i, comum: true, ativo: true },
     { id: "elevador_graos", nome: "Elevador de Grãos", grupo: "movimentacao", synonyms: ["elevador de canecas", "elevador de grãos"], re: /elevador de (gr[ãa]os|canecas)/i, comum: false, ativo: true },
     { id: "religadora", nome: "Religadora", grupo: "eletrica_automacao", synonyms: ["religador automático"], re: /religadora/i, comum: false, ativo: true },
-    { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /gerador|eletrog[êe]neo/i, comum: true, ativo: true },
+    { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /(?<!refri)gerador|eletrog[êe]neo/i, comum: true, ativo: true },
     { id: "luminaria_industrial", nome: "Luminária Industrial", grupo: "instrumentos_utilidades", synonyms: ["luminária LED industrial", "refletor industrial"], re: /lumin[áa]ria|refletor|plafon(ier)?/i, comum: false, ativo: true },
     { id: "seladora", nome: "Seladora", grupo: "envase_embalagem", synonyms: ["seladora de embalagens", "heat sealer"], re: /selador/i, comum: false, ativo: true },
     { id: "espectrofotometro", nome: "Espectrofotômetro", grupo: "instrumentos_utilidades", synonyms: ["espectrômetro", "spectrophotometer"], re: /espectr[oô]fot[ôo]metro|espectr[ôo]metro/i, comum: false, ativo: true },
@@ -4855,6 +4855,31 @@
       tipo_mercado: ehLeilao ? "Leil\xE3o" : "Venda Direta"
     }];
   }
+  // Machineseeker: a linha do card junta fabricante + modelo, às vezes
+  // grudados ("Atlas CopcoGA90+", "Alfa LavalAlfaCubic").
+  function separarMarcaModeloMachineseeker(linha) {
+    // título cortado pelo site ("...EuromixMTP 3-Seiten-...") - a última
+    // palavra incompleta sai
+    const l = String(linha || "").trim().replace(/\s+\S*(?:\.\.\.|\u2026)$/, "").trim();
+    if (!l) return { marca: null, modelo: null };
+    const conhecida = [...MARCAS_CONHECIDAS].sort((a, b) => b.length - a.length).find((m) => l.toLowerCase().startsWith(m.toLowerCase()) && !/^[a-z]/.test(l.slice(m.length)));
+    if (conhecida) return { marca: normalizarMarca(conhecida), modelo: l.slice(conhecida.length).trim() || null };
+    const tokens = l.split(/\s+/);
+    if (tokens[1] === "/" && tokens[2]) return { marca: `${tokens[0]} / ${tokens[2]}`, modelo: tokens.slice(3).join(" ") || null };
+    if (tokens.length > 1 && /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ&.'-]+$/.test(tokens[0]) && !PALAVRAS_TITULO_ANUNCIO.test(tokens[0])) {
+      return { marca: tokens[0], modelo: tokens.slice(1).join(" ") };
+    }
+    return { marca: null, modelo: l };
+  }
+  // "usado", "quase novo (usado)", "como novo (máquina de exposição)" =
+  // Usado; só "novo" de verdade vira Novo (regra 02/10).
+  function estadoMachineseeker(condicao) {
+    const c = String(condicao || "").toLowerCase().trim();
+    if (!c) return null;
+    if (/usad|recondicionad|como nov|quase nov|repara/.test(c)) return "Usado";
+    if (/^nov[oa]\b/.test(c)) return "Novo";
+    return "Usado";
+  }
   function parseMachineseekerLocal(rawText) {
     const texto = rawText || "";
     const itens = [];
@@ -4871,11 +4896,12 @@
       const ehLeilao = /leil[ãa]o|auktion|\bauction\b|lance atual|gebot/i.test(texto.slice(0, 1500));
       itens.push({
         categoria: classificarCategoriaGenerica(textoClassificacao) || classificarCategoriaGenerica(texto.slice(0, 500)),
-        marca: fabricanteMatch[1].trim(),
+        marca: normalizarMarca(fabricanteMatch[1].trim()) || fabricanteMatch[1].trim(),
         modelo: modeloMatch && !ehPlaceholder(modeloMatch[1]) ? modeloMatch[1].trim() : designacaoMatch ? designacaoMatch[1].trim() : null,
         ano: anoMatch ? anoMatch[1] : null,
-        estado: condicaoMatch && /usad/i.test(condicaoMatch[1]) ? "Usado" : condicaoMatch ? condicaoMatch[1].trim() : null,
-        localizacao: localMatch ? localMatch[1].trim() : null,
+        estado: estadoMachineseeker(condicaoMatch ? condicaoMatch[1] : ""),
+        // cabeçalho "Localização\nBielefeld Alemanha" (sem rua/CEP) tem prioridade
+        localizacao: (texto.match(/^Localiza[çc][ãa]o\s*\n\s*([^\n:]+)$/im) || [])[1] || (localMatch ? localMatch[1].trim() : null),
         preco: parsePrecoBR(precoPrincipalMatch[1]),
         moeda: "EUR",
         canal: "Revenda/Terceiro",
@@ -4915,47 +4941,53 @@
     // SL-R € 74.000" -> "Combilift C5000 SL-R") - achado real: nem todo card
     // do Machineseeker tem o preco em linha separada.
     const limparPrecoEmbutido = (l) => l.replace(/\s*€\s*[\d.,]+.*$/i, "").trim();
-    blocosRelacionados.forEach((bloco) => {
-      const precoMatch = bloco.match(/€\s*([\d.,]+)(?!\s*\*)/);
-      if (!precoMatch) return;
+    // 02/10: formato atual do card (lista e "anúncios relacionados"):
+    //   "1 / 7" · local (país opcional: " Kaufungen") · "9.724 km" ·
+    //   DESIGNAÇÃO (tipo de máquina) · FABRICANTE+MODELO · [Comerciante
+    //   verificado] · "€ 9.000" [· preço antigo] · "VB acresce IVA" ·
+    //   "Condição: usado, Ano de fabrico: 1997, ..." (descrição numa linha).
+    // Antes a categoria era decidida pelo texto inteiro do card (descrição
+    // longa) e saía errada (semirreboque como Válvula/Caldeira, caminhão
+    // basculante como Motor); marca vinha do "Fabricante:" da descrição
+    // (fabricante da carroceria, não do equipamento) e o local se perdia
+    // quando o card não trazia o país.
+    const RE_FIM_PAGINA_MS = /\n\s*(?:«|tariff-banner|Siegel|Machineseeker é o patrocinador|Pesquisas atuais de máquinas|ABF LT)\b[\s\S]*$/i;
+    blocosRelacionados.forEach((blocoBruto) => {
+      const bloco = blocoBruto.replace(RE_FIM_PAGINA_MS, "");
       const linhas = bloco.split("\n").map((l) => l.trim()).filter(Boolean);
-      const linhasUteis = linhas
-        .filter(
-          (l) => !/^\d+\s*\/\s*\d+$/.test(l) && !/^\d[\d.,]*\s*km$/i.test(l) && !/^comerciante verificado$/i.test(l) && !/^more images$/i.test(l) && !pareceLocalCurta(l)
-        )
-        .map(limparPrecoEmbutido)
-        .filter(Boolean);
       const idxKm = linhas.findIndex((l) => /^\d[\d.,]*\s*km$/i.test(l));
-      const localizacaoRel = idxKm > 0 && pareceLocalCurta(linhas[idxKm - 1]) ? linhas[idxKm - 1] : null;
-      const titulo = linhasUteis.slice(0, 2).join(" ").trim();
-      const anoRelMatch = bloco.match(/Ano de fabrico:\s*(\d{4})/i);
-      const condRelMatch = bloco.match(/Condi[çc][ãa]o:\s*([^,\n]+)/i);
-      const fabricanteRelMatch = bloco.match(/Fabricante:\s*([A-ZÀ-Ÿ][\wÀ-ÿ]*)/);
-      const capacidadeRelMatch = bloco.match(/Capacidade:\s*([\d.,]+[^\n]*?)(?=\s*Pot[êe]ncia|\s*$|\n)/i);
-      const potenciaRelMatch = bloco.match(/Pot[êe]ncia instalada:\s*([\d.,]+\s*kW)/i);
-      const ehLeilaoRel = /leil[ãa]o|auktion|\bauction\b|lance atual|gebot/i.test(bloco);
-      const detalhesRel = [];
+      if (idxKm < 0) return;
+      const idxPreco = linhas.findIndex((l, i) => i > idxKm && /^€\s*[\d.,]+$/.test(l));
+      if (idxPreco < 0) return; // card sem preço não entra
+      const localizacaoRel = idxKm > 0 && !/^\d+\s*\/\s*\d+$/.test(linhas[idxKm - 1]) ? linhas[idxKm - 1] : null;
+      const cabecalho = linhas.slice(idxKm + 1, idxPreco).filter((l) => !/^comerciante verificado$/i.test(l)).map(limparPrecoEmbutido).filter(Boolean);
+      const designacao = cabecalho[0] || null;
+      const linhaModelo = cabecalho[1] || null;
+      const descricao = linhas.slice(idxPreco + 1).find((l) => /^(Condi[çc][ãa]o|Ano de fabrico|quilometragem|pot[êe]ncia):/i.test(l)) || "";
+      const { marca: marcaLinha, modelo: modeloLinha } = separarMarcaModeloMachineseeker(linhaModelo);
+      const fabricanteRelMatch = descricao.match(/Fabricante:\s*([A-ZÀ-Ÿ][\wÀ-ÿ]*)/);
+      const anoRelMatch = descricao.match(/Ano de fabrico:\s*(\d{4})/i);
+      const condRelMatch = descricao.match(/Condi[çc][ãa]o:\s*([^,\n]+)/i);
+      const potenciaRelMatch = descricao.match(/pot[êe]ncia(?: instalada)?:\s*([\d.,]+)\s*kW/i);
+      const textoCurto = [designacao, linhaModelo, descricao.slice(0, 400)].filter(Boolean).join(" ");
+      // começo da descrição (cortado em fim de palavra: "400 l|itros" virava ". l")
+      const descricaoInicio = descricao.length > 600 ? descricao.slice(0, 600).replace(/\s+\S*$/, "") : descricao;
+      const fatosRel = extrairFatosDeTexto([linhaModelo, descricaoInicio].filter(Boolean).join(" "));
       itens.push({
-        categoria: classificarCategoriaGenerica(bloco),
-        marca: fabricanteRelMatch ? fabricanteRelMatch[1].trim() : null,
-        modelo: titulo || null,
+        categoria: classificarCategoriaGenerica(designacao || "") || classificarCategoriaGenerica(linhaModelo || "") || classificarCategoriaGenerica(textoCurto),
+        marca: marcaLinha || (fabricanteRelMatch ? fabricanteRelMatch[1].trim() : null),
+        modelo: modeloLinha || null,
+        _tituloOriginal: [designacao, linhaModelo].filter(Boolean).join(" "),
         ano: anoRelMatch ? anoRelMatch[1] : null,
-        // Bug real corrigido: antes o valor de "Potência instalada" (ex:
-        // "150 kW") ia parar dentro do campo capacidade como texto cru,
-        // e a captura de capacidade de verdade (capacidadeRelMatch) so era
-        // usada dentro de "detalhes" (nota solta), nunca num campo proprio.
-        // Agora capacidade usa o valor certo, e potencia_kw vira numero de
-        // verdade - o mesmo campo que ja e enviado pro banco em outros
-        // parsers, sem precisar mudar nada no restante do fluxo de salvar.
-        capacidade: capacidadeRelMatch ? capacidadeRelMatch[1].trim() : null,
-        potencia_kw: potenciaRelMatch ? parsePrecoBR(potenciaRelMatch[1].replace(/\s*kW/i, "")) : null,
-        detalhes: detalhesRel.length ? detalhesRel.join("; ") : null,
-        estado: condRelMatch && /usad/i.test(condRelMatch[1]) ? "Usado" : condRelMatch && /nov[oa]/i.test(condRelMatch[1]) ? "Novo" : null,
+        capacidade: fatosRel.capacidade,
+        potencia_kw: potenciaRelMatch ? parseNumeroBR(potenciaRelMatch[1]) : null,
+        detalhes: null,
+        estado: estadoMachineseeker(condRelMatch ? condRelMatch[1] : ""),
         localizacao: localizacaoRel,
-        preco: parsePrecoBR(precoMatch[1]),
+        preco: parsePrecoBR(linhas[idxPreco].replace(/^€\s*/, "")),
         moeda: "EUR",
         canal: "Revenda/Terceiro",
-        tipo_mercado: ehLeilaoRel ? "Leil\xE3o" : "Venda Direta"
+        tipo_mercado: /lance atual|leil[ãa]o\b/i.test(cabecalho.join(" ")) ? "Leil\xE3o" : "Venda Direta"
       });
     });
     return itens;
@@ -5750,9 +5782,11 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
         status = "suspeito";
       }
     }
+    // 02/10: sem categoria não entra por padrão (não dá pra comparar com
+    // nada e polui a base) - dá pra incluir na mão se for o caso.
     if (!catId) {
-      motivos.push("categoria n\xE3o reconhecida");
-      if (status === "ok") status = "alerta";
+      motivos.push("categoria n\xE3o reconhecida \u2014 fora por padr\xE3o");
+      if (status === "ok" || status === "alerta") status = "suspeito";
     }
     return { status, motivos, incluirPorPadrao: status === "ok" || status === "alerta" };
   }
