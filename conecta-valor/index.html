@@ -3231,7 +3231,9 @@
         rpm: fatos.rpm,
         ano: fatos.ano,
         carcaca: norm.carcaca,
-        estado: fatos.estado,
+        // "Novo" só quando o anúncio diz (título ou descrição do card); o
+        // resto vira "Usado" na anotação de qualidade (regra 02/10).
+        estado: fatos.estado || (estadoNovoOuUsado(bloco.textoBlocoCompleto) === "Novo" ? "Novo" : null),
         localizacao: bloco.localizacaoLinha,
         preco: comuns.preco,
         moeda: comuns.moeda,
