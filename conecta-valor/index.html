@@ -1780,6 +1780,7 @@
   }
   DEFAULT_CONFIG.categoriasComuns = CATEGORIA_CANONICA.filter((c) => c.comum).map((c) => c.nome);
   var MARCAS_CONHECIDAS = [
+    "Facchini",
     "WEG",
     "WEG MOTORES",
     "SEW-EURODRIVE",
@@ -2007,7 +2008,9 @@
     else if (/recondicionad/i.test(t)) estado = "Recondicionado";
     else if (/seminovo|semi.novo/i.test(t)) estado = "Seminovo";
     else if (/\busado\b/i.test(t)) estado = "Usado";
-    const capacidadeMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?(litros|l\b|m³|m3)(\s*\/\s*(?:min|h(?:ora)?)\b)?/i);
+    const capacidadeMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?(litros|lts?\b|l\b|m³|m3)(\s*\/\s*(?:min|h(?:ora)?)\b)?/i);
+    // "25 mil litros" = 25.000 L (antes saía "25mil  L", sem volume_l)
+    const numCapacidade = capacidadeMatch ? (capacidadeMatch[2] ? (parseNumeroBR(capacidadeMatch[1]) * 1e3).toLocaleString("pt-BR") : capacidadeMatch[1]) : null;
     // Taxa (vazão) junto da unidade: "6,5 m³/min" não pode virar "6,5 m³".
     const taxaCapacidade = capacidadeMatch && capacidadeMatch[4] ? (/min/i.test(capacidadeMatch[4]) ? "/min" : "/h") : "";
     const kgHoraMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?kg\s*[.\s]*\/?\s*v?\.?\s*\/?\s*h(?:ora)?\b/i) || t.match(/(\d+(?:[.,]\d+)?)\s*(mil\s*)?kg\s+vapor\s*[\/\s]*h(?:ora)?\b/i);
@@ -2028,13 +2031,17 @@
     else if (/cremosos?/i.test(t)) finalidade = "Cremosos";
     else if (/p[óo]s?\b|granulados?/i.test(t)) finalidade = "P\xF3s/Granulados";
     let materialMatch = null;
-    if (/a[çc]o\s*inox|inox\b/i.test(t)) materialMatch = "A\xE7o Inox";
+    if (/a[çc]o\s*inox|inox\b/i.test(t)) {
+      // grau do inox muda o preço (316 > 304) - guarda quando o anúncio diz (02/10)
+      const grau = t.match(/\b(304L?|316L?(?:\s*Ti)?|310S?|430|321)\b/i);
+      materialMatch = grau ? `A\xE7o Inox ${grau[1].replace(/\s+/g, "").replace(/ti$/i, "Ti").toUpperCase().replace("TI", "Ti")}` : "A\xE7o Inox";
+    }
     else if (/a[çc]o\s*carbono/i.test(t)) materialMatch = "A\xE7o Carbono";
     const capacidadeProdMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(unidades?|un\.?|garrafas?|frascos?|latas?|pe[çc]as?|embalagens?)\s*\/\s*h(ora)?/i);
     const detalhesPartes = [];
     if (combustivel) detalhesPartes.push(`Combust\xEDvel: ${combustivel}`);
     if (capacidadeMatch) {
-      const num = capacidadeMatch[1] + (capacidadeMatch[2] || "");
+      const num = numCapacidade;
       const unidade = /m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L";
       detalhesPartes.push(`Capacidade: ${num}${unidade}${taxaCapacidade}`);
     }
@@ -2050,7 +2057,7 @@
     else if (kvaMatch) capacidade = `${kvaMatch[1]} kVA`;
     else if (kgHoraMatch) capacidade = `${kgHoraMatch[1]}${kgHoraMatch[2] || ""} kg/h`;
     else if (tonHoraMatch) capacidade = `${tonHoraMatch[1]} ton/h`;
-    else if (capacidadeMatch) capacidade = `${capacidadeMatch[1]}${capacidadeMatch[2] || ""} ${/m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L"}${taxaCapacidade}`;
+    else if (capacidadeMatch) capacidade = `${numCapacidade} ${/m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L"}${taxaCapacidade}`;
     const potenciaCvFinal = nova.atributos.potencia_cv != null ? nova.atributos.potencia_cv : potenciaCvFracao != null ? potenciaCvFracao : cvMatch ? Number(cvMatch[1].replace(",", ".")) : null;
     const rpmFinal = nova.atributos.rpm != null ? nova.atributos.rpm : rpmMatch ? Number(rpmMatch[1]) : null;
     const anoFinal = nova.atributos.ano != null ? String(nova.atributos.ano) : anoMatch ? anoMatch[0] : null;
@@ -3221,6 +3228,7 @@
         categoria_id: fatos.categoria_id,
         marca,
         modelo: marcaCodigo ? marcaCodigo.modelo : norm.modelo,
+        _tituloOriginal: bloco.tituloBruto,
         capacidade: fatos.capacidade,
         material: fatos.material,
         finalidade: fatos.finalidade,
@@ -4677,11 +4685,15 @@
       uf: comuns.uf,
       ...extras
     });
+    const fatosItem = extrairFatosDeTexto((titulo || "") + " " + (descricao || ""));
     const item = {
       categoria: comuns.categoria,
       marca: norm.marca,
       modelo: titulo,
-      capacidade: capMatch ? `${capMatch[1]} ${capMatch[2]}` : null,
+      material: fatosItem.material,
+      ano: fatosItem.ano,
+      _tituloOriginal: titulo,
+      capacidade: fatosItem.capacidade || (capMatch ? `${capMatch[1]} ${capMatch[2]}` : null),
       detalhes: descricao || null,
       estado,
       localizacao: comuns.localizacaoTexto,
@@ -4737,6 +4749,10 @@
       const comuns = extractCommonDataFacebook(titulo, null, precoStr, localBruto);
       const norm = normalizeEquipmentFacebook(titulo, null);
       const extras = extractCategorySpecsMFRural(comuns.categoria, titulo || "");
+      // 02/10: o título do card já traz volume/material/ano ("Tanque inox
+      // 300 litros", "2017 ... 25 mil litros") - antes saía tudo null e o
+      // card era descartado por "falta de info" mesmo tendo o dado.
+      const fatos = extrairFatosDeTexto(titulo);
       const atributos_normalizados = limparAtributosExtras({
         cidade: comuns.cidade,
         uf: comuns.uf,
@@ -4746,9 +4762,13 @@
         categoria: comuns.categoria,
         marca: norm.marca,
         modelo: titulo,
-        capacidade: null,
+        capacidade: fatos.capacidade,
+        material: fatos.material,
+        ano: fatos.ano,
+        _tituloOriginal: titulo,
         detalhes: null,
-        estado: null,
+        // "Novo" só quando o título diz; o resto vira "Usado" na anotação
+        estado: estadoNovoOuUsado(titulo) === "Novo" ? "Novo" : null,
         localizacao: comuns.localizacaoTexto,
         preco: comuns.preco,
         moeda: comuns.moeda,
@@ -4766,7 +4786,7 @@
     // final mesmo sem nenhuma info que identifique o equipamento. Reaplicar
     // sanitizeResult depois (no pipeline externo) é inofensivo/idempotente.
     // A pedido da Marina: tudo bem descartar anúncio sem o mínimo de info.
-    return itens.map(sanitizeResult).filter((it) => validateObservationFacebook(it));
+    return itens.map(sanitizeResult).filter((it) => validateObservationFacebook(it) || (it.preco > 0 && it.capacidade));
   }
   // Lote/linha completa em formato brasileiro comum: título livre, itens em
   // bullets ("– equipamento" ou "- equipamento"), preço total solto em R$.
@@ -5650,6 +5670,18 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   }
   // Aluguel não entra na base (02/10): preço de locação não é valor de mercado.
   var RE_TEXTO_ALUGUEL = /\b(aluguel|alugo|alugar|alugam-se|aluga-se|loca[çc][ãa]o|para locar)\b|\/\s*m[êe]s\b|\bpor m[êe]s\b|\bmensal(idade)?\b/i;
+  // Preço de mentira (02/10): "R$ 999.999.999", "R$ 9.999.999" - o
+  // vendedor só não quis informar. Igual ao R$ 1,00, não é valor de mercado.
+  function ehPrecoFicticio(preco) {
+    const n = Math.round(Number(preco));
+    return n >= 99999 && /^9+$/.test(String(n));
+  }
+  // Item doméstico/de cozinha (02/10): "tanque" de lavanderia, pia, cuba,
+  // bancada - não é equipamento industrial, não entra na base.
+  var RE_ITEM_DOMESTICO = /\blavanderia\b|\bpias?\b|\bcubas?\b|\bbancadas?\b|apartamento|\barm[\u00E1a]rio\b|granito|m[\u00E1a]rmore|tramontina|acetinado|\bpara restaurante\b|\bcozinha\b/i;
+  function ehItemDomestico(texto) {
+    return RE_ITEM_DOMESTICO.test(String(texto || ""));
+  }
   function ehAluguel(it, tipoMercadoTela) {
     if (/loca[çc]/i.test(it.tipo_mercado || "") || /loca[çc]/i.test(tipoMercadoTela || "")) return true;
     return RE_TEXTO_ALUGUEL.test([it.modelo, it.detalhes].filter(Boolean).join(" "));
@@ -9140,8 +9172,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [manualResults, setManualResults] = (0, import_react.useState)([]);
     const [manualError, setManualError] = (0, import_react.useState)(null);
     const [manualDescartados, setManualDescartados] = (0, import_react.useState)(0);
-    const [removidosSimbolicoManual, setRemovidosSimbolicoManual] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0 });
-    const [removidosSimbolicoColetor, setRemovidosSimbolicoColetor] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0 });
+    const [removidosSimbolicoManual, setRemovidosSimbolicoManual] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0 });
+    const [removidosSimbolicoColetor, setRemovidosSimbolicoColetor] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0 });
     const [manualSavedCount, setManualSavedCount] = (0, import_react.useState)(null);
     const EMPTY_ENTRY = { categoria: "", marca: "", modelo: "", capacidade: "", polaridade: "", tensao: "", carcaca: "", rpm: "", ano: "", localizacao: "", preco: "", detalhes: "" };
     const [entryForm, setEntryForm] = (0, import_react.useState)(EMPTY_ENTRY);
@@ -9526,7 +9558,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // (o bloqueio de preço irrisório continua valendo).
     async function anotarQualidadeColeta(items, setRemovidosPrecoSimbolico, tipoMercadoTela) {
       if (!items || items.length === 0) {
-        setRemovidosPrecoSimbolico({ simbolico: 0, aluguel: 0, peca: 0 });
+        setRemovidosPrecoSimbolico({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0 });
         return items;
       }
       let medianas = {};
@@ -9592,14 +9624,15 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         const aluguel = ehAluguel(it, tipoMercadoTela);
         const precoBRL = it.preco === null || it.preco === undefined || it.preco === "" ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
-        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && precoBRL <= COLETA_PRECO_SIMBOLICO_BRL, _aluguel: aluguel, _peca: peca, _categoriaSugerida: categoriaSugerida };
+        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && (precoBRL <= COLETA_PRECO_SIMBOLICO_BRL || ehPrecoFicticio(it.preco)), _aluguel: aluguel, _peca: peca, _domestico: ehItemDomestico(itColetado._tituloOriginal || itColetado.modelo), _categoriaSugerida: categoriaSugerida };
       });
       setRemovidosPrecoSimbolico({
         simbolico: anotados.filter((it) => it._precoSimbolico).length,
         aluguel: anotados.filter((it) => !it._precoSimbolico && it._aluguel).length,
-        peca: anotados.filter((it) => !it._precoSimbolico && !it._aluguel && it._peca).length
+        peca: anotados.filter((it) => !it._precoSimbolico && !it._aluguel && it._peca).length,
+        domestico: anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca && it._domestico).length
       });
-      return anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca);
+      return anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca && !it._domestico);
     }
     function getSupaClient() {
       if (!supaUrl || !supaKey) return null;
@@ -14429,7 +14462,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => setCollectorTerm(e.target.value),
         placeholder: "Ex: motor el\xE9trico 30cv, tanque inox 316\u2026"
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.simbolico, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), removidosSimbolicoColetor.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoColetor.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoColetor.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -14466,7 +14499,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarManualCollector, disabled: manualRunning }, manualRunning ? "Salvando\u2026" : `Confirmar e salvar ${manualResults.filter((x) => x._incluir !== false).length} ${manualResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => {
       setManualResults([]);
       setManualText("");
-    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.simbolico, " an\xFAncio(s) com pre\xE7o de R$ 1,00 removido(s) automaticamente (lance simb\xF3lico)."), removidosSimbolicoManual.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoManual.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
+    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoManual.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoManual.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoManual.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
