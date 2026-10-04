@@ -1865,6 +1865,24 @@
   DEFAULT_CONFIG.categoriasComuns = CATEGORIA_CANONICA.filter((c) => c.comum).map((c) => c.nome);
   var MARCAS_CONHECIDAS = [
     "Facchini",
+    "IMA Life",
+    "IMA",
+    "Optima",
+    "Sartorius Stedim",
+    "Sartorius",
+    "Stilmas",
+    "Aseptic Technologies",
+    "Groninger",
+    "Marchesini",
+    "Syntegon",
+    "Uhlmann",
+    "Romaco",
+    "Fette",
+    "Korsch",
+    "Glatt",
+    "Neuberger",
+    "Manesty",
+    "Lodige",
     "MXM",
     "WEG",
     "WEG MOTORES",
@@ -2233,7 +2251,7 @@
   // da lista abaixo ficam em maiúsculas (WEG, KSB, MAN, ABB, SEW...).
   // Palavra que já vem com maiúsculas e minúsculas misturadas ("EuromixMTP")
   // é mantida como veio.
-  var MARCAS_SIGLA = new Set(["SEW", "EURODRIVE", "WEG", "KSB", "MAN", "ABB", "GEA", "KHS", "SKF", "NSK", "NTN", "FAG", "SMC", "JCB", "DMG", "TMK", "IMI", "MXM", "BMW", "DAF", "JBS", "CMA", "AGIE", "AISI", "MTP", "HIAB", "HP"]);
+  var MARCAS_SIGLA = new Set(["SEW", "IMA", "EURODRIVE", "WEG", "KSB", "MAN", "ABB", "GEA", "KHS", "SKF", "NSK", "NTN", "FAG", "SMC", "JCB", "DMG", "TMK", "IMI", "MXM", "BMW", "DAF", "JBS", "CMA", "AGIE", "AISI", "MTP", "HIAB", "HP"]);
   function padronizarCaixaMarca(valor) {
     if (!valor) return valor;
     return String(valor).trim().replace(/\s+/g, " ").replace(/[A-Za-z\u00C0-\u00FF]+/g, (palavra) => {
@@ -5240,12 +5258,17 @@
     if (itemUnicoMatch) {
       const tituloPrincipal = itemUnicoMatch[2].trim();
       const fabricanteMatch = textoCompleto.match(/Nome do fabricante\s*\n\s*([^\n]+)/i);
-      const modeloMatch = textoCompleto.match(/Modelo:\s*\n\s*([^\n]+)/i);
+      const modeloMatch = textoCompleto.match(/Modelo:\s*\n\s*([^\n]+)/i) || textoCompleto.match(/^(?:Model|Modelo):\s*([^\n]+)$/im);
+      const anoItemMatch = textoCompleto.match(/(?:Year of manufacture|Ano de fabrica[çc][ãa]o|Ano):\s*((?:19|20)\d{2})\b/i);
       const tensaoMatch = textoCompleto.match(/Tens[ãa]o:\s*\n\s*([^\n]+)/i);
       const potenciaMatch = textoCompleto.match(/Corrent[e]?:\s*\n\s*([\d.,]+)\s*KW/i);
       const pesoMatch = textoCompleto.match(/(\d+(?:[.,]\d+)?)\s*KGS/i);
       const localizacaoMatch = textoCompleto.match(/Localiza[çc][ãa]o:\s*([^\n]+)/i);
-      const precoMatch = textoCompleto.match(/(R\$|[€$£])\s*([\d.,]+)\s*([A-Z]{3})?/);
+      // 04/10: preço do anúncio principal só na parte de cima da página -
+      // antes, anúncio SEM preço pegava o preço do 1º "relacionado" (linha
+      // IMA Xtrema saiu com os € 3.000.000 de outra linha).
+      const textoPrincipal = textoCompleto.split(/Descri[çc][ãa]o do equipamento|Pessoas que visualizaram|Visto anteriormente/i)[0];
+      const precoMatch = textoPrincipal.match(/(R\$|[€$£])\s*([\d.,]+)\s*([A-Z]{3})?/);
       // 04/10: o lookahead antigo "(?=\\b|[A-Z0-9])" com flag "i" aceitava
       // letra minúscula - "CAT" batia em "Categoria" e a marca saía
       // "Caterpillar". Agora a marca precisa terminar na palavra, e vem
@@ -5281,6 +5304,7 @@
           preco: parsePrecoBR(precoMatch[2]),
           moeda: simboloParaMoeda(precoMatch[1], precoMatch[3]),
           _tituloOriginal: tituloPrincipal,
+          ano: anoItemMatch ? anoItemMatch[1] : null,
           estado: estadoNovoOuUsado(tituloPrincipal) === "Novo" ? "Novo" : null,
           tipo_mercado: "Venda Direta"
         });
@@ -5291,7 +5315,7 @@
     const relacionadosRe = /LISTAGEM #\s*(\d+)\s*\n\s*(R\$|[€$£])\s*([\d.,]+)\s*\n\s*(?:\[([^\]]+)\]\([^)]*\)|([^\n]+))\s*\n\s*Categoria:\s*([^\n]+)\s*\n\s*(?:\n\s*)?Localiza[çc][ãa]o:\s*([^\n]+)/gi;
     let relMatch;
     while ((relMatch = relacionadosRe.exec(textoCompleto)) !== null) {
-      const tituloRel = (relMatch[4] || relMatch[5] || "").trim();
+      const tituloRel = (relMatch[4] || relMatch[5] || "").trim().replace(/^Linhas de (?=Linha)/i, "");
       const marcaRel = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z\u00E0-\u00FF])`, "i").test(tituloRel)) || null;
       itens.push({
         categoria: classificarCategoriaGenerica(tituloRel) || classificarCategoriaGenerica(relMatch[6].trim()),
