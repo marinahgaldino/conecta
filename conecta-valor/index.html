@@ -200,7 +200,7 @@
     { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
     { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing|encartuch|encartonador|flow\s?pack/i, comum: false, ativo: true },
     { id: "sucata", nome: "Sucata", grupo: "outros", synonyms: ["sucata metálica", "sucata industrial"], re: /sucata/i, comum: true, ativo: true },
-    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad/i, comum: true, ativo: true },
+    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|\bsleeve\b|t[úu]nel (de )?(vapor|encolhimento|termoencolh)/i, comum: true, ativo: true },
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
     { id: "envasadora", nome: "Envasadora", grupo: "envase_embalagem", synonyms: ["envasadora automática"], re: /envasador(a)?\b/i, comum: false, ativo: true },
     { id: "transformador", nome: "Transformador", grupo: "eletrica_automacao", synonyms: ["trafo", "transformador de potência"], re: /transformador|\btrafo\b/i, comum: true, ativo: true },
@@ -212,7 +212,7 @@
     { id: "motovibrador", nome: "Motovibrador/Vibrador", grupo: "mecanica", synonyms: ["motovibrador", "vibrador de concreto", "vibrador de imersão"], re: /motovibrador|\bvibrador(es)?\b/i, comum: false, ativo: true },
     { id: "maquina_corte_laser", nome: "Máquina de Corte a Laser", grupo: "maquinas_ferramenta", synonyms: ["laser de fibra", "corte a laser", "laser CO2"], re: /\blaser\b/i, excludeRe: /n[íi]vel a laser|n[íi]vel laser|medidor|trena|term[ôo]metro|mira laser/i, comum: false, ativo: true },
     { id: "pulverizador_agricola", nome: "Pulverizador Agrícola", grupo: "veiculos", synonyms: ["pulverizador autopropelido", "pulverizador de arrasto"], re: /pulverizador/i, excludeRe: /^\s*tanque/i, comum: false, ativo: true },
-    { id: "motor_eletrico", nome: "Motor", grupo: "mecanica", synonyms: ["motor elétrico", "motor elétrico trifásico", "motor de indução", "motor a diesel", "motor a combustão", "motor estacionário"], re: /\bmotor\b|\bW22\b/i, comum: true, ativo: true },
+    { id: "motor_eletrico", nome: "Motor", grupo: "mecanica", synonyms: ["motor elétrico", "motor elétrico trifásico", "motor de indução", "motor a diesel", "motor a combustão", "motor estacionário"], re: /\bmotor\b|\bW22\b/i, excludeRe: /^\s*(compressor|bomba|motobomba|moto-?bomba|gerador|betoneira|esteira|misturador|serra|moedor|ventilador|exaustor)\b/i, comum: true, ativo: true },
     { id: "vaso_pressao", nome: "Vaso de Pressão", grupo: "tanques_processo", synonyms: ["vaso de pressão vertical", "recipiente sob pressão", "pressure vessel"], re: /vaso de press[ãa]o|recipiente sob press[ãa]o/i, comum: false, ativo: true },
     { id: "silo", nome: "Silo", grupo: "tanques_processo", synonyms: ["silo metálico", "silo de grãos"], re: /\bsilo\b/i, comum: false, ativo: true },
     { id: "tanque_misturador", nome: "Tanque Misturador", grupo: "tanques_processo", synonyms: ["tanque com agitador", "tanque de mistura"], re: /tanque.{0,20}(misturador|agitador)|misturador.{0,20}tanque/i, comum: false, ativo: true },
@@ -1808,6 +1808,13 @@
     if (!t) return { category_id: null, category_name: null, confidence: 0 };
     const completo = classificarFuncaoTexto(t);
     if (!completo.category_id) return completo;
+    // 04/10: "Compressor Parafuso 40HP motor de Inversor" - quando o texto
+    // inteiro cai num COMPONENTE (inversor, motor, painel...) mas a 1ª
+    // palavra já é um equipamento, vale a 1ª palavra.
+    if (CATEGORIAS_COMPONENTE.includes(completo.category_id)) {
+      const primeira = classificarFuncaoTexto(String(t).trim().split(/[\s,;:\-–(]+/)[0] || "");
+      if (primeira.category_id && !CATEGORIAS_COMPONENTE.includes(primeira.category_id)) return primeira;
+    }
     const m = String(t).match(RE_CONECTOR_COMPLEMENTO);
     if (!m) return completo;
     const cabeca = classificarFuncaoTexto(String(t).slice(0, m.index));
@@ -1865,6 +1872,14 @@
   DEFAULT_CONFIG.categoriasComuns = CATEGORIA_CANONICA.filter((c) => c.comum).map((c) => c.nome);
   var MARCAS_CONHECIDAS = [
     "Facchini",
+    "Nardini",
+    "Newton",
+    "Himeca",
+    "Chiaperini",
+    "Techto",
+    "Chicago Pneumatic",
+    "Chicago",
+    "Somar",
     "Sulmecânica",
     "Allweiler",
     "IMA Life",
@@ -2163,6 +2178,9 @@
     else if (kgHoraMatch) capacidade = `${kgHoraMatch[1]}${kgHoraMatch[2] || ""} kg/h`;
     else if (tonHoraMatch) capacidade = `${tonHoraMatch[1]} ton/h`;
     else if (capacidadeMatch) capacidade = `${numCapacidade} ${/m/i.test(capacidadeMatch[3]) ? "m\xB3" : "L"}${taxaCapacidade}`;
+    // vazão em PCM (pés cúbicos por minuto) -> m³/min (1 PCM = 0,02832 m³/min)
+    const pcmMatch = !capacidade ? t.match(/(\d+(?:[.,]\d+)?)\s*pcm\b/i) : null;
+    if (pcmMatch) capacidade = `${(parseNumeroBR(pcmMatch[1]) * 0.02832).toFixed(2).replace(".", ",")} m\xB3/min`;
     const potenciaCvFinal = nova.atributos.potencia_cv != null ? nova.atributos.potencia_cv : potenciaCvFracao != null ? potenciaCvFracao : cvMatch ? Number(cvMatch[1].replace(",", ".")) : null;
     const rpmFinal = nova.atributos.rpm != null ? nova.atributos.rpm : rpmMatch ? Number(rpmMatch[1]) : null;
     const anoFinal = nova.atributos.ano != null ? String(nova.atributos.ano) : anoMatch ? anoMatch[0] : null;
@@ -2246,6 +2264,7 @@
     "INGERSOLL RAND": "Ingersoll Rand",
     "DELAVAL": "DeLaval",
     "TETRA PAK": "Tetra Pak",
+    "CHICAGO": "Chicago Pneumatic",
     "TETRAPAK": "Tetra Pak"
   };
   // Padronização de marca (04/10): "GRACO"/"graco" -> "Graco",
@@ -4387,7 +4406,10 @@
       if (!tituloBruto) return;
       const precosPrincipais = linhas.filter((l) => /^R\$\s*[\d.,]+$/.test(l)).map((l) => l.match(/R\$\s*([\d.,]+)/)[1]);
       if (precosPrincipais.length === 0) return;
-      const linhaLocal = linhas.find((l) => extrairLocalizacaoGenerica(l));
+      // 04/10: o card da lista traz "São Paulo, Jardim Adelfiore" (cidade,
+      // bairro), sem UF - fica a cidade.
+      const linhaLocal = linhas.find((l) => extrairLocalizacaoGenerica(l)) ||
+        (linhas.find((l) => /^[A-ZÀ-Ÿ][a-zà-ÿ]+(?:\s+(?:d[aeo]s?\s+)?[A-ZÀ-Ÿ]?[a-zà-ÿ]+)*,\s+\S/.test(l) && !/R\$|em at[ée]|sem juros/i.test(l)) || "").split(",")[0].trim() || null;
       resultado.push({
         tituloBruto,
         textoBlocoCompleto: linhas.join(" "),
@@ -4421,10 +4443,14 @@
     if (voltagemRotuloMatch) r.tensao = voltagemRotuloMatch[1].trim();
     if (condicaoMatch) r.condicao = /usad/i.test(condicaoMatch[1]) ? "Usado" : condicaoMatch[1].trim();
     if (!r.marca) {
-      const marcaEncontrada = MARCAS_CONHECIDAS.find(
-        (m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(tituloBruto || "")
-      );
-      if (marcaEncontrada) r.marca = normalizarMarca(marcaEncontrada);
+      // a marca que aparece PRIMEIRO no título ("Torno ROMI ... comando
+      // Siemens" = Romi, não Siemens)
+      let melhor = null;
+      MARCAS_CONHECIDAS.forEach((m) => {
+        const mm = (tituloBruto || "").match(new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z\\u00E0-\\u00FF])`, "i"));
+        if (mm && (!melhor || mm.index < melhor.idx || (mm.index === melhor.idx && m.length > melhor.m.length))) melhor = { m, idx: mm.index };
+      });
+      if (melhor) r.marca = normalizarMarca(melhor.m);
     }
     return r;
   }
@@ -4511,6 +4537,8 @@
       moeda: "BRL",
       canal: "Revenda/Terceiro",
       tipo_mercado: "Venda Direta",
+      _tituloOriginal: titulo,
+      _incompleto: /com defeito|avaria/i.test(norm.condicao || "") || /Condi[çc][ãa]o\s*:?\s*Com defeito/i.test(texto),
       atributos_normalizados
     };
     return [item].filter((it) => validateObservationOLX(it));
@@ -4543,6 +4571,8 @@
         estado: norm.condicao || (/usad/i.test(bloco.tituloBruto || "") ? "Usado" : null),
         canal: "Revenda/Terceiro",
         tipo_mercado: comuns.tipoMercado,
+        _tituloOriginal: bloco.tituloBruto,
+        capacidade: extrairFatosDeTexto(bloco.tituloBruto).capacidade,
         atributos_normalizados
       };
       if (validateObservationOLX(item)) itens.push(item);
@@ -5865,7 +5895,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   var PALAVRAS_TITULO_ANUNCIO = /^(usad[oa]s?|nov[oa]s?|seminov[oa]s?|vendo|venda|vende-se|[óo]timo|otimo|excelente|bom|estado|funcionando|revisad[oa]|reformad[oa]|completo|completa|marca|modelo|industrial|industriais|trif[áa]sic[oa]|monof[áa]sic[oa]|el[ée]tric[oa]|mec[âa]nic[oa]|m[áa]quina|equipamento|linha|ano|de|do|da|dos|das|com|para|em|e|a|o|sem|tipo|parafuso|pist[ãa]o|universal|autom[áa]tic[oa]|hidr[áa]ulic[oa]|pneum[áa]tic[oa]|inox|a[çc]o|entre|pontas|di[âa]metro|admiss[íi]vel|dist[âa]ncia|capacidade|pot[êe]ncia|vaz[ãa]o|press[ãa]o|torre|g[áa]s|glp|diesel|lenha|vapor|leil[ãa]o|lote|oportunidade|imperd[íi]vel|urgente|barato|[óo]leo|seco|seca|plana|cil[íi]ndrica|horizontal|vertical|mesa|magn[ée]tica|cnc|pe[çc]as|reposi[çc][ãa]o|tamanho|eleva[çc][ãa]o|rota[çc][ãa]o|polos|entrega|dias|completa|completo|unidades?|caixas|eixos?|m[áa]quinas|toneladas|for[çc]a|produ[çc][ãa]o|alta|baixa|precis[ãa]o|padr[ãa]o|residencial|port[áa]til|eficiente|flange|blindado|carrapato|concreto|mangote|universal|bivolt|direto|pintura|cabe[çc]ote|m[óo]vel|alimentador|multitarefa|fogotubular|aquatubular|girat[óo]ria|base|mini|fixa|reciclagem|saquinho|moldados|pr[ée]|auto|clave|autoclave|carrinhos|bicos|l[íi]quidos|bebidas|janelas|portas|chapas?|armaz[ée]m|monof[áa]sico|bif[áa]sico|refor[çc]ad[oa]|nova|novas|semi|r[áa]pid[oa]|seguro|garantia|frete|gr[áa]tis|pre[çc]o|valor|em|no|na|por|motor|motores|aberta|fechada|tank|tanque|guincho|leite|metros)$/i;
   // Número só conta como especificação se não fizer parte de um código
   // (lookbehind): "8FG25" e "Tormax 20A" ficam intactos.
-  var RE_ESPEC_COM_UNIDADE = /(?<![\w-])\d+(?:[.,]\d+)?(?:\s*[\/-]\s*\d+(?:[.,]\d+)?)*\s*(?:mil\s*)?(?:metros?|mm|cm|km|kgf\/cm[²2]|kgf|kg\/h|kg|ton\/h|t\/h|ton|toneladas?|cv|hp|kw|kva|kv|v|rpm|bar|psi|mca|m[³3]\/(?:min|h)|m[³3]|m[²2]|l\/h|l\/min|litros?|polos?|p[ée]s|bph|unid(?:ades)?\/h|garrafas\/h|ml|lts?|mbar|kcal|m|%)(?![\w])/gi;
+  var RE_ESPEC_COM_UNIDADE = /(?<![\w-])\d+(?:[.,]\d+)?(?:\s*[\/-]\s*\d+(?:[.,]\d+)?)*\s*(?:mil\s*)?(?:metros?|mm|cm|km|kgf\/cm[²2]|kgf|kg\/h|kg|ton\/h|t\/h|ton|toneladas?|cv|hp|kw|kva|kv|v|rpm|bar|psi|mca|m[³3]\/(?:min|h)|m[³3]|m[²2]|l\/h|l\/min|litros?|polos?|p[ée]s|pcm|bph|unid(?:ades)?\/h|garrafas\/h|ml|lts?|mbar|kcal|m|%)(?![\w])/gi;
   function extrairModeloCurto(modelo, marca, categoria) {
     if (!modelo) return modelo;
     const original = String(modelo).trim();
@@ -5962,8 +5992,9 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   function ehLoteVariasUnidades(texto) {
     const t = String(texto || "").trim();
     if (RE_LOTE_MISTO.test(t)) return true;
-    const qtd = t.match(/^\s*(\d{1,4})\s*(?:p[çc]s?\.?|pe[çc]as|unid(?:ades)?\.?|un\.?)?\s+[A-Za-zÀ-ÿ]/i) || t.match(/\(\s*(\d{1,4})\s*(?:UN|UND|P[ÇC]S?|PE[ÇC]AS?)\.?\s*\)/i);
-    return !!(qtd && Number(qtd[1]) >= 2 && !/^\s*\d{1,4}\s*(cv|hp|kw|kva|l|litros|ton|t|m[³3]|mm|bicos|vias|polos|eixos|cavidades|portas|cores|furos|fusos|cabe[çc]otes|esta[çc][õo]es|v)(?![a-z\u00E0-\u00FF])/i.test(t));
+    // até 3 dígitos: "2017 Facchini..." é ano, não 2017 unidades
+    const qtd = t.match(/^\s*(\d{1,3})\s*(?:p[çc]s?\.?|pe[çc]as|unid(?:ades)?\.?|un\.?)?\s+[A-Za-zÀ-ÿ]/i) || t.match(/\(\s*(\d{1,4})\s*(?:UN|UND|P[ÇC]S?|PE[ÇC]AS?)\.?\s*\)/i);
+    return !!(qtd && Number(qtd[1]) >= 2 && !/^\s*\d{1,4}\s*(cv|hp|kw|kva|l|litros|ton|t|m[³3]|mm|bicos|vias|polos|eixos|cavidades|portas|cores|furos|fusos|cabe[çc]otes|esta[çc][õo]es|v|pcm|p[ée]s|bar|psi)(?![a-z\u00E0-\u00FF])/i.test(t));
   }
   function ehAluguel(it, tipoMercadoTela) {
     if (/loca[çc]/i.test(it.tipo_mercado || "") || /loca[çc]/i.test(tipoMercadoTela || "")) return true;
@@ -6021,6 +6052,10 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       status = "alerta";
     } else if (precoBRL < COLETA_PRECO_MINIMO_BRL) {
       motivos.push(`pre\xE7o irris\xF3rio (abaixo de R$ ${COLETA_PRECO_MINIMO_BRL})`);
+      status = "bloqueado";
+    } else if (precoBRL < 1000 && catId && familiaDaFuncao(catId) === "maquinas_ferramenta") {
+      // 04/10: dobradeira/torno/guilhotina a R$ 170 é preço de mentira
+      motivos.push("pre\xE7o irris\xF3rio para m\xE1quina-ferramenta (abaixo de R$ 1.000)");
       status = "bloqueado";
     } else {
       const mediana = catId && medianasPorCategoria ? medianasPorCategoria[catId] : null;
@@ -6279,6 +6314,8 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       return `${partes[0]}/${estadoParaUF(partes[1])}`;
     }
     if (partes.length === 1) {
+      // "São Paulo" / "Rio de Janeiro" sozinhos = a capital (cidade), não só o estado
+      if (/^(s[ãa]o paulo|rio de janeiro)$/i.test(partes[0])) return `${partes[0]}/${estadoParaUF(partes[0])}`;
       return estadoParaUF(partes[0]);
     }
     return limpo;
@@ -9874,7 +9911,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
       }
       const anotados = items.map((itColetado) => {
         // Sem categoria + título claro: usa a categoria do título.
-        const catTitulo = categoriaPeloTitulo(itColetado.modelo);
+        const catTitulo = categoriaPeloTitulo(itColetado._tituloOriginal || itColetado.modelo);
         const catVeio = itColetado.categoria_id || resolverCategoriaId(itColetado.categoria);
         const itOriginal = !catVeio && catTitulo ? { ...itColetado, categoria: catTitulo.category_name, categoria_id: catTitulo.category_id, _categoriaPeloTitulo: true } : itColetado;
         const tituloColetado = [itColetado._tituloOriginal, itColetado.modelo, itColetado.detalhes].filter(Boolean).join(" ");
@@ -9895,7 +9932,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           q.motivos.unshift(`mesmo item j\xE1 na base por ${formatBRL(dup.precoBase)} (${Math.round(dup.diff * 100)}% de diferen\xE7a)`);
           q.incluirPorPadrao = false;
         }
-        if (itColetado._incompleto) {
+        if (itColetado._incompleto || /faltando pe[çc]as?|para reformar|n[ãa]o funciona|com defeito|avariad|para retirada de pe[çc]as/i.test(itColetado._tituloOriginal || "")) {
           q.motivos.unshift("equipamento incompleto \u2014 fora por padr\xE3o");
           if (q.status === "ok" || q.status === "alerta") q.status = "suspeito";
           q.incluirPorPadrao = false;
@@ -9917,7 +9954,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           q.incluirPorPadrao = false;
           categoriaSugerida = { id: catTitulo.category_id, nome: catTitulo.category_name, qualidadeSemDuvida };
         }
-        const aluguel = ehAluguel(it, tipoMercadoTela);
+        const aluguel = ehAluguel({ ...it, detalhes: [it.detalhes, itColetado._tituloOriginal].filter(Boolean).join(" ") }, tipoMercadoTela);
         const precoBRL = it.preco === null || it.preco === undefined || it.preco === "" ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
         return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && (precoBRL <= COLETA_PRECO_SIMBOLICO_BRL || ehPrecoFicticio(it.preco)), _aluguel: aluguel, _peca: peca, _domestico: ehItemDomestico(itColetado._tituloOriginal || itColetado.modelo), _lote: ehLoteVariasUnidades(itColetado._tituloOriginal || itColetado.modelo), _categoriaSugerida: categoriaSugerida };
       });
