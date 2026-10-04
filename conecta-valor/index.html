@@ -2251,13 +2251,22 @@
   // da lista abaixo ficam em maiúsculas (WEG, KSB, MAN, ABB, SEW...).
   // Palavra que já vem com maiúsculas e minúsculas misturadas ("EuromixMTP")
   // é mantida como veio.
-  var MARCAS_SIGLA = new Set(["SEW", "IMA", "EURODRIVE", "WEG", "KSB", "MAN", "ABB", "GEA", "KHS", "SKF", "NSK", "NTN", "FAG", "SMC", "JCB", "DMG", "TMK", "IMI", "MXM", "BMW", "DAF", "JBS", "CMA", "AGIE", "AISI", "MTP", "HIAB", "HP"]);
+  var MARCAS_SIGLA = new Set(["SEW", "IMA", "EURODRIVE", "WEG", "KSB", "MAN", "ABB", "GEA", "KHS", "SKF", "NSK", "NTN", "FAG", "SMC", "JCB", "DMG", "TMK", "IMI", "MXM", "BMW", "DAF", "JBS", "CMA", "AGIE", "AISI", "MTP", "HIAB", "HP", "NETZSCH"]);
+  var CONECTORES_MARCA = new Set(["de", "da", "do", "das", "dos", "e", "und", "y", "van", "von", "der", "di", "du", "la", "le", "del"]);
   function padronizarCaixaMarca(valor) {
     if (!valor) return valor;
-    return String(valor).trim().replace(/\s+/g, " ").replace(/[A-Za-z\u00C0-\u00FF]+/g, (palavra) => {
+    const base = String(valor).trim().replace(/\s+/g, " ");
+    const multi = /\s/.test(base);
+    const todaMaiuscula = base === base.toUpperCase();
+    return base.replace(/[A-Za-z\u00C0-\u00FF]+/g, (palavra, posicao) => {
       if (palavra !== palavra.toUpperCase() && palavra !== palavra.toLowerCase()) return palavra; // já misturada
       const maiuscula = palavra.toUpperCase();
-      if (MARCAS_SIGLA.has(maiuscula) || (maiuscula.length <= 3 && !/\s/.test(String(valor).trim()))) return maiuscula;
+      if (MARCAS_SIGLA.has(maiuscula)) return maiuscula;
+      // sigla curta: marca de uma palavra só ("ATA") ou marca que já vem com
+      // maiúsculas e minúsculas ("KK Kletzer") - "WEG MOTORES" tudo em caixa
+      // alta não conta como sigla em "MOTORES"
+      if (maiuscula.length <= 3 && palavra === maiuscula && (!multi || !todaMaiuscula)) return maiuscula;
+      if (posicao > 0 && CONECTORES_MARCA.has(palavra.toLowerCase())) return palavra.toLowerCase();
       return maiuscula.charAt(0) + palavra.slice(1).toLowerCase();
     });
   }
