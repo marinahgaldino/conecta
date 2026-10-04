@@ -5273,6 +5273,7 @@
     const limpo = corrigirMojibake(m).replace(/^M[aá]quinas\s+/i, "").replace(RE_SUFIXO_RAZAO_SOCIAL, "").trim();
     return limpo || null;
   }
+  const RE_MELHOR_OFERTA_EQUIPNET = /^(?:fa[çc]a\s+(?:sua|uma)\s+)?melhor\s+oferta\b.{0,20}$/i;
   function parseEquipNetLocal(rawText) {
     const textoNormalizado = corrigirMojibake(rawText || "").replace(/(Item|Categoria|Fabricante|Localiza[çc][ãa]o):\s*\n\s*/gi, "$1:");
     const lines = textoNormalizado.split("\n").map((l) => l.trim());
@@ -5291,15 +5292,18 @@
       for (let j = i + 1; j < Math.min(i + 8, lines.length); j++) {
         const linha = lines[j];
         if (!linha) continue;
+        // 04/10: parar no próximo item - sem isso, um card com "Melhor
+        // oferta" escrito diferente pegava o preço do card seguinte.
+        if (/^Item:\d+$/.test(linha)) break;
         if (/^Categoria:/.test(linha)) categoria = linha.replace(/^Categoria:/, "").trim();
         else if (/^Fabricante:/.test(linha)) marca = linha.replace(/^Fabricante:/, "").trim();
         else if (/^Localiza[çc][ãa]o:/.test(linha)) localizacao = linha.replace(/^Localiza[çc][ãa]o:/, "").trim();
-        else if (/^(Melhor oferta|(?:R\$|[€$£₹])\s*[\d.,]+\s*[A-Z]{3}|[\d.,]+\s*[€$£₹])$/.test(linha)) {
+        else if (RE_MELHOR_OFERTA_EQUIPNET.test(linha) || /^((?:R\$|[€$£₹])\s*[\d.,]+\s*[A-Z]{3}|[\d.,]+\s*[€$£₹])$/.test(linha)) {
           precoLinha = linha;
           break;
         }
       }
-      if (!precoLinha || /Melhor oferta/i.test(precoLinha)) continue;
+      if (!precoLinha || RE_MELHOR_OFERTA_EQUIPNET.test(precoLinha)) continue;
       const precoMatchPrefixo = precoLinha.match(/(R\$|[€$£₹])\s*([\d.,]+)\s*([A-Z]{3})/);
       const precoMatchSufixo = !precoMatchPrefixo ? precoLinha.match(/([\d.,]+)\s*([€$£₹])/) : null;
       if (!precoMatchPrefixo && !precoMatchSufixo) continue;
@@ -5363,7 +5367,10 @@
         categoriaPrincipal = semInicio[semInicio.length - 1] || null;
       }
       categoriaPrincipal = classificarCategoriaGenerica(tituloPrincipal) || (categoriaPrincipal ? classificarCategoriaGenerica(categoriaPrincipal) : null);
-      if (precoMatch) {
+      // 04/10: anúncio principal com "Melhor oferta" no lugar do valor não
+      // tem preço - fica fora (antes podia pegar um número solto da página).
+      const semValorPrincipal = textoPrincipal.split("\n").some((l) => RE_MELHOR_OFERTA_EQUIPNET.test(l.trim()));
+      if (precoMatch && !semValorPrincipal) {
         itens.push({
           categoria: categoriaPrincipal,
           marca: fabricanteMatch ? fabricanteMatch[1].trim() : marcaConhecidaMatch,
