@@ -2139,12 +2139,30 @@
     "CAT": "Caterpillar",
     "CATERPILLAR": "Caterpillar",
     "INGERSOLL": "Ingersoll Rand",
-    "INGERSOLL RAND": "Ingersoll Rand"
+    "INGERSOLL RAND": "Ingersoll Rand",
+    "DELAVAL": "DeLaval",
+    "TETRA PAK": "Tetra Pak",
+    "TETRAPAK": "Tetra Pak"
   };
+  // Padronização de marca (04/10): "GRACO"/"graco" -> "Graco",
+  // "MERCEDES-BENZ" -> "Mercedes-Benz". Siglas curtas (até 3 letras) e as
+  // da lista abaixo ficam em maiúsculas (WEG, KSB, MAN, ABB, SEW...).
+  // Palavra que já vem com maiúsculas e minúsculas misturadas ("EuromixMTP")
+  // é mantida como veio.
+  var MARCAS_SIGLA = new Set(["SEW", "EURODRIVE", "WEG", "KSB", "MAN", "ABB", "GEA", "KHS", "SKF", "NSK", "NTN", "FAG", "SMC", "JCB", "DMG", "TMK", "IMI", "MXM", "BMW", "DAF", "JBS", "CMA", "AGIE", "AISI", "MTP", "HIAB", "HP"]);
+  function padronizarCaixaMarca(valor) {
+    if (!valor) return valor;
+    return String(valor).trim().replace(/\s+/g, " ").replace(/[A-Za-z\u00C0-\u00FF]+/g, (palavra) => {
+      if (palavra !== palavra.toUpperCase() && palavra !== palavra.toLowerCase()) return palavra; // já misturada
+      const maiuscula = palavra.toUpperCase();
+      if (MARCAS_SIGLA.has(maiuscula) || (maiuscula.length <= 3 && !/\s/.test(String(valor).trim()))) return maiuscula;
+      return maiuscula.charAt(0) + palavra.slice(1).toLowerCase();
+    });
+  }
   function normalizarMarca(valor) {
     if (!valor) return valor;
     const chave = String(valor).trim().toUpperCase();
-    return MARCA_ALIASES[chave] || valor;
+    return MARCA_ALIASES[chave] || padronizarCaixaMarca(valor);
   }
   function pareceLocalizacao(valor) {
     if (!valor) return false;
@@ -10064,7 +10082,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           categoria: normalizarCategoria(it.categoria),
           categoria_id: resolverCategoriaId(it.categoria),
           atributos_normalizados: atributosNormalizadosDe(it),
-          marca: it.marca || null,
+          marca: normalizarMarca(it.marca) || null,
           modelo: it.modelo || null,
           potencia_cv: it.potencia_cv ?? null,
           capacidade: completarCapacidade(it.capacidade, it.categoria) || null,
@@ -10202,7 +10220,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           categoria: normalizarCategoria(it.categoria),
           categoria_id: resolverCategoriaId(it.categoria),
           atributos_normalizados: atributosNormalizadosDe(it),
-          marca: it.marca || null,
+          marca: normalizarMarca(it.marca) || null,
           modelo: it.modelo || null,
           potencia_cv: it.potencia_cv ?? null,
           capacidade: completarCapacidade(it.capacidade, it.categoria) || null,
