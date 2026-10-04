@@ -1865,6 +1865,8 @@
   DEFAULT_CONFIG.categoriasComuns = CATEGORIA_CANONICA.filter((c) => c.comum).map((c) => c.nome);
   var MARCAS_CONHECIDAS = [
     "Facchini",
+    "Sulmecânica",
+    "Allweiler",
     "IMA Life",
     "IMA",
     "Optima",
@@ -2738,6 +2740,8 @@
     if (/gal[pn][ãa]o|terreno|im[óo]vel|[áa]rea constru[íi]da|\bm[²2]\b/i.test([item.modelo, item.categoria].filter(Boolean).join(" "))) return true;
     if (item.marca && (item.modelo || /n[uú]mero de s[ée]rie/i.test(item.detalhes || ""))) return true;
     if (item.atributos_normalizados && item.atributos_normalizados.num_bicos) return true;
+    // categoria reconhecida + código de modelo de verdade ("RPH75", "W22")
+    if ((item.categoria_id || resolverCategoriaId(item.categoria)) && extrairModeloCurto(item.modelo, item.marca, item.categoria)) return true;
     const texto = [item.modelo, item.capacidade, item.detalhes].filter(Boolean).join(" ");
     // kVA/MVA (potência aparente) faltava na lista - é a unidade padrão de
     // transformador ("500 kVA", "300 kVA" etc). Sem isso, um anúncio de
@@ -3415,6 +3419,25 @@
   // bloco = um anúncio ainda não processado. Mesma lógica de detecção que
   // já existia em parseSuperbidLocal (âncora = linha de preço sozinha "R$
   // X", sem unidade ao lado - formato de leilão).
+  // Superbid (04/10): "(Ref.: MCJ/507)" é código interno do leiloeiro,
+  // não modelo; "(01 UN)"/"(21 PÇ)" é quantidade; "- EQUIPAMENTO INCOMPLETO"
+  // vira aviso. "MARCA - IPC MODELO - GANSOW 1050" vira marca/modelo.
+  function limparTituloSuperbid(titulo) {
+    let t = String(titulo || "");
+    const incompleto = /equipamento incompleto|incompleto\b|sem motor\b|para retirada de pe[çc]as/i.test(t);
+    t = t.replace(/\(\s*Ref\.?:?[^)]*\)/gi, " ").replace(/\(\s*\d+\s*(UN|UND|P[ÇC]S?|PE[ÇC]AS?)\.?\s*\)/gi, " ")
+      .replace(/\s*-\s*EQUIPAMENTO INCOMPLETO\b/gi, " ").replace(/\s{2,}/g, " ").trim();
+    const rotulos = t.match(/MARCA\s*[-:]\s*(.+?)\s+MODELO\s*[-:]\s*(.+)$/i);
+    return { titulo: t, incompleto, marcaRotulo: rotulos ? rotulos[1].trim() : null, modeloRotulo: rotulos ? rotulos[2].trim() : null };
+  }
+  // Conjunto/sistema com vários componentes listados por vírgula ("SISTEMA
+  // DE MOAGEM ..., MOTOR WEG ..., REDUTOR ..., CCM E TRANSFORMADOR") - a
+  // categoria vem só da cabeça (antes da 1ª vírgula), senão um componente
+  // qualquer (CCM, motor) decide a categoria do conjunto inteiro.
+  function cabecaDoConjunto(titulo) {
+    const partes = String(titulo || "").split(/\s*,\s*/).filter((p) => p && !/^(ANO|S[ÉE]RIE|CAP|POT|MESA|MOD|FABR|ALTURA|LARGURA|COMPRIMENTO)\b/i.test(p));
+    return partes.length >= 4 ? partes[0] : null;
+  }
   function extractListingsSuperbid(rawText) {
     const lines = (rawText || "").split("\n").map((l) => l.trim());
     const priceStandaloneRe = /^R\$\s*([\d.,]+)\s*$/;
@@ -3632,9 +3655,11 @@
     const serieMatch = texto.match(/N[uú]mero de S[ée]rie:?\s*\n?\s*([^\n]+)/i) || texto.match(/\bS[ée]rie\.?:?\s*\n?\s*([\w\-\/]+)/i);
     const capacidadeMatch = texto.match(/Capacidade(?:\s+estimada)?:?\s*\n?\s*([\d.,]+\s*(?:litros?|l|m[³3](?:\/h)?|kg|ton(?:elada)?s?))/i);
     const dimensoesMatch = texto.match(/Dimens(?:ão|ões)(?:\s+do\s+\w+)?:?\s*\n?\s*([^\n]+)/i);
-    const categoriaFinal = classificarCategoriaGenerica(titulo);
-    const norm = normalizeEquipmentSuperbid(titulo, categoriaFinal);
-    const extras = extractCategorySpecsMFRural(categoriaFinal, texto);
+    const limpoItem = limparTituloSuperbid(titulo);
+    const cabecaItem = cabecaDoConjunto(limpoItem.titulo);
+    const categoriaFinal = classificarCategoriaGenerica(cabecaItem || limpoItem.titulo);
+    const norm = normalizeEquipmentSuperbid(cabecaItem || limpoItem.titulo, categoriaFinal);
+    const extras = cabecaItem ? {} : extractCategorySpecsMFRural(categoriaFinal, texto);
     const capacidadeFinal = capacidadeMatch ? capacidadeMatch[1].trim() : norm.capacidade_titulo;
     const marca = (marcaRotulo ? normalizarMarca(marcaRotulo) : null) || norm.marca;
     const modelo = modeloRotuloMatch ? modeloRotuloMatch[1].trim() : norm.modelo;
@@ -3663,6 +3688,8 @@
       moeda: "BRL",
       canal: "Revenda/Terceiro",
       tipo_mercado: loteMatch ? "Leil\xE3o" : "Venda Direta",
+      _tituloOriginal: titulo,
+      _incompleto: limpoItem.incompleto,
       atributos_normalizados
     };
     return [item].filter((it) => validateObservationSuperbid(it));
@@ -3672,10 +3699,13 @@
     const blocos = extractListingsSuperbid(rawText);
     const itens = [];
     for (const bloco of blocos) {
-      const comuns = extractCommonDataSuperbid(bloco.tituloBruto, bloco.precoStr, bloco.localizacaoLinha, bloco.loteNumero);
-      const fatos = extrairFatosDeTexto(bloco.textoBlocoCompleto);
-      const categoriaFinal = comuns.categoria || fatos.categoria;
-      const norm = normalizeEquipmentSuperbid(bloco.tituloBruto, categoriaFinal);
+      const limpo = limparTituloSuperbid(bloco.tituloBruto);
+      const cabeca = cabecaDoConjunto(limpo.titulo);
+      const comuns = extractCommonDataSuperbid(cabeca || limpo.titulo, bloco.precoStr, bloco.localizacaoLinha, bloco.loteNumero);
+      const fatos = extrairFatosDeTexto(cabeca || limparTituloSuperbid(bloco.textoBlocoCompleto).titulo);
+      const categoriaFinal = cabeca ? comuns.categoria : comuns.categoria || fatos.categoria;
+      const norm = normalizeEquipmentSuperbid(cabeca || limpo.titulo, categoriaFinal);
+      if (limpo.marcaRotulo) { norm.marca = normalizarMarca(limpo.marcaRotulo); norm.modelo = limpo.modeloRotulo; }
       const extras = extractCategorySpecsMFRural(categoriaFinal, bloco.textoBlocoCompleto);
       const marca = norm.marca || fatos.marca;
       const capacidadeFinal = norm.capacidade_titulo || fatos.capacidade;
@@ -3712,6 +3742,8 @@
         detalhes: null,
         tipo_mercado: comuns.tipoMercado,
         canal: "Revenda/Terceiro",
+        _tituloOriginal: bloco.tituloBruto,
+        _incompleto: limpo.incompleto,
         atributos_normalizados
       };
       if (validateObservationSuperbid(item)) itens.push(item);
@@ -5919,9 +5951,19 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
   }
   // Item doméstico/de cozinha (02/10): "tanque" de lavanderia, pia, cuba,
   // bancada - não é equipamento industrial, não entra na base.
-  var RE_ITEM_DOMESTICO = /\blavanderia\b|\bpias?\b|\bcubas?\b|\bbancadas?\b|apartamento|\barm[\u00E1a]rio\b|granito|m[\u00E1a]rmore|tramontina|acetinado|\bpara restaurante\b|\bcozinha\b/i;
+  var RE_ITEM_DOMESTICO = /\blavanderia\b|\bpias?\b|\bcubas?\b|\bbancadas?\b|apartamento|\barm[\u00E1a]rio\b|granito|m[\u00E1a]rmore|tramontina|acetinado|\bpara restaurante\b|\bcozinha\b|\bfreezer\b|\bgeladeira\b|\bfog[ãa]o\b|\bconsul\b|\bbrastemp\b|\belectrolux\b|\bmicro-?ondas\b/i;
   function ehItemDomestico(texto) {
     return RE_ITEM_DOMESTICO.test(String(texto || ""));
+  }
+  // Lote com várias unidades ("26 VÁLVULAS", "11 PÇS. ROLAMENTO", "(21 PÇ)")
+  // ou lote misto ("EQUIPAMENTOS DIVERSOS", "... E OUTROS", "APROX. 100
+  // ITENS"): o preço é do lote inteiro, não de um equipamento (04/10).
+  var RE_LOTE_MISTO = /\bdiversos\b|\be outros\b|aprox\.?\s*\d+\s*itens|\blote de\b|\bv[áa]rios itens\b/i;
+  function ehLoteVariasUnidades(texto) {
+    const t = String(texto || "").trim();
+    if (RE_LOTE_MISTO.test(t)) return true;
+    const qtd = t.match(/^\s*(\d{1,4})\s*(?:p[çc]s?\.?|pe[çc]as|unid(?:ades)?\.?|un\.?)?\s+[A-Za-zÀ-ÿ]/i) || t.match(/\(\s*(\d{1,4})\s*(?:UN|UND|P[ÇC]S?|PE[ÇC]AS?)\.?\s*\)/i);
+    return !!(qtd && Number(qtd[1]) >= 2 && !/^\s*\d{1,4}\s*(cv|hp|kw|kva|l|litros|ton|t|m[³3]|mm|bicos|vias|polos|eixos|cavidades|portas|cores|furos|fusos|cabe[çc]otes|esta[çc][õo]es|v)(?![a-z\u00E0-\u00FF])/i.test(t));
   }
   function ehAluguel(it, tipoMercadoTela) {
     if (/loca[çc]/i.test(it.tipo_mercado || "") || /loca[çc]/i.test(tipoMercadoTela || "")) return true;
@@ -9415,8 +9457,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     const [manualResults, setManualResults] = (0, import_react.useState)([]);
     const [manualError, setManualError] = (0, import_react.useState)(null);
     const [manualDescartados, setManualDescartados] = (0, import_react.useState)(0);
-    const [removidosSimbolicoManual, setRemovidosSimbolicoManual] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0 });
-    const [removidosSimbolicoColetor, setRemovidosSimbolicoColetor] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0 });
+    const [removidosSimbolicoManual, setRemovidosSimbolicoManual] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0, lote: 0 });
+    const [removidosSimbolicoColetor, setRemovidosSimbolicoColetor] = (0, import_react.useState)({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0, lote: 0 });
     const [manualSavedCount, setManualSavedCount] = (0, import_react.useState)(null);
     const EMPTY_ENTRY = { categoria: "", marca: "", modelo: "", capacidade: "", polaridade: "", tensao: "", carcaca: "", rpm: "", ano: "", localizacao: "", preco: "", detalhes: "" };
     const [entryForm, setEntryForm] = (0, import_react.useState)(EMPTY_ENTRY);
@@ -9801,7 +9843,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     // (o bloqueio de preço irrisório continua valendo).
     async function anotarQualidadeColeta(items, setRemovidosPrecoSimbolico, tipoMercadoTela) {
       if (!items || items.length === 0) {
-        setRemovidosPrecoSimbolico({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0 });
+        setRemovidosPrecoSimbolico({ simbolico: 0, aluguel: 0, peca: 0, domestico: 0, lote: 0 });
         return items;
       }
       let medianas = {};
@@ -9853,6 +9895,11 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           q.motivos.unshift(`mesmo item j\xE1 na base por ${formatBRL(dup.precoBase)} (${Math.round(dup.diff * 100)}% de diferen\xE7a)`);
           q.incluirPorPadrao = false;
         }
+        if (itColetado._incompleto) {
+          q.motivos.unshift("equipamento incompleto \u2014 fora por padr\xE3o");
+          if (q.status === "ok" || q.status === "alerta") q.status = "suspeito";
+          q.incluirPorPadrao = false;
+        }
         if (itColetado._precoVencido) {
           q.motivos.unshift(`pre\xE7o vencido (v\xE1lido at\xE9 ${itColetado._precoVencido}) \u2014 fora por padr\xE3o`);
           if (q.status === "ok" || q.status === "alerta") q.status = "suspeito";
@@ -9872,15 +9919,16 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         }
         const aluguel = ehAluguel(it, tipoMercadoTela);
         const precoBRL = it.preco === null || it.preco === undefined || it.preco === "" ? null : converterParaBRL(Number(it.preco), it.moeda || "BRL", cotacoes);
-        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && (precoBRL <= COLETA_PRECO_SIMBOLICO_BRL || ehPrecoFicticio(it.preco)), _aluguel: aluguel, _peca: peca, _domestico: ehItemDomestico(itColetado._tituloOriginal || itColetado.modelo), _categoriaSugerida: categoriaSugerida };
+        return { ...it, _qualidade: q, _incluir: q.incluirPorPadrao, _precoSimbolico: precoBRL !== null && !isNaN(precoBRL) && (precoBRL <= COLETA_PRECO_SIMBOLICO_BRL || ehPrecoFicticio(it.preco)), _aluguel: aluguel, _peca: peca, _domestico: ehItemDomestico(itColetado._tituloOriginal || itColetado.modelo), _lote: ehLoteVariasUnidades(itColetado._tituloOriginal || itColetado.modelo), _categoriaSugerida: categoriaSugerida };
       });
       setRemovidosPrecoSimbolico({
         simbolico: anotados.filter((it) => it._precoSimbolico).length,
         aluguel: anotados.filter((it) => !it._precoSimbolico && it._aluguel).length,
         peca: anotados.filter((it) => !it._precoSimbolico && !it._aluguel && it._peca).length,
-        domestico: anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca && it._domestico).length
+        domestico: anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca && it._domestico).length,
+        lote: anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca && !it._domestico && it._lote).length
       });
-      return anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca && !it._domestico);
+      return anotados.filter((it) => !it._precoSimbolico && !it._aluguel && !it._peca && !it._domestico && !it._lote);
     }
     function getSupaClient() {
       if (!supaUrl || !supaKey) return null;
@@ -14710,7 +14758,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => setCollectorTerm(e.target.value),
         placeholder: "Ex: motor el\xE9trico 30cv, tanque inox 316\u2026"
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoColetor.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.lote > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.lote, " lote(s) com v\xE1rias unidades ou itens diversos removido(s) automaticamente (o pre\xE7o \xE9 do lote, n\xE3o de um equipamento)."), removidosSimbolicoColetor.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoColetor.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -14747,7 +14795,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarManualCollector, disabled: manualRunning }, manualRunning ? "Salvando\u2026" : `Confirmar e salvar ${manualResults.filter((x) => x._incluir !== false).length} ${manualResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => {
       setManualResults([]);
       setManualText("");
-    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoManual.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoManual.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoManual.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
+    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoManual.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoManual.lote > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.lote, " lote(s) com v\xE1rias unidades ou itens diversos removido(s) automaticamente (o pre\xE7o \xE9 do lote, n\xE3o de um equipamento)."), removidosSimbolicoManual.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoManual.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
