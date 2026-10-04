@@ -108,4 +108,12 @@ var SUITE_TESTES = [
   { categoria_esperada: "caldeira", texto: "Caldeira a lenha 2000 kg/h", campos_esperados: {"tipo_combustivel": "Lenha", "capacidade_producao_vapor_kgh": 2000} },
   { categoria_esperada: "caldeira", texto: "Caldeira a lenha ou cavaco 1100 kg/h", campos_esperados: {"capacidade_producao_vapor_kgh": 1100} },
   { categoria_esperada: "motor_eletrico", texto: "Motor biodiesel 50 hp", campos_esperados: {"combustivel": "Biodiesel"} },
+  // 04/10 - EquipNet/Machineseeker: categorias novas e falsos positivos
+  { categoria_esperada: "compressora_comprimidos", texto: "Pré Compressora e Compressora de Comprimidos Neuberger MN-35", campos_esperados: {} },
+  { categoria_esperada: "autoclave", texto: "Autoclave Horizontal Cisa", campos_esperados: {} },
+  { categoria_esperada: "esteira_transportadora", texto: "Esteira Transpotadora de Correia", campos_esperados: {} },
+  { categoria_esperada: "empacotadora", texto: "Encartuchadora Horizontal Marchesini MA 155", campos_esperados: {} },
+  { categoria_esperada: "carreta", texto: "Semi-reboque basculante Wielton 24 m³", campos_esperados: {} },
+  { categoria_esperada: "caminhao", texto: "Tipper MAN TGS 41.480 8x4", campos_esperados: {} },
+  { categoria_esperada: "gerador", texto: "Gerador diesel 300 kVA Stemac", campos_esperados: {} },
 ];

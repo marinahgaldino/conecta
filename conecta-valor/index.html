@@ -156,7 +156,7 @@
     { id: "guilhotina", nome: "Guilhotina", grupo: "maquinas_ferramenta", synonyms: ["guilhotina hidráulica", "tesoura guilhotina"], re: /guilhotina/i, comum: true, ativo: true },
     { id: "paletizador", nome: "Paletizador", grupo: "envase_embalagem", synonyms: ["paletizadora automática", "palletizer"], re: /paletizador(a)?/i, comum: false, ativo: true },
     { id: "empilhadeira", nome: "Empilhadeira", grupo: "movimentacao", synonyms: ["empilhadeira a gás", "empilhadeira elétrica", "empilhador", "forklift"], re: /empilhadeira|\bempilhador\b/i, comum: true, ativo: true },
-    { id: "esteira_transportadora", nome: "Esteira Transportadora", grupo: "movimentacao", synonyms: ["esteira de correia", "transportador de rolos", "conveyor"], re: /esteira (transportadora|de envase)|transportador(a)? de (correia|rolos)/i, comum: true, ativo: true },
+    { id: "esteira_transportadora", nome: "Esteira Transportadora", grupo: "movimentacao", synonyms: ["esteira de correia", "transportador de rolos", "conveyor"], re: /esteiras? (transp\w*|de envase|de correia)|esteiras?\b.{0,30}\bcorreia|transportador(a)? de (correia|rolos)/i, comum: true, ativo: true },
     { id: "ponte_rolante", nome: "Ponte Rolante", grupo: "movimentacao", synonyms: ["ponte rolante biviga", "overhead crane"], re: /ponte rolante/i, comum: false, ativo: true },
     { id: "talha", nome: "Talha", grupo: "movimentacao", synonyms: ["talha elétrica", "hoist"], re: /\btalha\b/i, comum: false, ativo: true },
     { id: "painel_eletrico", nome: "Painel Elétrico", grupo: "eletrica_automacao", synonyms: ["CCM", "centro de controle de motores", "quadro elétrico geral"], re: /painel el[ée]trico|CCM\b|centro de controle de motores/i, comum: true, ativo: true },
@@ -174,7 +174,7 @@
     { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", synonyms: ["retificadora cilíndrica", "retificadora plana"], re: /ret[íi]fic(adora|a)\b|barramento/i, comum: true, ativo: true },
     { id: "elevador_graos", nome: "Elevador de Grãos", grupo: "movimentacao", synonyms: ["elevador de canecas", "elevador de grãos"], re: /elevador de (gr[ãa]os|canecas)/i, comum: false, ativo: true },
     { id: "religadora", nome: "Religadora", grupo: "eletrica_automacao", synonyms: ["religador automático"], re: /religadora/i, comum: false, ativo: true },
-    { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /(?<!refri)gerador|eletrog[êe]neo/i, comum: true, ativo: true },
+    { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /(?<!refri)gerador|eletrog[êe]neo/i, excludeRe: /gerador(es)? de (nitrog|oxig|oz[oô]n|di[oó]xido|cloro|hidrog|espuma|v[aá]cuo)/i, comum: true, ativo: true },
     { id: "luminaria_industrial", nome: "Luminária Industrial", grupo: "instrumentos_utilidades", synonyms: ["luminária LED industrial", "refletor industrial"], re: /lumin[áa]ria|refletor|plafon(ier)?/i, comum: false, ativo: true },
     { id: "seladora", nome: "Seladora", grupo: "envase_embalagem", synonyms: ["seladora de embalagens", "heat sealer"], re: /selador/i, comum: false, ativo: true },
     { id: "espectrofotometro", nome: "Espectrofotômetro", grupo: "instrumentos_utilidades", synonyms: ["espectrômetro", "spectrophotometer"], re: /espectr[oô]fot[ôo]metro|espectr[ôo]metro/i, comum: false, ativo: true },
@@ -190,7 +190,7 @@
     { id: "linha_envase", nome: "Linha de Envase", grupo: "envase_embalagem", synonyms: ["linha de engarrafamento", "linha completa de envase", "bottling line"], re: /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie/i, comum: true, ativo: true },
     { id: "misturador", nome: "Misturador", grupo: "processo_alimenticio", synonyms: ["misturador industrial", "mixer"], re: /misturador|mixer(?! ?grinder)/i, comum: true, ativo: true },
     { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
-    { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing/i, comum: false, ativo: true },
+    { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing|encartuch|encartonador|flow\s?pack/i, comum: false, ativo: true },
     { id: "sucata", nome: "Sucata", grupo: "outros", synonyms: ["sucata metálica", "sucata industrial"], re: /sucata/i, comum: true, ativo: true },
     { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad/i, comum: true, ativo: true },
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
@@ -200,6 +200,8 @@
     { id: "redutor", nome: "Redutor", grupo: "mecanica", synonyms: ["redutor de velocidade", "caixa redutora", "gearbox"], re: /\bredutor(es)?\b/i, comum: false, ativo: true },
     { id: "unidade_hidraulica", nome: "Unidade Hidráulica", grupo: "mecanica", synonyms: ["central hidráulica", "power unit"], re: /unidade hidr[áa]ulica/i, comum: true, ativo: true },
     // 02/10 - categorias novas, com evidência real na base (itens que ficavam sem categoria ou em categoria errada)
+    { id: "autoclave", nome: "Autoclave", grupo: "processo_alimenticio", synonyms: ["autoclave horizontal", "autoclave vertical", "esterilizador a vapor"], re: /auto\s?clave/i, comum: false, ativo: true },
+    { id: "compressora_comprimidos", nome: "Compressora de Comprimidos", grupo: "processo_alimenticio", synonyms: ["compressora rotativa", "pré-compressora", "tablet press"], re: /compressoras? (rotativas? )?de comprimidos|pr[ée][\s-]?compressora|tablet press|comprimidora/i, comum: false, ativo: true },
     { id: "motovibrador", nome: "Motovibrador/Vibrador", grupo: "mecanica", synonyms: ["motovibrador", "vibrador de concreto", "vibrador de imersão"], re: /motovibrador|\bvibrador(es)?\b/i, comum: false, ativo: true },
     { id: "maquina_corte_laser", nome: "Máquina de Corte a Laser", grupo: "maquinas_ferramenta", synonyms: ["laser de fibra", "corte a laser", "laser CO2"], re: /\blaser\b/i, excludeRe: /n[íi]vel a laser|n[íi]vel laser|medidor|trena|term[ôo]metro|mira laser/i, comum: false, ativo: true },
     { id: "pulverizador_agricola", nome: "Pulverizador Agrícola", grupo: "veiculos", synonyms: ["pulverizador autopropelido", "pulverizador de arrasto"], re: /pulverizador/i, excludeRe: /^\s*tanque/i, comum: false, ativo: true },
@@ -209,8 +211,8 @@
     { id: "tanque_misturador", nome: "Tanque Misturador", grupo: "tanques_processo", synonyms: ["tanque com agitador", "tanque de mistura"], re: /tanque.{0,20}(misturador|agitador)|misturador.{0,20}tanque/i, comum: false, ativo: true },
     { id: "tanque", nome: "Tanque", grupo: "tanques_processo", synonyms: ["tanque inox", "tanque de armazenamento"], re: /tanque/i, comum: true, ativo: true },
     { id: "reator", nome: "Reator", grupo: "tanques_processo", synonyms: ["reator químico", "reator de processo"], re: /reator/i, comum: false, ativo: true },
-    { id: "compressor", nome: "Compressor", grupo: "utilidades", synonyms: ["compressor de ar", "compressor de parafuso", "compressor de pistão"], re: /compressor/i, comum: true, ativo: true },
-    { id: "bomba", nome: "Bomba", grupo: "mecanica", synonyms: ["bomba centrífuga", "bomba dosadora", "bomba de vácuo"], re: /bomba/i, comum: true, ativo: true },
+    { id: "compressor", nome: "Compressor", grupo: "utilidades", synonyms: ["compressor de ar", "compressor de parafuso", "compressor de pistão"], re: /compressor/i, excludeRe: /comprimid/i, comum: true, ativo: true },
+    { id: "bomba", nome: "Bomba", grupo: "mecanica", synonyms: ["bomba centrífuga", "bomba dosadora", "bomba de vácuo"], re: /bomba/i, excludeRe: /\bhplc\b|bombas? de infus[aã]o|cromat[oó]grafo/i, comum: true, ativo: true },
     { id: "chiller", nome: "Chiller", grupo: "utilidades", synonyms: ["chiller industrial", "unidade frigorífica"], re: /chiller|frigor[íi]fica/i, comum: false, ativo: true },
     { id: "injetora", nome: "Injetora", grupo: "maquinas_ferramenta", synonyms: ["injetora de plástico", "máquina de moldagem por injeção"], re: /injetora|moldagem por inje[çc][ãa]o/i, comum: false, ativo: true },
     { id: "checkweigher", nome: "Checkweigher", grupo: "instrumentos_utilidades", synonyms: ["balança checadora", "balança dinâmica de linha"], re: /checkweigher|balan[çc]a checadora|balan[çc]a din[âa]mica/i, comum: false, ativo: true },
@@ -254,6 +256,26 @@
     });
   }
   var SCHEMA_FUNCAO = {
+    "autoclave": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["volume_l", "modelo", "ano", "pressao_bar"],
+      campos_normalizados: {"volume_l": "L"},
+      campos_ocr_prioritarios: ["fabricante", "volume_l"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["volume_l", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "compressora_comprimidos": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["modelo", "num_puncoes", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["num_puncoes", "ano"] }
+    },
     "motovibrador": {
       campos_obrigatorios: ["fabricante"],
       campos_opcionais: ["potencia_cv", "tensao_v", "modelo", "ano"],
@@ -5086,8 +5108,22 @@
     }
     return itens;
   }
+  // Texto com acento quebrado vindo do site ("MÃ¡quinas" -> "Máquinas").
+  function corrigirMojibake(t) {
+    const v = String(t || "");
+    if (!/Ã[\u0080-\u00BF]/.test(v)) return v;
+    try { return decodeURIComponent(escape(v)); } catch { return v; }
+  }
+  // EquipNet traz a razão social como fabricante ("Quiminox Industria e
+  // Comercio Ltda", "Waters Corporation") - fica só o nome da marca.
+  var RE_SUFIXO_RAZAO_SOCIAL = /\s+(?:Ltda\.?|Ltd\.?|Inc\.?|Eireli|EPP|S\.?\/?A\.?|GmbH|Corporation|Corp\.?|Co\.|Group|Solu[cç][oõ]es|Solutions|Instruments?|Scientific|Systems|Labeling|Particle|Automa[cç][aã]o|Ind[uú]stria|Ind\.|Com[eé]rcio|Com\.|do Brasil|Bombas|M[aá]quinas|Equipamentos|Technologies|Technology)\b.*$/i;
+  function limparRazaoSocialMarca(m) {
+    if (!m) return m;
+    const limpo = corrigirMojibake(m).replace(/^M[aá]quinas\s+/i, "").replace(RE_SUFIXO_RAZAO_SOCIAL, "").trim();
+    return limpo || null;
+  }
   function parseEquipNetLocal(rawText) {
-    const textoNormalizado = (rawText || "").replace(/(Item|Categoria|Fabricante|Localiza[çc][ãa]o):\s*\n\s*/gi, "$1:");
+    const textoNormalizado = corrigirMojibake(rawText || "").replace(/(Item|Categoria|Fabricante|Localiza[çc][ãa]o):\s*\n\s*/gi, "$1:");
     const lines = textoNormalizado.split("\n").map((l) => l.trim());
     const itens = [];
     for (let i = 0; i < lines.length; i++) {
@@ -5117,13 +5153,20 @@
       const precoMatchSufixo = !precoMatchPrefixo ? precoLinha.match(/([\d.,]+)\s*([€$£₹])/) : null;
       if (!precoMatchPrefixo && !precoMatchSufixo) continue;
       if (marca === "Sem categoria") marca = null;
+      marca = limparRazaoSocialMarca(marca);
       const simboloParaCodigo = { "\u20AC": "EUR", "$": "USD", "\xA3": "GBP", "\u20B9": "INR" };
       const preco = precoMatchPrefixo ? parsePrecoBR(precoMatchPrefixo[2]) : parsePrecoBR(precoMatchSufixo[1]);
       const moeda = precoMatchPrefixo ? precoMatchPrefixo[3] : simboloParaCodigo[precoMatchSufixo[2]] || null;
+      // 04/10: a categoria do EquipNet às vezes é errada (autoclave em
+      // "Bombas de Infusão", carrinho em "Carretas") - o título manda; a
+      // categoria do site só entra se o título não disser nada.
       itens.push({
-        categoria,
+        categoria: classificarCategoriaGenerica(titulo || "") || classificarCategoriaGenerica(categoria || ""),
         marca,
         modelo: titulo,
+        _tituloOriginal: titulo,
+        estado: estadoNovoOuUsado(titulo) === "Novo" ? "Novo" : null,
+        detalhes: /-\s*INATIVO\s*$/i.test(titulo || "") ? "Equipamento inativo (fora de opera\xE7\xE3o)" : null,
         localizacao,
         preco,
         moeda,
@@ -5141,7 +5184,13 @@
       const pesoMatch = textoCompleto.match(/(\d+(?:[.,]\d+)?)\s*KGS/i);
       const localizacaoMatch = textoCompleto.match(/Localiza[çc][ãa]o:\s*([^\n]+)/i);
       const precoMatch = textoCompleto.match(/(R\$|[€$£])\s*([\d.,]+)\s*([A-Z]{3})?/);
-      const marcaConhecidaMatch = !fabricanteMatch ? MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(tituloPrincipal)) || MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(textoCompleto)) : null;
+      // 04/10: o lookahead antigo "(?=\\b|[A-Z0-9])" com flag "i" aceitava
+      // letra minúscula - "CAT" batia em "Categoria" e a marca saía
+      // "Caterpillar". Agora a marca precisa terminar na palavra, e vem
+      // primeiro do título ("Neuberger MN-35"), depois do texto.
+      const reMarca = (m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z\u00E0-\u00FF])`, "i");
+      const marcaCodigoTitulo = !fabricanteMatch ? marcaCodigoDoTitulo(tituloPrincipal) : null;
+      const marcaConhecidaMatch = !fabricanteMatch ? MARCAS_CONHECIDAS.find((m) => reMarca(m).test(tituloPrincipal)) || (marcaCodigoTitulo && marcaCodigoTitulo.marca) || MARCAS_CONHECIDAS.find((m) => reMarca(m).test(textoCompleto.split(/Pessoas que visualizaram|Visto anteriormente/i)[0])) : null;
       const modeloSolto = !modeloMatch && marcaConhecidaMatch ? textoCompleto.match(new RegExp(`${marcaConhecidaMatch}\\s+([A-Z]{1,4}\\d+\\s*(?:[A-Z]\\d+\\s*)*(?:\\/\\d+)?)`, "i")) : null;
       const bpmMatch = textoCompleto.match(/(?:approximately\s*)?(?:(\d+)\s*to\s*)?(\d+)\s*BPM/i);
       const embalagensMatch = textoCompleto.match(/\((\d+(?:[\d,\s]*(?:and|e)\s*\d+)?)\s*(CL|mL|ml|L)\)/i);
@@ -5157,7 +5206,7 @@
       } else {
         categoriaPrincipal = semInicio[semInicio.length - 1] || null;
       }
-      if (!categoriaPrincipal) categoriaPrincipal = classificarCategoriaGenerica(tituloPrincipal);
+      categoriaPrincipal = classificarCategoriaGenerica(tituloPrincipal) || (categoriaPrincipal ? classificarCategoriaGenerica(categoriaPrincipal) : null);
       if (precoMatch) {
         itens.push({
           categoria: categoriaPrincipal,
@@ -5169,18 +5218,26 @@
           localizacao: localizacaoMatch ? localizacaoMatch[1].trim() : null,
           preco: parsePrecoBR(precoMatch[2]),
           moeda: simboloParaMoeda(precoMatch[1], precoMatch[3]),
+          _tituloOriginal: tituloPrincipal,
+          estado: estadoNovoOuUsado(tituloPrincipal) === "Novo" ? "Novo" : null,
           tipo_mercado: "Venda Direta"
         });
       }
     }
-    const relacionadosRe = /LISTAGEM #\s*(\d+)\s*\n\s*(R\$|[€$£])\s*([\d.,]+)\s*\n\s*\[([^\]]+)\]\([^)]*\)\s*\n\s*Categoria:\s*([^\n]+)\s*\n\s*Localiza[çc][ãa]o:\s*([^\n]+)/gi;
+    // 04/10: o título do relacionado também vem sem link (texto copiado da
+    // página) e com linha em branco antes da localização.
+    const relacionadosRe = /LISTAGEM #\s*(\d+)\s*\n\s*(R\$|[€$£])\s*([\d.,]+)\s*\n\s*(?:\[([^\]]+)\]\([^)]*\)|([^\n]+))\s*\n\s*Categoria:\s*([^\n]+)\s*\n\s*(?:\n\s*)?Localiza[çc][ãa]o:\s*([^\n]+)/gi;
     let relMatch;
     while ((relMatch = relacionadosRe.exec(textoCompleto)) !== null) {
+      const tituloRel = (relMatch[4] || relMatch[5] || "").trim();
+      const marcaRel = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z\u00E0-\u00FF])`, "i").test(tituloRel)) || null;
       itens.push({
-        categoria: relMatch[5].trim(),
-        marca: null,
-        modelo: relMatch[4].trim(),
-        localizacao: relMatch[6].trim(),
+        categoria: classificarCategoriaGenerica(tituloRel) || classificarCategoriaGenerica(relMatch[6].trim()),
+        marca: marcaRel,
+        modelo: tituloRel,
+        _tituloOriginal: tituloRel,
+        estado: estadoNovoOuUsado(tituloRel) === "Novo" ? "Novo" : null,
+        localizacao: relMatch[7].trim(),
         preco: parsePrecoBR(relMatch[3]),
         moeda: simboloParaMoeda(relMatch[2], null),
         tipo_mercado: "Venda Direta"
@@ -9683,7 +9740,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const catTitulo = categoriaPeloTitulo(itColetado.modelo);
         const catVeio = itColetado.categoria_id || resolverCategoriaId(itColetado.categoria);
         const itOriginal = !catVeio && catTitulo ? { ...itColetado, categoria: catTitulo.category_name, categoria_id: catTitulo.category_id, _categoriaPeloTitulo: true } : itColetado;
-        const tituloColetado = [itColetado.modelo, itColetado.detalhes].filter(Boolean).join(" ");
+        const tituloColetado = [itColetado._tituloOriginal, itColetado.modelo, itColetado.detalhes].filter(Boolean).join(" ");
         const enr = { ...enriquecerAtributosColeta(itOriginal), estado: estadoNovoOuUsado([itColetado.estado, tituloColetado].filter(Boolean).join(" ")) };
         const peca = ehPecaAvulsa(itOriginal, itColetado.modelo);
         const modeloCurto = extrairModeloCurto(enr.modelo, enr.marca, enr.categoria);
