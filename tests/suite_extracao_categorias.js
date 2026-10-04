@@ -116,4 +116,11 @@ var SUITE_TESTES = [
   { categoria_esperada: "carreta", texto: "Semi-reboque basculante Wielton 24 m³", campos_esperados: {} },
   { categoria_esperada: "caminhao", texto: "Tipper MAN TGS 41.480 8x4", campos_esperados: {} },
   { categoria_esperada: "gerador", texto: "Gerador diesel 300 kVA Stemac", campos_esperados: {} },
+  // 04/10 - grupo Laboratório
+  { categoria_esperada: "estufa_laboratorio", texto: "Estufa de Secagem Quiminox", campos_esperados: {} },
+  { categoria_esperada: "banho_maria", texto: "Banho Maria Marconi TE-158", campos_esperados: {} },
+  { categoria_esperada: "purificador_agua", texto: "Sistema de Purificação de Água Millipore Elix 10", campos_esperados: {} },
+  { categoria_esperada: "cromatografo_hplc", texto: "Bomba para HPLC Waters 510", campos_esperados: {} },
+  { categoria_esperada: "equipamento_laboratorio", texto: "Lavadora Automatizada de Tiras Bio-Tek ELx405", campos_esperados: {} },
+  { categoria_esperada: "forno_industrial", texto: "Estufa industrial a gás", campos_esperados: {} },
 ];

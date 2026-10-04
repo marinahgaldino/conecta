@@ -177,7 +177,15 @@
     { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /(?<!refri)gerador|eletrog[êe]neo/i, excludeRe: /gerador(es)? de (nitrog|oxig|oz[oô]n|di[oó]xido|cloro|hidrog|espuma|v[aá]cuo)/i, comum: true, ativo: true },
     { id: "luminaria_industrial", nome: "Luminária Industrial", grupo: "instrumentos_utilidades", synonyms: ["luminária LED industrial", "refletor industrial"], re: /lumin[áa]ria|refletor|plafon(ier)?/i, comum: false, ativo: true },
     { id: "seladora", nome: "Seladora", grupo: "envase_embalagem", synonyms: ["seladora de embalagens", "heat sealer"], re: /selador/i, comum: false, ativo: true },
-    { id: "espectrofotometro", nome: "Espectrofotômetro", grupo: "instrumentos_utilidades", synonyms: ["espectrômetro", "spectrophotometer"], re: /espectr[oô]fot[ôo]metro|espectr[ôo]metro/i, comum: false, ativo: true },
+    // 04/10: grupo Laboratório - cada tipo na sua categoria (banho-maria de
+    // R$ 300 não pode ser comparado com autoclave de R$ 35 mil).
+    { id: "autoclave", nome: "Autoclave", grupo: "laboratorio", synonyms: ["autoclave horizontal", "autoclave vertical", "esterilizador a vapor"], re: /auto\s?clave/i, comum: false, ativo: true },
+    { id: "estufa_laboratorio", nome: "Estufa de Laboratório", grupo: "laboratorio", synonyms: ["estufa de secagem", "estufa de esterilização", "estufa bacteriológica"], re: /\bestufas?\b/i, excludeRe: /industrial|agr[íi]cola|plantas?\b|hortali|mudas|cultivo|hidrop[ôo]n|filme|pl[áa]stico|estrutura|galp[ãa]o|convencion|cozinha|forno combinado/i, comum: false, ativo: true },
+    { id: "banho_maria", nome: "Banho-Maria / Circulador", grupo: "laboratorio", synonyms: ["banho-maria", "banho termostatizado", "circulador termostático"], re: /banhos?[\s-]maria|banho termost|circulador(es)? termost/i, comum: false, ativo: true },
+    { id: "purificador_agua", nome: "Purificador de Água", grupo: "laboratorio", synonyms: ["sistema de purificação de água", "Milli-Q", "destilador de água"], re: /purifica[çc][ãa]o de [áa]gua|purificador(es)? de [áa]gua|milli-?q|destilador(es)? de [áa]gua|deionizador/i, comum: false, ativo: true },
+    { id: "cromatografo_hplc", nome: "Cromatógrafo / HPLC", grupo: "laboratorio", synonyms: ["HPLC", "UPLC", "cromatógrafo a gás"], re: /\bhplc\b|\buplc\b|cromat[óo]graf/i, comum: false, ativo: true },
+    { id: "equipamento_laboratorio", nome: "Equipamento de Laboratório", grupo: "laboratorio", synonyms: ["dissolutor", "capela de exaustão", "fluxo laminar", "incubadora"], re: /dissolutor|secador de ponto cr[íi]tico|soxhlet|capela de (exaust|fluxo)|fluxo laminar|incubadora|leitor(es)? de microplacas|lavadora (automatizada )?de (tiras|microplacas)|agitador magn[ée]tico|\bmufla\b|viscos[íi]metro|ph-?metro|balan[çc]a anal[íi]tica|microsc[óo]pio|titulador|densit[ôo]metro/i, comum: false, ativo: true },
+    { id: "espectrofotometro", nome: "Espectrofotômetro", grupo: "laboratorio", synonyms: ["espectrômetro", "spectrophotometer"], re: /espectr[oô]fot[ôo]metro|espectr[ôo]metro/i, comum: false, ativo: true },
     { id: "jateamento", nome: "Jateamento", grupo: "instrumentos_utilidades", synonyms: ["jato de granalha", "cabine de jateamento", "shot blasting"], re: /jato de areia|jato de granalha|granalha|jateamento/i, comum: true, ativo: true },
     { id: "torno", nome: "Torno", grupo: "maquinas_ferramenta", synonyms: ["torno mecânico", "torno CNC", "torno universal"], re: /torno\b/i, comum: true, ativo: true },
     { id: "dobradeira", nome: "Dobradeira", grupo: "maquinas_ferramenta", synonyms: ["dobradeira hidráulica", "dobradeira CNC"], re: /m[áa]quina de dobrar|dobradeira\b/i, comum: false, ativo: true },
@@ -200,7 +208,6 @@
     { id: "redutor", nome: "Redutor", grupo: "mecanica", synonyms: ["redutor de velocidade", "caixa redutora", "gearbox"], re: /\bredutor(es)?\b/i, comum: false, ativo: true },
     { id: "unidade_hidraulica", nome: "Unidade Hidráulica", grupo: "mecanica", synonyms: ["central hidráulica", "power unit"], re: /unidade hidr[áa]ulica/i, comum: true, ativo: true },
     // 02/10 - categorias novas, com evidência real na base (itens que ficavam sem categoria ou em categoria errada)
-    { id: "autoclave", nome: "Autoclave", grupo: "processo_alimenticio", synonyms: ["autoclave horizontal", "autoclave vertical", "esterilizador a vapor"], re: /auto\s?clave/i, comum: false, ativo: true },
     { id: "compressora_comprimidos", nome: "Compressora de Comprimidos", grupo: "processo_alimenticio", synonyms: ["compressora rotativa", "pré-compressora", "tablet press"], re: /compressoras? (rotativas? )?de comprimidos|pr[ée][\s-]?compressora|tablet press|comprimidora/i, comum: false, ativo: true },
     { id: "motovibrador", nome: "Motovibrador/Vibrador", grupo: "mecanica", synonyms: ["motovibrador", "vibrador de concreto", "vibrador de imersão"], re: /motovibrador|\bvibrador(es)?\b/i, comum: false, ativo: true },
     { id: "maquina_corte_laser", nome: "Máquina de Corte a Laser", grupo: "maquinas_ferramenta", synonyms: ["laser de fibra", "corte a laser", "laser CO2"], re: /\blaser\b/i, excludeRe: /n[íi]vel a laser|n[íi]vel laser|medidor|trena|term[ôo]metro|mira laser/i, comum: false, ativo: true },
@@ -265,6 +272,56 @@
       validacoes: [
       ],
       valuation: { obrigatorios: ["volume_l", "fabricante", "estado"], complementares: ["modelo", "ano"] }
+    },
+    "estufa_laboratorio": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["volume_l", "temperatura_max_c", "modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["ano"] }
+    },
+    "banho_maria": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["volume_l", "modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["ano"] }
+    },
+    "purificador_agua": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["vazao_lh", "modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["ano"] }
+    },
+    "cromatografo_hplc": {
+      campos_obrigatorios: ["fabricante", "modelo"],
+      campos_opcionais: ["ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["ano"] }
+    },
+    "equipamento_laboratorio": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["modelo", "ano"],
+      campos_normalizados: {},
+      campos_ocr_prioritarios: ["fabricante", "modelo"],
+      faixas_esperadas: {},
+      validacoes: [
+      ],
+      valuation: { obrigatorios: ["fabricante", "modelo", "estado"], complementares: ["ano"] }
     },
     "compressora_comprimidos": {
       campos_obrigatorios: ["fabricante"],
@@ -1729,6 +1786,7 @@
     veiculos: "Ve\xEDculos",
     processo_alimenticio: "Processo Aliment\xEDcio",
     instrumentos_utilidades: "Instrumentos e Utilidades Gerais",
+    laboratorio: "Laborat\xF3rio",
     outros: "Outros"
   };
   // ===== REGRAS DE DECIS\xC3O (guia p/ classifica\xE7\xE3o manual e prompts de IA) =====
@@ -1754,6 +1812,10 @@
     if (!m) return completo;
     const cabeca = classificarFuncaoTexto(String(t).slice(0, m.index));
     if (!cabeca.category_id || cabeca.category_id === completo.category_id) return completo;
+    // a exclusão da categoria da cabeça vale pro texto inteiro ("Bomba para
+    // HPLC" não é bomba industrial)
+    const catCabeca = CATEGORIA_CANONICA.find((c) => c.id === cabeca.category_id);
+    if (catCabeca && catCabeca.excludeRe && catCabeca.excludeRe.test(t)) return completo;
     if (/^(para|p\/)$/i.test(m[1])) return cabeca;
     return CATEGORIAS_COMPONENTE.includes(completo.category_id) ? cabeca : completo;
   }
