@@ -206,7 +206,7 @@
     { id: "sucata", nome: "Sucata", grupo: "outros", synonyms: ["sucata metálica", "sucata industrial"], re: /sucata/i, comum: true, ativo: true },
     { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|\bsleeve\b|t[úu]nel (de )?(vapor|encolhimento|termoencolh)/i, comum: true, ativo: true },
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
-    { id: "envasadora", nome: "Envasadora", grupo: "envase_embalagem", synonyms: ["envasadora automática"], re: /envasador(a)?\b/i, comum: false, ativo: true },
+    { id: "envasadora", nome: "Envasadora", grupo: "envase_embalagem", synonyms: ["envasadora automática"], re: /envasador(a)?\b|m[\u00E1a]quina\s+(?:autom[\u00E1a]tica\s+|semi-?autom[\u00E1a]tica\s+)?(?:de|para)\s+(?:envase|envasar|enchimento)\b|equipamento\s+(?:semi-?autom[\u00E1a]tico\s+)?de\s+enchimento/i, comum: false, ativo: true },
     { id: "transformador", nome: "Transformador", grupo: "eletrica_automacao", synonyms: ["trafo", "transformador de potência"], re: /transformador|\btrafo\b/i, comum: true, ativo: true },
     { id: "motorredutor", nome: "Motorredutor", grupo: "mecanica", synonyms: ["gearmotor", "motoredutor"], re: /motor\s*redutor|motoredutor|moto[\s-]redutor/i, comum: true, ativo: true },
     { id: "redutor", nome: "Redutor", grupo: "mecanica", synonyms: ["redutor de velocidade", "caixa redutora", "gearbox"], re: /\bredutor(es)?\b/i, comum: false, ativo: true },
@@ -227,7 +227,7 @@
     { id: "chiller", nome: "Chiller", grupo: "utilidades", synonyms: ["chiller industrial", "unidade frigorífica"], re: /chiller|frigor[íi]fica/i, comum: false, ativo: true },
     { id: "injetora", nome: "Injetora", grupo: "maquinas_ferramenta", synonyms: ["injetora de plástico", "máquina de moldagem por injeção"], re: /injetora|moldagem por inje[çc][ãa]o/i, comum: false, ativo: true },
     { id: "checkweigher", nome: "Checkweigher", grupo: "instrumentos_utilidades", synonyms: ["balança checadora", "balança dinâmica de linha"], re: /checkweigher|balan[çc]a checadora|balan[çc]a din[âa]mica/i, comum: false, ativo: true },
-    { id: "balanca", nome: "Balança", grupo: "instrumentos_utilidades", synonyms: ["balança industrial", "balança de plataforma", "balança rodoviária"], re: /balan[çc]a/i, comum: true, ativo: true },
+    { id: "balanca", nome: "Balança", grupo: "instrumentos_utilidades", synonyms: ["balança industrial", "balança de plataforma", "balança rodoviária"], re: /balan[çc]a/i, excludeRe: /dosadora/i, comum: true, ativo: true },
     { id: "lavadora_piso", nome: "Lavadora de Piso", grupo: "instrumentos_utilidades", synonyms: ["lavadora varredora"], re: /lavadora de piso|lavadora varredora|varredora autopropelida/i, comum: false, ativo: true },
     { id: "filtro_industrial", nome: "Filtro Industrial", grupo: "instrumentos_utilidades", synonyms: ["filtro de areia", "filtro prensa", "sistema de filtração"], re: /filtro de areia|filtro industrial|filtro prensa|sistema de filtra[çc][ãa]o/i, comum: true, ativo: true },
     { id: "forno_industrial", nome: "Forno Industrial", grupo: "utilidades", synonyms: ["forno de secagem", "estufa industrial"], re: /forno industrial|forno de secagem|estufa industrial/i, comum: true, ativo: true },
@@ -4631,9 +4631,16 @@
         (l) => l.length > 15 && l.length < 200 && !/mercado livre|onde comprar e vender|^(casa,|vender|compartilhar|clip-icon|adicionar aos favoritos|usado$|novo$)/i.test(l)
       ) || null;
     }
-    const precoInfo = acharPrecoML(texto, 0);
+    const precoPrimeiro = acharPrecoML(texto, 0);
+    // 05/10: o 1º R$ é o preço riscado quando tem desconto - o atual vem
+    // logo depois ("R$ 1.937 / R$ 1.297,79 / 33% OFF").
+    const precoInfo = precoPrimeiro ? precoAtualML(texto.slice(precoPrimeiro.indice)) : null;
     if (!titulo || !precoInfo) return [];
     const marcaMatch = texto.match(/Marca\s*\n\s*([^\n]+)/i);
+    const doseMatch = texto.match(/Capacidade m[\u00EDi]nima de enchimento\s*-\s*Capacidade m[\u00E1a]xima de enchimento\s*\n\s*([\d.,]+)\s*(mL|L|g|kg)\s*-\s*([\d.,]+)\s*(mL|L|g|kg)/i);
+    const materialMatch = texto.match(/\nMateriais?\s*\n\s*([^\n]+)/i);
+    const bicosMatch = texto.match(/Quantidade de bicos(?: de enchimento)?\s*\n\s*(\d+)/i);
+    const lojaOficialMatch = texto.match(/Loja oficial\s+([^\n]+)/i);
     const modeloMatch = texto.match(/Modelo\s*\n\s*([^\n]+)/i);
     const potenciaMatch = texto.match(/Pot[êe]ncia\s*\n\s*([\d.,]+)\s*W\b/i);
     // A "Ficha Técnica" real usa CV (não W) e tem outros campos que nunca
@@ -4689,35 +4696,87 @@
       localizacao,
       detalhes,
       estado: condicaoMatch ? /novo/i.test(condicaoMatch[1]) ? "Novo" : "Usado" : "Novo",
+      capacidade: doseMatch ? `${doseMatch[1]} a ${doseMatch[3]} ${doseMatch[4]}` : capacidadeEnvaseML(titulo),
+      material: materialMatch ? (/inox/i.test(materialMatch[1]) ? "Aço Inox" : materialMatch[1].trim()) : null,
+      _tituloOriginal: titulo,
+      atributos_normalizados: limparAtributosExtras({ num_bicos: bicosMatch ? Number(bicosMatch[1]) : null }),
       preco: precoInfo.valor,
       moeda: "BRL",
-      canal: "Fabricante Direto",
+      // 05/10: só é fabricante quando a loja oficial é a própria marca.
+      canal: lojaOficialMatch && marcaMatch && lojaOficialMatch[1].trim().toLowerCase().startsWith(marcaMatch[1].trim().toLowerCase()) ? "Fabricante Direto" : "Revenda/Terceiro",
       tipo_mercado: "Venda Direta"
     }];
   }
+  // 05/10: preço atual do ML - o card mostra "R$ 1.937 / R$ 1.297 / 33%
+  // OFF": o 1º é o preço riscado (antigo), o atual é o 2º. Para no
+  // parcelamento ("10x") e em "Outra opção de compra".
+  function precoAtualML(trecho) {
+    const corte = trecho.search(/\n\s*\d+x\s*\n|\n\s*Outra op[\u00E7c][\u00E3a]o de compra|\n\s*sem juros/i);
+    const area = corte === -1 ? trecho : trecho.slice(0, corte);
+    const precos = [];
+    let pos = 0, info;
+    while ((info = acharPrecoML(area, pos)) && precos.length < 3) { precos.push(info); pos = info.fim; }
+    if (!precos.length) return null;
+    const temDesconto = /\d+\s*%\s*OFF/i.test(area);
+    return precos.length >= 2 && temDesconto ? precos[1] : precos[0];
+  }
+  // Dose/volume do título: "5-50ml", "10 A 100ml", "100-1000 Ml", "3500ml".
+  function capacidadeEnvaseML(titulo) {
+    const t = String(titulo || "");
+    const faixa = t.match(/(\d+(?:[.,]\d+)?)\s*(?:-|a|at[\u00E9e])\s*(\d+(?:[.,]\d+)?)\s*(ml|l|g|kg)\b/i);
+    if (faixa) return `${faixa[1]} a ${faixa[2]} ${faixa[3].toLowerCase() === "ml" ? "mL" : faixa[3].toLowerCase() === "l" ? "L" : faixa[3].toLowerCase()}`;
+    const unica = t.match(/(\d+(?:[.,]\d+)?)\s*(ml|l)\b/i);
+    return unica ? `${unica[1]} ${unica[2].toLowerCase() === "ml" ? "mL" : "L"}` : null;
+  }
+  // Linha de marca do card: "REGISTRON", "CETRO por Loja Cetro Maquinas",
+  // "NAGANO por Agrotama". Nome de loja ("TIME TO BE COMERCIO", "Espaço
+  // Flix") não é marca.
+  function marcaDoCardML(linhasCard, titulo) {
+    for (const bruta of linhasCard) {
+      const l = bruta.trim();
+      if (!l || l === "Ad") continue;
+      if (/^R\$|^\d|vendid|classifica|frete|chegar|OFF\b|^Internacional|^China$|^Novidade/i.test(l)) break;
+      const base = l.replace(/\s+por\s+.+$/i, "").trim();
+      if (base.length < 2 || base.length > 30) continue;
+      if (/com[\u00E9e]rcio|ltda|\bloja\b|store|importa|espa[\u00E7c]o|\bme\b|eireli/i.test(base)) return null;
+      return normalizarMarca(base);
+    }
+    const doTitulo = MARCAS_CONHECIDAS.map((m) => ({ m, i: String(titulo || "").search(new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z\u00E0-\u00FF])`, "i")) })).filter((x) => x.i >= 0).sort((a, b) => a.i - b.i)[0];
+    return doTitulo ? doTitulo.m : null;
+  }
   function parseMercadoLivreListaLocal(rawText) {
-    const texto = rawText || "";
+    const texto = (rawText || "").replace(/\r\n/g, "\n");
     const itens = [];
     // Selo promocional ("OFERTA IMPERDÍVEL", "ÚLTIMAS 4" etc) aparece só na
     // 1ª das duas linhas de título (alt-text da imagem), não na 2ª (texto
     // visível do card) - sem o grupo opcional abaixo, as duas linhas
     // deixam de ser idênticas e o card inteiro era descartado (achado
     // real: 2 de 6 cards de uma página real perdidos por esse motivo).
-    const regexTitulo = /^([^\n]{10,}?)(?:\s+[A-ZÀ-Ÿ0-9][A-ZÀ-Ÿ0-9\s]{2,40})?\n\1$/gm;
+    const regexTitulo = /^([^\n]{10,}?)(?:\s*[A-Z\u00C0-\u01780-9][A-Z\u00C0-\u01780-9\s!]{2,40})?\n\1$/gm;
     const anchors = [...texto.matchAll(regexTitulo)];
     anchors.forEach((m, idx) => {
       const inicioBusca = m.index + m[0].length;
       const limiteFim = idx + 1 < anchors.length ? anchors[idx + 1].index : inicioBusca + 400;
-      const precoInfo = acharPrecoML(texto, inicioBusca);
-      if (!precoInfo || precoInfo.indice > limiteFim) return;
+      const bloco = texto.slice(inicioBusca, limiteFim);
+      // Card de loja ("Loja Cetro Máquinas / +9.900 seguidores") não é anúncio.
+      if (/seguidores|Ir para a loja/i.test(bloco.split(/R\$/)[0])) return;
+      const precoInfo = precoAtualML(bloco);
+      if (!precoInfo) return;
+      const titulo = m[1].trim();
+      const internacional = /\nInternacional\b/i.test(bloco);
+      const capacidade = capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo).capacidade;
       itens.push({
-        categoria: classificarCategoriaGenerica(m[1]),
-        marca: null,
-        modelo: m[1].trim(),
+        categoria: classificarCategoriaGenerica(titulo),
+        marca: marcaDoCardML(bloco.split("\n"), titulo),
+        modelo: titulo,
+        _tituloOriginal: titulo,
+        capacidade,
+        detalhes: [/\bmanual\b/i.test(titulo) ? "Acionamento manual" : null, internacional ? "Envio internacional" : null].filter(Boolean).join("; ") || null,
         estado: "Novo",
         preco: precoInfo.valor,
         moeda: "BRL",
-        canal: "Fabricante Direto",
+        // 05/10: ML é marketplace - loja/revenda, não fabricante.
+        canal: "Revenda/Terceiro",
         tipo_mercado: "Venda Direta"
       });
     });
@@ -5994,7 +6053,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     return RE_ESTADO_NOVO.test(t) && !RE_ESTADO_SEMINOVO.test(t) ? "Novo" : "Usado";
   }
   // Peça/acessório avulso não entra na base (02/10): "ou é equipamento ou não é".
-  var RE_PECA_AVULSA = /^\s*(?:\d+\s*)?(kit|pe[çc]as?|mangote|morsa|castanhas?|placa para|correias?|rolamentos?|engrenagem para|reparo|jogo de|suporte para|acess[óo]rios?|carv[ãa]o|rotor para|selo mec[âa]nico|buchas?|retentor(es)?|dispositivo de bloqueio|filtro para|polia|eixo para|bobina para|manual)\b/i;
+  var RE_PECA_AVULSA = /^\s*(?:\d+\s*)?(kit|pe[çc]as?|mangote|morsa|castanhas?|placa para|correias?|rolamentos?|engrenagem para|reparo|jogo de|suporte para|acess[óo]rios?|carv[ãa]o|rotor para|selo mec[âa]nico|buchas?|retentor(es)?|dispositivo de bloqueio|filtro para|polia|eixo para|bobina para|manual|bicos?\s+(?:de|para)|pedal)\b/i;
   function ehPecaAvulsa(it, titulo) {
     const texto = titulo || it.modelo || "";
     if (RE_PECA_AVULSA.test(texto)) return true;
@@ -9954,7 +10013,9 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const itOriginal = !catVeio && catTitulo ? { ...itColetado, categoria: catTitulo.category_name, categoria_id: catTitulo.category_id, _categoriaPeloTitulo: true } : itColetado;
         const tituloColetado = [itColetado._tituloOriginal, itColetado.modelo, itColetado.detalhes].filter(Boolean).join(" ");
         const enr = { ...enriquecerAtributosColeta(itOriginal), estado: estadoNovoOuUsado([itColetado.estado, tituloColetado].filter(Boolean).join(" ")) };
-        const peca = ehPecaAvulsa(itOriginal, itColetado.modelo);
+        // 05/10: título original - o modelo já vem sem "Envasadora" na
+        // frente, e "Envasadora Manual ..." virava "Manual ..." = peça.
+        const peca = ehPecaAvulsa(itOriginal, itColetado._tituloOriginal || itColetado.modelo);
         const modeloCurto = extrairModeloCurto(enr.modelo, enr.marca, enr.categoria);
         // Adjetivos e texto de anúncio não vão pra base (pedido dela, 02/10):
         // fica só o modelo curto; specs já foram extraídas em atributos.
