@@ -3250,7 +3250,13 @@
       }
     }
     const modeloBruto = modeloRotuloMatch ? modeloRotuloMatch[1].trim() : codigoModeloDescricao ? `${titulo} ${codigoModeloDescricao}` : titulo;
-    const categoriaFinal = classificarCategoriaGenerica(titulo) || (blocoDescricao ? classificarCategoriaGenerica(blocoDescricao[1]) : null);
+    // 04/10: na descrição, "pneus de carro e caminhão" / "para caminhão" é
+    // uso, não o equipamento - linha de moagem de pneus saía "Caminhão".
+    const descParaCategoria = blocoDescricao ? blocoDescricao[1].replace(/\b(?:de|para|do|dos|em)\s+(?:carros?\s+(?:e|ou)\s+)?caminh(?:[\u00E3a]o|[\u00F5o]es)\b/gi, " ") : null;
+    // Título "Linha/Conjunto ..." sem categoria: a descrição lista as
+    // máquinas da linha (triturador, motor...) - nenhuma delas é o anúncio.
+    const tituloConjunto = /\b(linha|conjunto|planta|usina)\b/i.test(titulo || "");
+    const categoriaFinal = classificarCategoriaGenerica(titulo) || (descParaCategoria && !tituloConjunto ? classificarCategoriaGenerica(descParaCategoria) : null);
     let marcaFinal = marcaMatch ? marcaMatch[1].trim() : null;
     if (!marcaFinal && blocoDescricao) {
       const encontrada = MARCAS_CONHECIDAS.find((m) => new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?=\\b|[A-Z0-9])`, "i").test(blocoDescricao[1]));
@@ -3287,6 +3293,15 @@
       capacidadeFinal = capacidadeRotuloMatch[1];
     } else {
       capacidadeFinal = fatos.capacidade;
+    }
+    // 04/10: linha/conjunto com várias máquinas (motor 75 cv, 15 cv, 100 cv)
+    // - a potência de uma máquina não é a da linha; fica sem potência.
+    const potenciasDistintas = new Set([...textoEscopo.matchAll(/(\d+(?:[.,]\d+)?)\s*(cv|hp|kw)\b/gi)].map((m) => `${m[1]}${m[2].toLowerCase()}`));
+    const linhaVariasMaquinas = tituloConjunto && potenciasDistintas.size >= 2;
+    if (linhaVariasMaquinas) {
+      if (capacidadeFinal && /\b(cv|hp|kw)\b/i.test(capacidadeFinal)) capacidadeFinal = null;
+      fatos.potencia_cv = null;
+      fatos.potencia_kw = null;
     }
     const marca = (marcaFinal ? normalizarMarca(marcaFinal) : null) || norm.marca || fatos.marca;
     const atributos_normalizados = limparAtributosExtras({
