@@ -196,6 +196,10 @@
     { id: "tampadora", nome: "Tampadora", grupo: "envase_embalagem", synonyms: ["capping machine", "máquina de tampar"], re: /capping machine|tampador/i, comum: false, ativo: true },
     { id: "lavadora_industrial", nome: "Lavadora Industrial", grupo: "processo_alimenticio", synonyms: ["lavadora de garrafas", "washing machine"], re: /washing machine|lavadora(?! de piso)(?! varredora)/i, comum: false, ativo: true },
     { id: "linha_envase", nome: "Linha de Envase", grupo: "envase_embalagem", synonyms: ["linha de engarrafamento", "linha completa de envase", "bottling line"], re: /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie/i, comum: true, ativo: true },
+    // 05/10: moinho / triturador / granulador (linha de moagem de pneus,
+    // plástico, grãos) - antes não tinha categoria e o anúncio pegava a de
+    // uma peça da descrição (Painel Elétrico, Caminhão).
+    { id: "moinho", nome: "Moinho / Triturador", grupo: "mecanica", synonyms: ["moinho de martelos", "moinho de facas", "triturador", "granulador", "linha de moagem"], re: /\bmoinhos?\b|\bmoagem\b|\btriturador|\bgranulador(?!a)|\bdesintegrador/i, comum: false, ativo: true },
     { id: "misturador", nome: "Misturador", grupo: "processo_alimenticio", synonyms: ["misturador industrial", "mixer"], re: /misturador|mixer(?! ?grinder)/i, comum: true, ativo: true },
     { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
     { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing|encartuch|encartonador|flow\s?pack/i, comum: false, ativo: true },
@@ -417,6 +421,15 @@
         { campo: "capacidade_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
       ],
       valuation: { obrigatorios: ["capacidade_l", "fabricante", "estado"], complementares: ["modelo", "ano", "tipo_resfriamento"] }
+    },
+    "moinho": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["potencia_cv", "capacidade", "modelo", "ano"],
+      campos_normalizados: {"potencia_cv": "CV"},
+      campos_ocr_prioritarios: ["fabricante", "modelo", "potencia_cv"],
+      faixas_esperadas: {},
+      validacoes: [],
+      valuation: { obrigatorios: ["fabricante", "estado"], complementares: ["potencia_cv", "capacidade", "modelo", "ano"] }
     },
     "misturador": {
       campos_obrigatorios: ["volume_l", "fabricante"],
@@ -3239,7 +3252,10 @@
     const capacidadeRotuloMatch = texto.match(/Capacidade:\s*\n?\s*([\d.,]+\s*(?:l|litros?|kg|ton(?:elada)?s?|m[³3])\s*\/?\s*h(?:ora)?)/i);
     const marcaRotuloMatch = texto.match(/Marca:\s*\n?\s*([^\n]+)/i);
     const modeloRotuloMatch = texto.match(/Modelo:\s*\n?\s*([^\n]+)/i);
-    const capacidadeMatch = texto.match(/at[ée]\s*([\d.,]+)\s*(kg\/h|ton(?:elada)?s?\/h|l\/h|litros?\/h|m[³3]\/h)(?:\s*(?:com|a)\s*([\d.,]+)\s*bar\s*(?:\(g\))?)?/i) || texto.match(/([\d.,]+)\s*(kgv?\/h)/i) || texto.match(/([\d.,]+)\s*(T\s*por\s*Hora)/i) || texto.match(/(de\s+[\d.,]+\s*a\s*[\d.,]+)\s*(ton(?:elada)?s?\s*por\s*hora)/i) || (blocoDescricao ? blocoDescricao[1] : texto).match(/at[ée]\s*([\d.,]+)\s*((?:unidades?|frascos?|garrafas?|sach[êe]s?|pe[çc]as?|embalagens?|pouch(?:es)?)\s*(?:\/|por)\s*h(?:ora)?)\b/i) || texto.match(/([\d.,]+)\s*(litros|l\b|m[³3])\b/i);
+    // 05/10: capacidade só do anúncio - "Produtos Relacionados" abaixo
+    // trazia "1.200 kg/h" de outro moinho.
+    const textoSemRelacionados = texto.split(/\n\s*Produtos Relacionados\s*\n/i)[0];
+    const capacidadeMatch = textoSemRelacionados.match(/at[ée]\s*([\d.,]+)\s*(kg\/h|ton(?:elada)?s?\/h|l\/h|litros?\/h|m[³3]\/h)(?:\s*(?:com|a)\s*([\d.,]+)\s*bar\s*(?:\(g\))?)?/i) || textoSemRelacionados.match(/([\d.,]+)\s*(kgv?\/h)/i) || textoSemRelacionados.match(/([\d.,]+)\s*(T\s*por\s*Hora)/i) || textoSemRelacionados.match(/(de\s+[\d.,]+\s*a\s*[\d.,]+)\s*(ton(?:elada)?s?\s*por\s*hora)/i) || (blocoDescricao ? blocoDescricao[1] : textoSemRelacionados).match(/at[ée]\s*([\d.,]+)\s*((?:unidades?|frascos?|garrafas?|sach[êe]s?|pe[çc]as?|embalagens?|pouch(?:es)?)\s*(?:\/|por)\s*h(?:ora)?)\b/i) || textoSemRelacionados.match(/([\d.,]+)\s*(litros|l\b|m[³3])\b/i);
     const potenciaPublicadaMatch = texto.match(/Pot[êe]ncia publicada:?\s*([\d.,]+)\s*kw/i);
     const marcaMatch = marcaRotuloMatch || texto.match(/\bda\s+([A-Z][\wà-ÿ]+)\s+s[ãa]o\b/) || texto.match(/\bpela\s+([A-Z][\wà-ÿ]+)\b/);
     let codigoModeloDescricao = null;
