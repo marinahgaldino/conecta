@@ -4847,7 +4847,8 @@
     const capTxt = campo(/^capacidade/);
     const capMatch = capTxt && capTxt.match(/([\d.,]+)\s*(litros?|l\b|kg|ml)/i);
     const porLote = capTxt && /por (processo|lote|batelada|ciclo)/i.test(capTxt) ? " por lote" : "";
-    const capacidade = capMatch ? `${capMatch[1]} ${/^l/i.test(capMatch[2]) ? "L" : capMatch[2].toLowerCase() === "ml" ? "mL" : "kg"}${porLote}` : capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo).capacidade || null;
+    const porHora = capTxt && /\/\s*h\b|por hora/i.test(capTxt) ? "/h" : "";
+    const capacidade = capMatch ? `${capMatch[1]} ${/^l/i.test(capMatch[2]) ? "L" : capMatch[2].toLowerCase() === "ml" ? "mL" : "kg"}${porHora || porLote}` : capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo).capacidade || null;
     const tensaoTxt = campo(/^tens[ãa]o/);
     const tensao = tensaoTxt ? tensaoTxt.replace(/\s*\|\s*3~/, " trifásico").replace(/\s*\|\s*1~/, " monofásico").trim() : null;
     const contato = campo(/contato com (o )?produto/);
@@ -4856,7 +4857,12 @@
     const velTxt = campo(/velocidade/);
     const dimTxt = campo(/^dimens/);
     // "Reator com Mixer" é Reator: a cabeça (antes de "com") vence.
-    const categoria = categoriaCetro(titulo);
+    let categoria = categoriaCetro(titulo);
+    // "Misturador Homogeneizador CHMM 300" é homogeneizador de alta pressão
+    // (êmbolo, válvulas, até 60 MPa) - a ficha decide, não a 1ª palavra.
+    const pressaoTxt = campo(/^press[ãa]o$/);
+    const pressaoMax = pressaoTxt && pressaoTxt.match(/([\d.,]+)\s*mpa/i);
+    if (/homogeneizador/i.test(titulo) && pressaoMax && parseNumeroBR(pressaoMax[1]) >= 10) categoria = classificarCategoriaGenerica("Homogeneizador");
     const material = contato || construcao;
     return [{
       categoria,
@@ -4869,7 +4875,7 @@
       capacidade,
       material: material ? (/316/.test(material) ? "Aço Inox 316L" : /inox|304/i.test(material) ? "Aço Inox" : material) : null,
       localizacao: null,
-      detalhes: [contato ? `Contato com produto: ${contato}` : null, construcao ? `Estrutura: ${construcao.replace(/^estrutura\s+(em\s+)?/i, "")}` : null, velTxt ? `Velocidade: ${velTxt}` : null, dimTxt ? `Dimensões: ${dimTxt}` : null, pesoTxt ? `Peso: ${pesoTxt}` : null].filter(Boolean).join("; ") || null,
+      detalhes: [pressaoTxt ? `Pressão: ${pressaoTxt}` : null, campo(/^est[áa]gios/) ? `Estágios: ${campo(/^est[áa]gios/)}` : null, contato ? `Contato com produto: ${contato}` : null, construcao ? `${/^material/.test(Object.keys(ficha).find((k) => ficha[k] === construcao) || "") ? "Material" : "Estrutura"}: ${construcao.replace(/^estrutura\s+(em\s+)?/i, "")}` : null, campo(/^material das v[áa]lvulas/) ? `Válvulas: ${campo(/^material das v[áa]lvulas/)}` : null, velTxt ? `Velocidade: ${velTxt}` : null, dimTxt ? `Dimensões: ${dimTxt}` : null, pesoTxt ? `Peso: ${pesoTxt}` : null].filter(Boolean).join("; ") || null,
       _tituloOriginal: titulo,
       preco,
       moeda: "BRL",
