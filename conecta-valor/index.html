@@ -3945,6 +3945,7 @@
     olx_lista: "OLX (lista de busca)",
     mercadolivre_item: "Mercado Livre (item \xFAnico)",
     mercadolivre_lista: "Mercado Livre (lista de busca)",
+    cetro: "Cetro (loja do fabricante)",
     estruturado: "Texto com r\xF3tulos (gr\xE1tis)",
     generico: "N\xE3o reconhecido"
   };
@@ -3979,6 +3980,9 @@
       if (/(Sucatas e Recicláveis|Sobras Industriais|Infraestrutura Industrial)\s*>/i.test(t)) return "syx_item";
     }
     if (/made-in-china\.com|Find Similar Products|MOQ\)/i.test(t) && /US\$[\d,]+\.\d{2}/.test(t)) return "made_in_china";
+    // 30/10: loja da Cetro (fabricante, VTEX) - antes caía em "estruturado"
+    // e saía preço R$ 1,00 (do "12x"), estado Usado e sem marca.
+    if (/Cetro Solu[çc][õo]es em Embalagens|cetro\.com\.br/i.test(t) && /Ficha t[ée]cnica/i.test(t)) return "cetro";
     if (/Mercado Livre|mercadolivre\.com/i.test(t) && /Caracter[íi]sticas (do produto|gerais)/i.test(t)) return "mercadolivre_item";
     if (/Mercado Livre|mercadolivre\.com/i.test(t) && /Saldo no Mercado Pago|Frete gr[áa]tis/i.test(t) && (t.match(/^([^\n]{10,}?)\n\1$/gm) || []).length >= 2) return "mercadolivre_lista";
     if ((t.match(/Adicionar aos favoritos/gi) || []).length >= 2 && /Slide 1/i.test(t)) return "olx_lista";
@@ -4787,6 +4791,76 @@
     }
     const doTitulo = MARCAS_CONHECIDAS.map((m) => ({ m, i: String(titulo || "").search(new RegExp(`\\b${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![a-z\u00E0-\u00FF])`, "i")) })).filter((x) => x.i >= 0).sort((a, b) => a.i - b.i)[0];
     return doTitulo ? doTitulo.m : null;
+  }
+  // 30/10: página de produto da Cetro (fabricante; produto novo, preço de
+  // tabela). Título = linha repetida antes do código "MQ0000"; preço = 1º
+  // "R$" depois do código (parcelamento, "Compre junto" e "Você também pode
+  // gostar" ficam de fora); dados da "Ficha técnica" (rótulo numa linha,
+  // valor na seguinte). Localização vazia: loja vende para o Brasil todo.
+  function parseCetroLocal(rawText) {
+    const texto = (rawText || "").replace(/\r\n/g, "\n");
+    const linhas = texto.split("\n").map((l) => l.trim());
+    const idxCodigo = linhas.findIndex((l) => /^MQ\d{4,}$/i.test(l));
+    let titulo = null;
+    if (idxCodigo > 0) titulo = linhas[idxCodigo - 1] || null;
+    if (!titulo) {
+      const rep = texto.match(/^([^\n]{15,200})\n\1$/m);
+      titulo = rep ? rep[1].trim() : null;
+    }
+    const aposCodigo = idxCodigo >= 0 ? linhas.slice(idxCodigo + 1).join("\n") : texto;
+    const precoMatch = aposCodigo.match(/^R\$\s*([\d.]+,\d{2})\s*$/m);
+    if (!titulo || !precoMatch) return [];
+    const preco = parsePrecoBR(precoMatch[1]);
+    if (!preco || preco <= 1) return [];
+    const idxFicha = linhas.findIndex((l) => /^Ficha t[ée]cnica$/i.test(l));
+    const ficha = {};
+    if (idxFicha !== -1) {
+      for (let i = idxFicha + 1; i < linhas.length - 1; i++) {
+        const rot = linhas[i];
+        if (!rot || /^Precisa de ajuda|^Compre Junto|^Voc[êe] tamb[ée]m/i.test(rot)) break;
+        const val = linhas[i + 1];
+        if (!val) continue;
+        ficha[rot.toLowerCase()] = val;
+        i++;
+      }
+    }
+    const campo = (re) => { const k = Object.keys(ficha).find((x) => re.test(x)); return k ? ficha[k] : null; };
+    const potW = campo(/^pot[êe]ncia/);
+    const potWNum = potW && /\bW\b/i.test(potW) && !/kW/i.test(potW) ? parseNumeroBR(potW.replace(/\s*W.*$/i, "")) : null;
+    const potKwMatch = potW && potW.match(/([\d.,]+)\s*kW/i);
+    const potCvMatch = potW && potW.match(/([\d.,]+)\s*(cv|hp)/i);
+    const capTxt = campo(/^capacidade/);
+    const capMatch = capTxt && capTxt.match(/([\d.,]+)\s*(litros?|l\b|kg|ml)/i);
+    const capacidade = capMatch ? `${capMatch[1]} ${/^l/i.test(capMatch[2]) ? "L" : capMatch[2].toLowerCase() === "ml" ? "mL" : "kg"}` : capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo).capacidade || null;
+    const tensaoTxt = campo(/^tens[ãa]o/);
+    const tensao = tensaoTxt ? tensaoTxt.replace(/\s*\|\s*3~/, " trifásico").replace(/\s*\|\s*1~/, " monofásico").trim() : null;
+    const contato = campo(/contato com (o )?produto/);
+    const construcao = campo(/^constru[çc][ãa]o|^material/);
+    const pesoTxt = campo(/^peso/);
+    const velTxt = campo(/velocidade/);
+    const dimTxt = campo(/^dimens/);
+    // "Reator com Mixer" é Reator: a cabeça (antes de "com") vence.
+    const cabeca = titulo.split(/\s(com|c\/|para|\+)\s/i)[0];
+    const categoria = classificarCategoriaGenerica(cabeca) || classificarCategoriaGenerica(titulo);
+    const material = contato || construcao;
+    return [{
+      categoria,
+      marca: "Cetro",
+      modelo: campo(/^modelo/) || modeloDoTituloML(titulo),
+      potencia_kw: potWNum ? potWNum / 1e3 : potKwMatch ? parseNumeroBR(potKwMatch[1]) : null,
+      potencia_cv: potCvMatch ? parseNumeroBR(potCvMatch[1]) : null,
+      tensao,
+      capacidade,
+      material: material ? (/316/.test(material) ? "Aço Inox 316L" : /inox|304/i.test(material) ? "Aço Inox" : material) : null,
+      localizacao: null,
+      detalhes: [contato ? `Contato com produto: ${contato}` : null, construcao ? `Estrutura: ${construcao.replace(/^estrutura\s+(em\s+)?/i, "")}` : null, velTxt ? `Velocidade: ${velTxt}` : null, dimTxt ? `Dimensões: ${dimTxt}` : null, pesoTxt ? `Peso: ${pesoTxt}` : null].filter(Boolean).join("; ") || null,
+      _tituloOriginal: titulo,
+      preco,
+      moeda: "BRL",
+      estado: "Novo",
+      canal: "Fabricante Direto",
+      tipo_mercado: "Venda Direta"
+    }];
   }
   function parseMercadoLivreListaLocal(rawText) {
     const texto = (rawText || "").replace(/\r\n/g, "\n");
@@ -10564,6 +10638,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
           items = parseMercadoLivreItemLocal(manualText);
         } else if (formatoPagina === "mercadolivre_lista") {
           items = parseMercadoLivreListaLocal(manualText);
+        } else if (formatoPagina === "cetro") {
+          items = parseCetroLocal(manualText);
         } else if (formatoPagina === "estruturado") {
           items = parseTextoEstruturadoLocal(manualText);
         } else {
