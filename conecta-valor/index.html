@@ -2492,7 +2492,8 @@
     m = m.replace(/\d+(?:[.,]\d+)?\s*ton(?:elada)?s?\s*[\/\s]*h(?:ora)?\b/gi, " ");
     m = m.replace(/at[ée]\s*\d+(?:[.,]\d+)?\s*bar\b/gi, " ");
     m = m.replace(/\d+(?:[.,]\d+)?\s*kgf\s*\/\s*cm[²2]/gi, " ");
-    m = m.replace(/\d+(?:[.,]\d+)?\s*(mil\s*)?(litros|l\b|m³|m3)(\s*\/\s*(?:min|h(?:ora)?)\b)?/gi, " ");
+    // 30/10: (?<![A-Za-z]) - "SS316L" (aço 316L) é código, não 316 litros.
+    m = m.replace(/(?<![A-Za-z0-9.,])\d+(?:[.,]\d+)?\s*(mil\s*)?(litros|l\b|m³|m3)(\s*\/\s*(?:min|h(?:ora)?)\b)?/gi, " ");
     m = m.replace(/\s*[-–—]\s*(Oportunidade( Única)?|[ÀA] Venda|Excelente Neg[óo]cio|Pronta Entrega)\s*$/gi, "");
     {
       const NAO_LOCAL = /^(Funcionamento|Opera[çc][ãa]o|Produ[çc][ãa]o|Andamento|Atividade|Plena Produ[çc][ãa]o)$/i;
