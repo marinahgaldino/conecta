@@ -4636,10 +4636,13 @@
     // logo depois ("R$ 1.937 / R$ 1.297,79 / 33% OFF").
     const precoInfo = precoPrimeiro ? precoAtualML(texto.slice(precoPrimeiro.indice)) : null;
     if (!titulo || !precoInfo) return [];
+    if (precoInfo.valor < PRECO_MIN_ML) return [];
     const marcaMatch = texto.match(/Marca\s*\n\s*([^\n]+)/i);
     const doseMatch = texto.match(/Capacidade m[\u00EDi]nima de enchimento\s*-\s*Capacidade m[\u00E1a]xima de enchimento\s*\n\s*([\d.,]+)\s*(mL|L|g|kg)\s*-\s*([\d.,]+)\s*(mL|L|g|kg)/i);
     const materialMatch = texto.match(/\nMateriais?\s*\n\s*([^\n]+)/i);
     const bicosMatch = texto.match(/Quantidade de bicos(?: de enchimento)?\s*\n\s*(\d+)/i);
+    // Descrição: "Faixa de enchimento: 5-3500 ml".
+    const faixaMatch = texto.match(/Faixa de enchimento:?\s*([^\n]+)/i);
     const lojaOficialMatch = texto.match(/Loja oficial\s+([^\n]+)/i);
     const modeloMatch = texto.match(/Modelo\s*\n\s*([^\n]+)/i);
     const potenciaMatch = texto.match(/Pot[êe]ncia\s*\n\s*([\d.,]+)\s*W\b/i);
@@ -4685,9 +4688,9 @@
       detalhes = partes.length ? partes.join(" ").trim() : null;
     }
     return [{
-      categoria: classificarCategoriaGenerica(titulo),
-      marca: marcaMatch ? marcaMatch[1].trim() : null,
-      modelo: modeloMatch ? modeloMatch[1].trim() : titulo,
+      categoria: categoriaML(titulo),
+      marca: marcaMatch && !MARCA_GENERICA_ML.test(marcaMatch[1].trim()) ? marcaMatch[1].trim() : null,
+      modelo: (modeloMatch && modeloFichaValidoML(modeloMatch[1])) || modeloDoTituloML(titulo),
       potencia_cv: potenciaCvMatch ? Number(potenciaCvMatch[1].replace(",", ".")) : null,
       potencia_kw: potenciaMatch ? Number(potenciaMatch[1].replace(",", ".")) / 1e3 : null,
       tensao: tensaoMatch ? tensaoMatch[1].trim() : null,
@@ -4696,7 +4699,7 @@
       localizacao,
       detalhes,
       estado: condicaoMatch ? /novo/i.test(condicaoMatch[1]) ? "Novo" : "Usado" : "Novo",
-      capacidade: doseMatch ? `${doseMatch[1]} a ${doseMatch[3]} ${doseMatch[4]}` : capacidadeEnvaseML(titulo),
+      capacidade: doseMatch ? `${doseMatch[1]} a ${doseMatch[3]} ${doseMatch[4]}` : (faixaMatch ? capacidadeEnvaseML(faixaMatch[1]) : null) || capacidadeEnvaseML(titulo),
       material: materialMatch ? (/inox/i.test(materialMatch[1]) ? "Aço Inox" : materialMatch[1].trim()) : null,
       _tituloOriginal: titulo,
       atributos_normalizados: limparAtributosExtras({ num_bicos: bicosMatch ? Number(bicosMatch[1]) : null }),
@@ -4720,9 +4723,50 @@
     const temDesconto = /\d+\s*%\s*OFF/i.test(area);
     return precos.length >= 2 && temDesconto ? precos[1] : precos[0];
   }
+  // 30/10 (Marina): no Mercado Livre só entra anúncio a partir de R$ 1.000
+  // (abaixo disso é acessório/bancada barata - ex.: "Enchedor manual" R$ 75).
+  const PRECO_MIN_ML = 1000;
+  // Marca genérica/categoria lida como marca ("DOSADORA", "General", "Other").
+  const MARCA_GENERICA_ML = /^(dosadora|envasadora|enchedora|maquina|m[\u00E1a]quina|general|generic[oa]?|gen[\u00E9e]ric[oa]|other|outros?|sem marca)$/i;
+  // Modelo = só o código do título ("Rg-a03", "A-03d", "Hzk160", "P-50",
+  // "Csy-m90", "Rg-gfk160"), nunca o título inteiro. Medidas (5-100ml,
+  // 127/220v, 30w, 12l, 10kg) não são modelo. Sem código -> null.
+  function modeloDoTituloML(titulo) {
+    const unidade = /(ml|l|g|kg|w|kw|v|cv|hp|mm|cm|m|min|h|un|pcs?)$/i;
+    for (const bruto of String(titulo || "").split(/[\s,()]+/)) {
+      const tok = bruto.replace(/^[-–]+|[-–.]+$/g, "");
+      if (!/^[A-Za-z]{1,5}-?[A-Za-z]{0,4}-?\d{2,4}[A-Za-z]{0,2}$/.test(tok)) continue;
+      if (unidade.test(tok) && /^\d|-\d+[a-z]+$|^\d/i.test(tok.replace(/^[A-Za-z]{1,2}-/, "0"))) {
+        if (/\d(ml|l|g|kg|w|kw|v|cv|hp|mm|cm|min|h)$/i.test(tok)) continue;
+      }
+      if (/\d(ml|l|g|kg|w|kw|v|cv|hp|mm|cm|min)$/i.test(tok)) continue;
+      return tok.toUpperCase();
+    }
+    return null;
+  }
+  // Modelo da ficha só vale se parece código (curto, sem vírgula, com dígito
+  // ou até 2 palavras). "maquina envasar sache,maquina seladora..." = lixo.
+  function modeloFichaValidoML(v) {
+    const m = String(v || "").trim();
+    if (!m || m.length > 25 || /,/.test(m)) return null;
+    if (!/\d/.test(m) && m.split(/\s+/).length > 2) return null;
+    if (/m[\u00E1a]quina|envas|selad|enchedor|dosador/i.test(m)) return null;
+    return m;
+  }
+  // Envase/enchimento no ML: máquina solta é Envasadora (não Linha de Envase);
+  // bomba dosadora segue Bomba.
+  function categoriaML(titulo) {
+    const cat = classificarCategoriaGenerica(titulo);
+    const ehEnvase = /enche(dor|dora|imento)|envas|envase|\bdosadora\b/i.test(titulo) && !/\bbomba\b/i.test(titulo);
+    if (ehEnvase && !/\blinha\b/i.test(titulo) && (!cat || cat === "Linha de Envase")) return "Envasadora";
+    return cat;
+  }
   // Dose/volume do título: "5-50ml", "10 A 100ml", "100-1000 Ml", "3500ml".
   function capacidadeEnvaseML(titulo) {
-    const t = String(titulo || "");
+    // "Funil 12l" é o tamanho do funil, não a dose; "4l Min" é vazão.
+    const t = String(titulo || "").replace(/funil\s*(de\s*)?\d+(?:[.,]\d+)?\s*l\b/ig, "");
+    const vazao = t.match(/(\d+(?:[.,]\d+)?)\s*l\s*\/?\s*min\b/i);
+    if (vazao) return `${vazao[1]} L/min`;
     const faixa = t.match(/(\d+(?:[.,]\d+)?)\s*(?:-|a|at[\u00E9e])\s*(\d+(?:[.,]\d+)?)\s*(ml|l|g|kg)\b/i);
     if (faixa) return `${faixa[1]} a ${faixa[2]} ${faixa[3].toLowerCase() === "ml" ? "mL" : faixa[3].toLowerCase() === "l" ? "L" : faixa[3].toLowerCase()}`;
     const unica = t.match(/(\d+(?:[.,]\d+)?)\s*(ml|l)\b/i);
@@ -4754,6 +4798,7 @@
     // real: 2 de 6 cards de uma página real perdidos por esse motivo).
     const regexTitulo = /^([^\n]{10,}?)(?:\s*[A-Z\u00C0-\u01780-9][A-Z\u00C0-\u01780-9\s!]{2,40})?\n\1$/gm;
     const anchors = [...texto.matchAll(regexTitulo)];
+    const vistos = new Set();
     anchors.forEach((m, idx) => {
       const inicioBusca = m.index + m[0].length;
       const limiteFim = idx + 1 < anchors.length ? anchors[idx + 1].index : inicioBusca + 400;
@@ -4763,12 +4808,21 @@
       const precoInfo = precoAtualML(bloco);
       if (!precoInfo) return;
       const titulo = m[1].trim();
+      if (precoInfo.valor < PRECO_MIN_ML) return;
+      // Patrocinado + orgânico: o mesmo card aparece 2x.
+      const chave = `${titulo.toLowerCase()}|${precoInfo.valor}`;
+      if (vistos.has(chave)) return;
+      vistos.add(chave);
+      const categoria = categoriaML(titulo);
+      // Sem categoria = não é equipamento (ex.: "Rolo de forro de prateleira").
+      if (!categoria) return;
+      const marcaCard = marcaDoCardML(bloco.split("\n"), titulo);
       const internacional = /\nInternacional\b/i.test(bloco);
-      const capacidade = capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo).capacidade;
+      const capacidade = capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo.replace(/funil\s*(de\s*)?\d+(?:[.,]\d+)?\s*l\b/ig, "")).capacidade;
       itens.push({
-        categoria: classificarCategoriaGenerica(titulo),
-        marca: marcaDoCardML(bloco.split("\n"), titulo),
-        modelo: titulo,
+        categoria,
+        marca: marcaCard && !MARCA_GENERICA_ML.test(marcaCard) ? marcaCard : null,
+        modelo: modeloDoTituloML(titulo),
         _tituloOriginal: titulo,
         capacidade,
         detalhes: [/\bmanual\b/i.test(titulo) ? "Acionamento manual" : null, internacional ? "Envio internacional" : null].filter(Boolean).join("; ") || null,
