@@ -4846,11 +4846,12 @@
     const potCvMatch = potW && potW.match(/([\d.,]+)\s*(cv|hp)/i);
     const capTxt = campo(/^capacidade/);
     const capMatch = capTxt && capTxt.match(/([\d.,]+)\s*(litros?|l\b|kg|ml)/i);
-    const capacidade = capMatch ? `${capMatch[1]} ${/^l/i.test(capMatch[2]) ? "L" : capMatch[2].toLowerCase() === "ml" ? "mL" : "kg"}` : capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo).capacidade || null;
+    const porLote = capTxt && /por (processo|lote|batelada|ciclo)/i.test(capTxt) ? " por lote" : "";
+    const capacidade = capMatch ? `${capMatch[1]} ${/^l/i.test(capMatch[2]) ? "L" : capMatch[2].toLowerCase() === "ml" ? "mL" : "kg"}${porLote}` : capacidadeEnvaseML(titulo) || extrairFatosDeTexto(titulo).capacidade || null;
     const tensaoTxt = campo(/^tens[ãa]o/);
     const tensao = tensaoTxt ? tensaoTxt.replace(/\s*\|\s*3~/, " trifásico").replace(/\s*\|\s*1~/, " monofásico").trim() : null;
     const contato = campo(/contato com (o )?produto/);
-    const construcao = campo(/^constru[çc][ãa]o|^material/);
+    const construcao = campo(/^constru[çc][ãa]o|^material|^estrutura/);
     const pesoTxt = campo(/^peso/);
     const velTxt = campo(/velocidade/);
     const dimTxt = campo(/^dimens/);
@@ -4860,7 +4861,8 @@
     return [{
       categoria,
       marca: "Cetro",
-      modelo: campo(/^modelo/) || modeloCatalogoCetro(titulo),
+      // Ficha "Modelo: Drageadeira Semiautomática" é descrição, não código.
+      modelo: (campo(/^modelo/) && /\d/.test(campo(/^modelo/)) ? campo(/^modelo/) : null) || modeloCatalogoCetro(titulo),
       potencia_kw: potWNum ? potWNum / 1e3 : potKwMatch ? parseNumeroBR(potKwMatch[1]) : null,
       potencia_cv: potCvMatch ? parseNumeroBR(potCvMatch[1]) : null,
       tensao,
