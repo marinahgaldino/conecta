@@ -4844,7 +4844,8 @@
     const potWNum = potW && /\bW\b/i.test(potW) && !/kW/i.test(potW) ? parseNumeroBR(potW.replace(/\s*W.*$/i, "")) : null;
     const potKwMatch = potW && potW.match(/([\d.,]+)\s*kW/i);
     const potCvMatch = potW && potW.match(/([\d.,]+)\s*(cv|hp)/i);
-    const capTxt = campo(/^capacidade/);
+    // "Capacidade interna", "Volume do reservatório", "Carga máxima suportada".
+    const capTxt = campo(/^capacidade/) || campo(/^volume/) || campo(/^carga m[áa]xima/);
     const capMatch = capTxt && capTxt.match(/([\d.,]+)\s*(litros?|l\b|kg|ml)/i);
     const porLote = capTxt && /por (processo|lote|batelada|ciclo)/i.test(capTxt) ? " por lote" : "";
     const porHora = capTxt && /\/\s*h\b|por hora/i.test(capTxt) ? "/h" : "";
@@ -4852,7 +4853,9 @@
     const tensaoTxt = campo(/^tens[ãa]o/);
     const tensao = tensaoTxt ? tensaoTxt.replace(/\s*\|\s*3~/, " trifásico").replace(/\s*\|\s*1~/, " monofásico").trim() : null;
     const contato = campo(/contato com (o )?produto/);
-    const construcao = campo(/^constru[çc][ãa]o|^material|^estrutura/);
+    const tipoInox = campo(/^tipo de a[çc]o/);
+    const construcao = campo(/^constru[çc][ãa]o|^material|^estrutura/) || (tipoInox ? `Aço Inox ${tipoInox}` : null);
+    const produtividade = campo(/^produtividade/);
     const pesoTxt = campo(/^peso/);
     const velTxt = campo(/velocidade/);
     const dimTxt = campo(/^dimens/);
@@ -4875,7 +4878,7 @@
       capacidade,
       material: material ? (/316/.test(material) ? "Aço Inox 316L" : /inox|304/i.test(material) ? "Aço Inox" : material) : null,
       localizacao: null,
-      detalhes: [pressaoTxt ? `Pressão: ${pressaoTxt}` : null, campo(/^est[áa]gios/) ? `Estágios: ${campo(/^est[áa]gios/)}` : null, contato ? `Contato com produto: ${contato}` : null, construcao ? `${/^material/.test(Object.keys(ficha).find((k) => ficha[k] === construcao) || "") ? "Material" : "Estrutura"}: ${construcao.replace(/^estrutura\s+(em\s+)?/i, "")}` : null, campo(/^material das v[áa]lvulas/) ? `Válvulas: ${campo(/^material das v[áa]lvulas/)}` : null, velTxt ? `Velocidade: ${velTxt}` : null, dimTxt ? `Dimensões: ${dimTxt}` : null, pesoTxt ? `Peso: ${pesoTxt}` : null].filter(Boolean).join("; ") || null,
+      detalhes: [pressaoTxt ? `Pressão: ${pressaoTxt}` : null, campo(/^est[áa]gios/) ? `Estágios: ${campo(/^est[áa]gios/)}` : null, contato ? `Contato com produto: ${contato}` : null, construcao ? `${/^material/.test(Object.keys(ficha).find((k) => ficha[k] === construcao) || "") ? "Material" : "Estrutura"}: ${construcao.replace(/^estrutura\s+(em\s+)?/i, "")}` : null, campo(/^material das v[áa]lvulas/) ? `Válvulas: ${campo(/^material das v[áa]lvulas/)}` : null, velTxt ? `Velocidade: ${velTxt}` : null, produtividade ? `Produtividade: ${produtividade}` : null, dimTxt ? `Dimensões: ${dimTxt}` : null, pesoTxt ? `Peso: ${pesoTxt}` : null].filter(Boolean).join("; ") || null,
       _tituloOriginal: titulo,
       preco,
       moeda: "BRL",
