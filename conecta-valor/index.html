@@ -2762,6 +2762,17 @@
     if ("potencia_cv" in r) r.potencia_cv = valorNumericoPlausivel(r.potencia_cv, r.categoria, POTENCIA_CV_RANGES);
     if ("potenciaCv" in r) r.potenciaCv = valorNumericoPlausivel(r.potenciaCv, r.categoria, POTENCIA_CV_RANGES);
     if ("pesoKg" in r) r.pesoKg = valorNumericoPlausivel(r.pesoKg, r.categoria, PESO_KG_RANGES);
+    // 30/10 (Marina): em envase, capacidade é produção (garrafas/h,
+    // unidades/min, L/h). Volume/dose ("5 a 100 mL", "500 mL", "1 kg") é o
+    // que a máquina envasa -> vai para detalhes como "Volume de envase".
+    if (r.capacidade && /^(Envasadora|Envasadora Monobloco|Envasadora Tribloco|Linha de Envase|Dosadora)$/i.test(r.categoria || "")) {
+      const ehTaxa = /\/\s*(h|min|hora|minuto)\b|\bpor\s+(hora|minuto)\b|\b(bpm|bph|gph|uph)\b/i.test(r.capacidade);
+      if (!ehTaxa) {
+        const nota = `Volume de envase: ${r.capacidade}`;
+        if (!/volume de envase/i.test(r.detalhes || "")) r.detalhes = [nota, r.detalhes].filter(Boolean).join("; ");
+        r.capacidade = null;
+      }
+    }
     return r;
   }
   function gerarChaveDedup(row) {
