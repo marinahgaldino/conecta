@@ -195,7 +195,7 @@
     { id: "envasadora_monobloco", nome: "Envasadora Monobloco", grupo: "envase_embalagem", synonyms: ["enchedora monobloco"], re: /\bmonoblo(co|ck)\b/i, comum: false, ativo: true },
     { id: "tampadora", nome: "Tampadora", grupo: "envase_embalagem", synonyms: ["capping machine", "máquina de tampar"], re: /capping machine|tampador/i, comum: false, ativo: true },
     { id: "lavadora_industrial", nome: "Lavadora Industrial", grupo: "processo_alimenticio", synonyms: ["lavadora de garrafas", "washing machine"], re: /washing machine|lavadora(?! de piso)(?! varredora)/i, comum: false, ativo: true },
-    { id: "linha_envase", nome: "Linha de Envase", grupo: "envase_embalagem", synonyms: ["linha de engarrafamento", "linha completa de envase", "bottling line"], re: /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie/i, comum: true, ativo: true },
+    { id: "linha_envase", nome: "Linha de Envase", grupo: "envase_embalagem", synonyms: ["linha de engarrafamento", "linha completa de envase", "bottling line"], re: /filling (machine|line)|bottling|filler\b|linha de engarrafamento|linha.{0,20}envase|pet bottles?|garrafas? pet|aseptic.{0,15}(still|gas)|enchedora|abf[uü]lllinie|linha (?:de|para) (?:produ[çc][ãa]o|enchimento) (?:de |para )?(?:bebidas|[áa]gua|sucos?|refrigerantes?|cervejas?)|linha de enchimento/i, comum: true, ativo: true },
     // 05/10: moinho / triturador / granulador (linha de moagem de pneus,
     // plástico, grãos) - antes não tinha categoria e o anúncio pegava a de
     // uma peça da descrição (Painel Elétrico, Caminhão).
@@ -207,7 +207,7 @@
     { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
     { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing|encartuch|encartonador|flow\s?pack/i, comum: false, ativo: true },
     { id: "sucata", nome: "Sucata", grupo: "outros", synonyms: ["sucata metálica", "sucata industrial"], re: /sucata/i, comum: true, ativo: true },
-    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|\bsleeve\b|t[úu]nel (de )?(vapor|encolhimento|termoencolh)/i, comum: true, ativo: true },
+    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|etiquetag|etiquetadora|\blabell?er\b|etikettier|\bsleeve\b|t[úu]nel (de )?(vapor|encolhimento|termoencolh)/i, comum: true, ativo: true },
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
     { id: "envasadora", nome: "Envasadora", grupo: "envase_embalagem", synonyms: ["envasadora automática"], re: /envasador(a)?\b|m[\u00E1a]quina\s+(?:autom[\u00E1a]tica\s+|semi-?autom[\u00E1a]tica\s+)?(?:de|para)\s+(?:envase|envasar|enchimento)\b|equipamento\s+(?:semi-?autom[\u00E1a]tico\s+)?de\s+enchimento/i, comum: false, ativo: true },
     { id: "transformador", nome: "Transformador", grupo: "eletrica_automacao", synonyms: ["trafo", "transformador de potência"], re: /transformador|\btrafo\b/i, comum: true, ativo: true },
@@ -1553,7 +1553,7 @@
   function extrairAno(texto) {
     var anoAtual = new Date().getFullYear();
     // Ignora número seguido de unidade (ex: "2000 mm", "1980 kg") - não é ano.
-    var candidatos = (texto.match(/\b(19[5-9]\d|20[0-4]\d)\b(?!\s*(?:mm|cm|km|kgf|kg|kva|kw|kv|cv|hp|rpm|bar|psi|m[²³23]|mca|ton|t\/h|l\/h|l\/min|unid|un\b|pe[çc]as|garrafas|litros|[mltvw]\b|°|ºc|%))/gi) || []);
+    var candidatos = (texto.match(/\b(19[5-9]\d|20[0-4]\d)\b(?!\s*(?:mm|cm|km|kgf|kg|kva|kw|kv|cv|hp|rpm|bar|psi|m[²³23]|mca|ton|t\/h|l\/h|l\/min|unid|un\b|pe[çc]as|garrafas|frascos|latas|unidades|embalagens|bph|bpm|uph|upm|cpm|fph|fpm|litros|[mltvw]\b|°|ºc|%))/gi) || []);
     if (!candidatos.length) candidatos = null;
     if (!candidatos || !candidatos.length) return null;
     var ano = parseInt(candidatos[candidatos.length - 1], 10);
@@ -1661,8 +1661,42 @@
     }
     return null;
   }
+  // 13/11 (Marina): capacidade de produção é sempre por HORA (nossa
+  // referência). bph = garrafas/frascos/unidades por hora; o que vier por
+  // minuto (bpm, /min, por minuto) é multiplicado por 60.
+  var RE_UNID_CONTAVEL = "(?:garrafas?|frascos?|unidades?|unid\\.?|un\\.?|latas?|pe[\u00e7c]as?|pcs|embalagens?|potes?|copos?|sach[\u00eae]s?|sacos?|saquinhos?|caixas?|ampolas?|tubos?|bisnagas?|pacotes?|doses?|bombons?|balas?|tampas?|r[\u00f3o]tulos?|bolsas?|blisters?|cartuchos?|envelopes?)";
+  var RE_CAPACIDADE_HORA = new RegExp("(?<![\\w.,])(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)\\s*(?:(bph|uph|fph|cph|pph)|(bpm|upm|fpm|cpm)|" + RE_UNID_CONTAVEL + "\\s*(?:\\/|por|p\\/)\\s*(?:(h|hr|hrs|horas?)|(min|minutos?)))(?![a-z\u00e0-\u00fa])", "i");
+  function extrairCapacidadePorHora(texto) {
+    if (!texto) return null;
+    var m = String(texto).match(RE_CAPACIDADE_HORA);
+    if (!m) return null;
+    var n = parseNumeroBR(m[1]);
+    if (!isFinite(n) || n <= 0) return null;
+    var porMinuto = !!(m[3] || m[5]);
+    var valor = Math.round(porMinuto ? n * 60 : n);
+    return { valor: valor, confianca: 0.9, original: m[0].trim(), porMinuto: porMinuto };
+  }
+  function formatarCapacidadeHora(valor) {
+    return Number(valor).toLocaleString("pt-BR") + " un/h";
+  }
+  // Tanque rodoviário (tanque de caminhão, semirreboque/carreta tanque) é
+  // categoria Tanque, aplicação "Rodoviário" - não compara com tanque de
+  // indústria (13/11). "Caminhão tanque" (o veículo) continua Caminhão.
+  var RE_TANQUE_RODOVIARIO = /tanque\s*rodovi|tanque.{0,25}(de|para|p\/)\s*caminh|tanque.{0,25}(semi[\s-]?reboque|carreta|bitrem|rodotrem)|(semi[\s-]?reboque|carreta|reboque|bitrem|rodotrem).{0,25}tanque|\bauto[\s-]?tanque/i;
+  function ehTanqueRodoviario(texto) {
+    var t = String(texto || "");
+    return RE_TANQUE_RODOVIARIO.test(t) && !/^\s*caminh[\u00e3a]o\b/i.test(t);
+  }
+  function chaveCategoriaBase(catId, aplicacao) {
+    return catId === "tanque" && /rodovi/i.test(aplicacao || "") ? "tanque|rodoviario" : catId;
+  }
+
   function extrairCampo(campo, texto, cursorPorUnidade) {
     cursorPorUnidade = cursorPorUnidade || {};
+    if (campo === "capacidade_bph" || campo === "capacidade_bph_ou_kgh") {
+      var rHora = extrairCapacidadePorHora(texto);
+      if (rHora) return { valor: rHora.valor, confianca: rHora.confianca, original: rHora.original };
+    }
     if (campo === "combustivel" || campo === "tipo_combustivel" || campo === "tipo_energia") return extrairCombustivel(texto);
     if (campo === "potencia_cv") return extrairPotenciaConvertida(texto, "CV", cursorPorUnidade);
     if (campo === "potencia_kw") return extrairPotenciaConvertida(texto, "kW", cursorPorUnidade);
@@ -1775,6 +1809,7 @@
       return { category_id: null, category_name: null, confidence: 0, atributos: {}, confiancas: {}, atributos_originais: {}, setor_ids: setorIds, setor_nomes: nomesDosSetores(setorIds), alertas: [], erros: [], campos_para_revisao: [] };
     }
     var extracao = extrairAtributosPorSchema(texto, classe.category_id);
+    if (classe.category_id === "tanque" && ehTanqueRodoviario(texto)) extracao.atributos.aplicacao = "Rodovi\u00e1rio";
     var validacao = validarAtributos(classe.category_id, extracao.atributos);
     var faltando = schemaCamposObrigatoriosFaltando(classe.category_id, extracao.atributos);
     var LIMIAR_CONFIANCA = 0.85;
@@ -1854,6 +1889,7 @@
   function classificarFuncaoTexto(t) {
     if (!t) return { category_id: null, category_name: null, confidence: 0 };
     if (/lote de m[\xE1a]quinas|lote de equipamentos/i.test(t)) return { category_id: null, category_name: null, confidence: 0 };
+    if (ehTanqueRodoviario(t)) return { category_id: "tanque", category_name: "Tanque", confidence: 0.9 };
     for (const c of CATEGORIA_CANONICA) {
       if (!c.ativo) continue;
       if (!c.re.test(t)) continue;
@@ -2544,8 +2580,8 @@
     // "bph" (bottles per hour / garrafas por hora) e "pes"/"pés" (comum em
     // compressores de ar, ex: "240 pés") - unidades reais que apareciam sem
     // reconhecimento nenhum, ficando presas dentro do texto do modelo.
-    const bphMatch = t.match(/([\d.,]+)\s*bph\b/i);
-    if (bphMatch) return `${bphMatch[1]} bph`;
+    const porHora = extrairCapacidadePorHora(t);
+    if (porHora) return formatarCapacidadeHora(porHora.valor);
     const pesMatch = t.match(/([\d.,]+)\s*p[ée]s\b/i);
     if (pesMatch) return `${pesMatch[1]} p\xE9s`;
     const rotulo = t.match(/Capacidade(?:\s+(?:m[áa]xima|estimada|nominal|de produ[çc][ãa]o))?:?\s*\n?\s*(at[ée]\s*)?([\d.,]+)\s*(kg|l|litros?|ton(?:elada)?s?|m[³3]|unidades?|frascos?|garrafas?|sach[êe]s?|pe[çc]as?|t)\s*[\/\s]*(?:por\s*)?(h(?:ora)?|min(?:uto)?)?/i);
@@ -2765,6 +2801,16 @@
     // 30/10 (Marina): em envase, capacidade é produção (garrafas/h,
     // unidades/min, L/h). Volume/dose ("5 a 100 mL", "500 mL", "1 kg") é o
     // que a máquina envasa -> vai para detalhes como "Volume de envase".
+    // 13/11: produção sempre por hora ("30 bpm" -> "1.800 un/h").
+    if (r.capacidade) {
+      const porHora = extrairCapacidadePorHora(r.capacidade);
+      if (porHora) {
+        const padrao = formatarCapacidadeHora(porHora.valor);
+        if (porHora.porMinuto && !/capacidade informada/i.test(r.detalhes || "")) r.detalhes = [`Capacidade informada: ${porHora.original}`, r.detalhes].filter(Boolean).join("; ");
+        r.capacidade = padrao;
+      }
+    }
+    if (/^tanque$/i.test(r.categoria || "") && ehTanqueRodoviario([r._tituloOriginal, r.modelo, r.detalhes, r.tipo].filter(Boolean).join(" "))) r.aplicacao = "Rodovi\u00e1rio";
     if (r.capacidade && /^(Envasadora|Envasadora Monobloco|Envasadora Tribloco|Linha de Envase|Dosadora)$/i.test(r.categoria || "")) {
       const ehTaxa = /\/\s*(h|min|hora|minuto)\b|\bpor\s+(hora|minuto)\b|\b(bpm|bph|gph|uph)\b/i.test(r.capacidade);
       if (!ehTaxa) {
@@ -5370,6 +5416,12 @@
     const conhecida = [...MARCAS_CONHECIDAS].sort((a, b) => b.length - a.length).find((m) => l.toLowerCase().startsWith(m.toLowerCase()) && !/^[a-z]/.test(l.slice(m.length)));
     if (conhecida) return { marca: normalizarMarca(conhecida), modelo: l.slice(conhecida.length).trim() || null };
     const tokens = l.split(/\s+/);
+    // 13/11: "COMPLETE PET BOTTLES ... FILLING LINE KRONES" - 1ª palavra
+    // genérica; usa a marca conhecida que aparece na linha.
+    if (/^(complete|completa|completo|full|used|usad[ao]|nova?|new|linha|line|m[áa]quina|machine)$/i.test(tokens[0] || "")) {
+      const dentro = [...MARCAS_CONHECIDAS].sort((a, b) => b.length - a.length).find((m) => new RegExp(`(^|[^\\w])${m.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\w]|$)`, "i").test(l));
+      if (dentro) return { marca: normalizarMarca(dentro), modelo: null };
+    }
     if (tokens[1] === "/" && tokens[2]) return { marca: `${tokens[0]} / ${tokens[2]}`, modelo: tokens.slice(3).join(" ") || null };
     if (tokens.length > 1 && /^[A-Za-zÀ-ÿ][A-Za-zÀ-ÿ&.'-]+$/.test(tokens[0]) && !PALAVRAS_TITULO_ANUNCIO.test(tokens[0])) {
       return { marca: tokens[0], modelo: tokens.slice(1).join(" ") };
@@ -5486,16 +5538,35 @@
       const cabecalho = linhas.slice(idxKm + 1, idxPreco).filter((l) => !/^comerciante verificado$/i.test(l)).map(limparPrecoEmbutido).filter(Boolean);
       const designacao = cabecalho[0] || null;
       const linhaModelo = cabecalho[1] || null;
-      const descricao = linhas.slice(idxPreco + 1).find((l) => /^(Condi[çc][ãa]o|Ano de fabrico|quilometragem|pot[êe]ncia):/i.test(l)) || "";
+      let descricao = linhas.slice(idxPreco + 1).find((l) => /^(Condi[çc][ãa]o|Ano de fabrico|quilometragem|pot[êe]ncia):/i.test(l)) || "";
+      // 13/11: card expandido ("Dados técnicos" / "Condição" / "usado" /
+      // "Ano de fabrico" / "1996" / "Descrição" / texto em várias linhas).
+      if (!descricao) {
+        const resto = linhas.slice(idxPreco + 1);
+        const valorApos = (re) => {
+          const i = resto.findIndex((l) => re.test(l));
+          return i >= 0 && resto[i + 1] ? resto[i + 1] : null;
+        };
+        const condExp = valorApos(/^Condi[çc][ãa]o$/i);
+        const anoExp = valorApos(/^Ano de fabrico$/i);
+        const iDesc = resto.findIndex((l) => /^Descri[çc][ãa]o$/i.test(l));
+        const iFim = resto.findIndex((l, i) => i > iDesc && /^(Fornecedor|O an[úu]ncio foi traduzido|Nota: Registe-se)/i.test(l));
+        const corpo = iDesc >= 0 ? resto.slice(iDesc + 1, iFim > iDesc ? iFim : void 0).join(" ") : "";
+        descricao = [condExp && `Condi\xE7\xE3o: ${condExp}`, anoExp && /^\d{4}$/.test(anoExp) && `Ano de fabrico: ${anoExp}`, corpo].filter(Boolean).join(", ");
+      }
       const { marca: marcaLinha, modelo: modeloLinha } = separarMarcaModeloMachineseeker(linhaModelo);
       const fabricanteRelMatch = descricao.match(/Fabricante:\s*([A-ZÀ-Ÿ][\wÀ-ÿ]*)/);
-      const anoRelMatch = descricao.match(/Ano de fabrico:\s*(\d{4})/i);
+      const anoRelMatch = descricao.match(/Ano de fabrico:\s*(\d{4})/i) || descricao.match(/Ano de (?:fabrica[çc][ãa]o|produ[çc][ãa]o)\s*:\s*(\d{4})/i);
       const condRelMatch = descricao.match(/Condi[çc][ãa]o:\s*([^,\n]+)/i);
       const potenciaRelMatch = descricao.match(/pot[êe]ncia(?: instalada)?:\s*([\d.,]+)\s*kW/i);
       const textoCurto = [designacao, linhaModelo, descricao.slice(0, 400)].filter(Boolean).join(" ");
       // começo da descrição (cortado em fim de palavra: "400 l|itros" virava ". l")
       const descricaoInicio = descricao.length > 600 ? descricao.slice(0, 600).replace(/\s+\S*$/, "") : descricao;
       const fatosRel = extrairFatosDeTexto([linhaModelo, descricaoInicio].filter(Boolean).join(" "));
+      // 13/11: produção por hora - primeiro a do título ("KHS 16000 bph"),
+      // depois a do rótulo "Capacidade (da linha):", depois o resto.
+      const rotuloCapRel = descricao.match(/Capacidade(?: da (?:linha|m[áa]quina(?: de enchimento)?))?\s*:?\s*([^\n]{0,80})/i);
+      const capHoraRel = extrairCapacidadePorHora([designacao, linhaModelo].filter(Boolean).join(" ")) || (rotuloCapRel ? extrairCapacidadePorHora(rotuloCapRel[1]) : null);
       const veiculoRel = dadosVeiculoMachineseeker(descricao);
       itens.push({
         categoria: classificarCategoriaGenerica(designacao || "") || classificarCategoriaGenerica(linhaModelo || "") || classificarCategoriaGenerica(textoCurto),
@@ -5503,7 +5574,7 @@
         modelo: modeloLinha || null,
         _tituloOriginal: [designacao, linhaModelo].filter(Boolean).join(" "),
         ano: anoRelMatch ? anoRelMatch[1] : veiculoRel.anoMatricula,
-        capacidade: fatosRel.capacidade,
+        capacidade: capHoraRel ? formatarCapacidadeHora(capHoraRel.valor) : fatosRel.capacidade,
         potencia_kw: potenciaRelMatch ? parseNumeroBR(potenciaRelMatch[1]) : null,
         atributos_normalizados: limparAtributosExtras({ quilometragem_km: veiculoRel.quilometragem_km, capacidade_carga_ton: veiculoRel.capacidade_carga_ton }),
         detalhes: null,
@@ -6330,7 +6401,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       if (it.capacidade && e.capacidade && normalizarCodigo(it.capacidade) !== normalizarCodigo(e.capacidade)) return false;
       return true;
     };
-    const mesmos = (existentesPorCategoria[catId] || []).filter((e) => normalizarCodigo(normalizarMarca(e.marca)) === marca && normalizarCodigo(e.modelo).includes(modelo) && mesmaEspec(e));
+    const mesmos = (existentesPorCategoria[chaveCategoriaBase(catId, it.aplicacao)] || []).filter((e) => normalizarCodigo(normalizarMarca(e.marca)) === marca && normalizarCodigo(e.modelo).includes(modelo) && mesmaEspec(e));
     if (mesmos.length === 0) return null;
     const maisProximo = mesmos.reduce((melhor, e) => Math.abs(e.precoBRL - precoNovo) < Math.abs(melhor.precoBRL - precoNovo) ? e : melhor);
     const diff = Math.abs(maisProximo.precoBRL - precoNovo) / Math.max(maisProximo.precoBRL, 1);
@@ -6367,7 +6438,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       motivos.push("pre\xE7o irris\xF3rio para m\xE1quina-ferramenta (abaixo de R$ 1.000)");
       status = "bloqueado";
     } else {
-      const mediana = catId && medianasPorCategoria ? medianasPorCategoria[catId] : null;
+      const mediana = catId && medianasPorCategoria ? medianasPorCategoria[chaveCategoriaBase(catId, it.aplicacao)] : null;
       if (mediana && precoBRL < mediana * COLETA_FRACAO_MEDIANA_SUSPEITA) {
         motivos.push(`pre\xE7o suspeito (menos de 10% da mediana da categoria, ${formatBRL(mediana)})`);
         status = "suspeito";
@@ -6435,7 +6506,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     try {
       const catId = item.categoria_id || resolverCategoriaId(item.categoria);
       const params = new URLSearchParams();
-      params.set("select", "preco,moeda,data_observacao,tipo_mercado,estado");
+      params.set("select", "preco,moeda,data_observacao,tipo_mercado,estado,capacidade,atributos_normalizados");
       if (catId) {
         params.set("categoria_id", `eq.${catId}`);
       } else {
@@ -6454,6 +6525,13 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
           ? "or(atributos_normalizados->>combustivel.is.null,atributos_normalizados->>combustivel.eq.Eletricidade)"
           : `atributos_normalizados->>combustivel.eq.${comb}`);
       }
+      // 13/11: tanque rodoviário não compara com tanque de indústria.
+      const textoItemBase = [item.categoria, item.modelo, item.obs, item.descricao, item.aplicacao].filter(Boolean).join(" ");
+      if (catId === "tanque") {
+        condicoes.push(ehTanqueRodoviario(textoItemBase) || /rodovi/i.test(item.aplicacao || "")
+          ? "aplicacao.eq.Rodovi\xE1rio"
+          : "or(aplicacao.is.null,aplicacao.neq.Rodovi\xE1rio)");
+      }
       params.set("and", `(${condicoes.join(",")})`);
       const limiteData = new Date(Date.now() - BASE_PROPRIA_VALIDADE_DIAS * 24 * 60 * 60 * 1e3).toISOString();
       params.set("data_observacao", `gte.${limiteData}`);
@@ -6468,7 +6546,16 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
         buscarCotacoes()
       ]);
       if (!res.ok) return null;
-      const rows = await res.json();
+      let rows = await res.json();
+      // 13/11: capacidade por hora pesa direto no valor - com capacidade
+      // informada, só entram itens de capacidade parecida (metade a dobro).
+      const capItem = (item.atributosExtras && Number(item.atributosExtras.capacidade_bph)) || (extrairCapacidadePorHora([item.capacidade, textoItemBase].filter(Boolean).join(" ")) || {}).valor || null;
+      if (capItem) {
+        rows = (rows || []).filter((r) => {
+          const capRow = (r.atributos_normalizados && Number(r.atributos_normalizados.capacidade_bph)) || (extrairCapacidadePorHora(r.capacidade || "") || {}).valor || null;
+          return capRow && capRow >= capItem * 0.5 && capRow <= capItem * 2;
+        });
+      }
       // Novo só compara com novo; usado (e seminovo, sucata...) com usado (02/10).
       const itemNovo = /^novo$/i.test(String(item.estado || "").trim());
       const obs = (rows || []).map((r) => {
@@ -10200,15 +10287,16 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const client = getSupaClient();
         const ids = [...new Set(items.map((it) => it.categoria_id || resolverCategoriaId(it.categoria)).filter(Boolean))];
         if (client && ids.length > 0) {
-          const { data, error: errMed } = await client.from("observacoes_mercado").select("categoria_id, marca, modelo, potencia_cv, capacidade, preco, moeda, tipo_mercado").in("categoria_id", ids).not("preco", "is", null).limit(5e3);
+          const { data, error: errMed } = await client.from("observacoes_mercado").select("categoria_id, marca, modelo, potencia_cv, capacidade, preco, moeda, tipo_mercado, aplicacao").in("categoria_id", ids).not("preco", "is", null).limit(5e3);
           if (!errMed && data) {
             const porCat = {};
             data.forEach((r) => {
               if (/loca[çc]/i.test(r.tipo_mercado || "")) return;
               const v = converterParaBRL(Number(r.preco), r.moeda, cotacoes);
               if (v === null || isNaN(v) || v < COLETA_PRECO_MINIMO_BRL) return;
-              (porCat[r.categoria_id] = porCat[r.categoria_id] || []).push(v);
-              (existentes[r.categoria_id] = existentes[r.categoria_id] || []).push({ marca: r.marca, modelo: r.modelo, potencia_cv: r.potencia_cv, capacidade: r.capacidade, precoBRL: v });
+              const chave = chaveCategoriaBase(r.categoria_id, r.aplicacao);
+              (porCat[chave] = porCat[chave] || []).push(v);
+              (existentes[chave] = existentes[chave] || []).push({ marca: r.marca, modelo: r.modelo, potencia_cv: r.potencia_cv, capacidade: r.capacidade, precoBRL: v });
             });
             Object.entries(porCat).forEach(([id, lista]) => {
               if (lista.length >= COLETA_MIN_AMOSTRAS_MEDIANA) medianas[id] = medianaNumeros(lista);
@@ -15110,7 +15198,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         onChange: (e) => setCollectorTerm(e.target.value),
         placeholder: "Ex: motor el\xE9trico 30cv, tanque inox 316\u2026"
       }
-    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.lote > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.lote, " lote(s) com v\xE1rias unidades ou itens diversos removido(s) automaticamente (o pre\xE7o \xE9 do lote, n\xE3o de um equipamento)."), removidosSimbolicoColetor.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoColetor.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
+    )), /* @__PURE__ */ React.createElement("div", { className: "submit-row" }, /* @__PURE__ */ React.createElement("button", { type: "button", className: "secondary", onClick: interpretarCollector, disabled: collectorRunning || !collectorTerm.trim() }, collectorRunning ? "Buscando\u2026" : "Buscar s\xF3 esse termo"), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarCollector, disabled: collectorRunning }, collectorRunning ? "Salvando\u2026" : `Confirmar e salvar ${collectorResults.filter((x) => x._incluir !== false).length} ${collectorResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => setCollectorResults([]) }, "descartar")))), collectorError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, collectorError), removidosSimbolicoColetor.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoColetor.lote > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.lote, " lote(s) com v\xE1rias unidades ou itens diversos removido(s) automaticamente (o pre\xE7o \xE9 do lote, n\xE3o de um equipamento)."), removidosSimbolicoColetor.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoColetor.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoColetor.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), collectorSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint", style: { marginTop: "1rem" } }, collectorSavedCount), collectorResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, collectorResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria, /rodovi/i.test(it.aplicacao || "") ? "(rodovi\xE1rio)" : null].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.tipo_mercado || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setCollectorResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
@@ -15147,7 +15235,7 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
     ), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("button", { type: "button", className: "primary", onClick: confirmarSalvarManualCollector, disabled: manualRunning }, manualRunning ? "Salvando\u2026" : `Confirmar e salvar ${manualResults.filter((x) => x._incluir !== false).length} ${manualResults.filter((x) => x._incluir !== false).length === 1 ? "item" : "itens"} no banco`), /* @__PURE__ */ React.createElement("button", { type: "button", className: "link-btn", style: { marginLeft: "0.9rem" }, onClick: () => {
       setManualResults([]);
       setManualText("");
-    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoManual.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoManual.lote > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.lote, " lote(s) com v\xE1rias unidades ou itens diversos removido(s) automaticamente (o pre\xE7o \xE9 do lote, n\xE3o de um equipamento)."), removidosSimbolicoManual.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoManual.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
+    } }, "descartar")))), manualError && /* @__PURE__ */ React.createElement("div", { className: "error-box" }, manualError), manualDescartados > 0 && manualResults.length > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualDescartados, " an\xFAncio(s) descartado(s) automaticamente \u2014 sem pot\xEAncia, capacidade, tens\xE3o ou outro dado t\xE9cnico junto."), removidosSimbolicoManual.simbolico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.simbolico, " an\xFAncio(s) com pre\xE7o simb\xF3lico (R$ 1,00 ou 999.999\u2026) removido(s) automaticamente."), removidosSimbolicoManual.domestico > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.domestico, " item(ns) dom\xE9stico(s) ou de cozinha (pia, tanque de lavanderia\u2026) removido(s) automaticamente."), removidosSimbolicoManual.lote > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.lote, " lote(s) com v\xE1rias unidades ou itens diversos removido(s) automaticamente (o pre\xE7o \xE9 do lote, n\xE3o de um equipamento)."), removidosSimbolicoManual.aluguel > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.aluguel, " an\xFAncio(s) de aluguel/loca\xE7\xE3o removido(s) automaticamente (aluguel n\xE3o entra na base)."), removidosSimbolicoManual.peca > 0 && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, removidosSimbolicoManual.peca, " pe\xE7a(s)/acess\xF3rio(s) avulso(s) removido(s) automaticamente (s\xF3 equipamento entra na base)."), manualSavedCount !== null && /* @__PURE__ */ React.createElement("p", { className: "field-hint" }, manualSavedCount), manualResults.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "batch-table", style: { marginTop: "1rem" } }, manualResults.map((it, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "batch-row" }, /* @__PURE__ */ React.createElement("div", { className: "batch-row-main batch-row-main-removable" }, /* @__PURE__ */ React.createElement("span", { className: "batch-idx" }, i + 1), /* @__PURE__ */ React.createElement("span", { className: "batch-nome" }, [it.marca, it.modelo, it.categoria, /rodovi/i.test(it.aplicacao || "") ? "(rodovi\xE1rio)" : null].filter(Boolean).join(" "), it.capacidade ? ` \xB7 ${it.capacidade}` : ""), /* @__PURE__ */ React.createElement("span", { className: "batch-status" }, it.localizacao || "\u2014"), /* @__PURE__ */ React.createElement("span", { className: "batch-faixa" }, formatMoeda(it.preco, it.moeda)), /* @__PURE__ */ React.createElement(QualidadeColetaBadge, { it, onToggle: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? { ...x, _incluir: !(x._incluir !== false) } : x)), onTrocarCategoria: () => setManualResults((prev) => prev.map((x, idx) => idx === i ? aplicarCategoriaSugerida(x) : x)) }), /* @__PURE__ */ React.createElement(
       "button",
       {
         type: "button",
