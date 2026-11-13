@@ -6322,7 +6322,15 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     if (ini > 0 && /^\d/.test(tokens[iCod]) && /^[A-ZÀ-Ÿ]/.test(tokens[ini - 1])) ini -= 1;
     let fim = iCod + 1;
     while (fim < tokens.length && fim - ini < 3 && ehCodigo(tokens[fim]) && tokens[fim].length <= 12) fim++;
-    return tokens.slice(ini, fim).join(" ");
+    // 13/11: sufixo numérico de 2 dígitos depois de um código ("SV 08") faz
+    // parte do modelo ("VHK 032 / SV 08").
+    if (fim < tokens.length && fim - ini === 3 && ehNum2ComNome(tokens[fim], fim)) fim++;
+    const escRe = (x) => x.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    return tokens.slice(ini, fim).reduce((acc, tk, i, arr) => {
+      if (i === 0) return tk;
+      const comBarra = new RegExp(`${escRe(arr[i - 1])}\\s*\\/\\s*${escRe(tk)}`, "i").test(original);
+      return `${acc}${comBarra ? " / " : " "}${tk}`;
+    }, "");
   }
   // Estado (02/10): "Novo" só quando o anúncio diz (novo, sem uso, zero,
   // lacrado...). Seminovo e todo o resto = "Usado".
