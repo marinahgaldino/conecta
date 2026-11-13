@@ -5408,6 +5408,49 @@
   }
   // Machineseeker: a linha do card junta fabricante + modelo, às vezes
   // grudados ("Atlas CopcoGA90+", "Alfa LavalAlfaCubic").
+  // 13/11 (Marina): linha completa precisa de mais detalhe - formatos e a
+  // composição (cada máquina com marca, modelo, ano e capacidade por hora).
+  // Texto antirrobô do Machineseeker ("Gbjcewv Trlo E Nn Nfyjw") sai.
+  var RE_LIXO_ANTIROBO = /\bG[a-z]{1,9}(?:\s+[A-Za-z]{1,9}){1,6}?\s+Nf[a-z]{2,6}\b/g;
+  function normalizarTaxasNoTexto(t) {
+    return String(t || "").replace(new RegExp(RE_CAPACIDADE_HORA.source, "gi"), (trecho) => {
+      const r = extrairCapacidadePorHora(trecho);
+      return r ? formatarCapacidadeHora(r.valor) : trecho;
+    });
+  }
+  function componentesDaLinha(linhasDescricao) {
+    const linhas = (linhasDescricao || []).map((l) => String(l).replace(RE_LIXO_ANTIROBO, "").replace(/\s+/g, " ").trim()).filter(Boolean);
+    const componentes = [];
+    linhas.forEach((l) => {
+      const m = l.match(/^(?:(\d+(?:\s*[\u2013-]\s*\d+)?)\s*[.)]|[-\u2013\u2022*])\s+(.+)$/);
+      if (!m) return;
+      const desc = normalizarTaxasNoTexto(m[2]).replace(/\s*[,;.]\s*$/, "").slice(0, 180);
+      const marca = [...MARCAS_CONHECIDAS].sort((a, b) => b.length - a.length).find((mc) => new RegExp(`(^|[^\\w])${mc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\w]|$)`, "i").test(desc));
+      const anoM = desc.match(/\bano\s*:?\s*((?:19|20)\d{2})\b/i) || desc.match(/(?:^|[\s,(])((?:19[5-9]|20[0-4])\d)(?=\s*[,;)])/);
+      const cap = extrairCapacidadePorHora(desc);
+      componentes.push(limparAtributosExtras({
+        item: m[1] ? m[1].replace(/\s+/g, "") : "-",
+        descricao: desc,
+        marca: marca ? normalizarMarca(marca) : null,
+        ano: anoM ? Number(anoM[1]) : null,
+        capacidade_bph: cap ? cap.valor : null
+      }));
+    });
+    const textoTodo = linhas.join(" ");
+    const formatosM = textoTodo.match(/(?:formatos?|recipientes?)[^:]{0,40}:\s*([^.]{3,80}?(?:\d+[.,]?\d*\s*(?:L|l|ml|mL)\b[^.]{0,40}))(?:\.|$)/i);
+    const anos = componentes.map((c) => c.ano).filter(Boolean);
+    const partes = [];
+    if (formatosM) partes.push(`Formatos: ${formatosM[1].trim()}`);
+    // "0,5L x 36.000 garrafas/hora" (capacidade por formato de embalagem)
+    const porFormato = linhas.map((l) => l.match(/^(\d+(?:[.,]\d+)?)\s*(L|l|ml|mL)\s*[x\u00d7:=-]\s*(.+)$/)).filter(Boolean).map((m) => {
+      const c = extrairCapacidadePorHora(m[3]);
+      return c ? `${m[1]} ${m[2].toLowerCase() === "l" ? "L" : "mL"} = ${formatarCapacidadeHora(c.valor)}` : null;
+    }).filter(Boolean);
+    if (porFormato.length) partes.push(`Produ\xE7\xE3o por formato: ${porFormato.join("; ")}`);
+    if (anos.length > 1) partes.push(`Anos dos equipamentos: ${Math.min(...anos)}${Math.max(...anos) !== Math.min(...anos) ? `\u2013${Math.max(...anos)}` : ""}`);
+    if (componentes.length) partes.push(`Composi\xE7\xE3o: ${componentes.map((c) => (c.item !== "-" ? `${c.item}) ` : "") + c.descricao).join("; ")}`);
+    return { componentes, detalhes: partes.join(" | ") || null, anoPrincipal: anos[0] || null };
+  }
   function separarMarcaModeloMachineseeker(linha) {
     // título cortado pelo site ("...EuromixMTP 3-Seiten-...") - a última
     // palavra incompleta sai
@@ -5538,6 +5581,7 @@
       const cabecalho = linhas.slice(idxKm + 1, idxPreco).filter((l) => !/^comerciante verificado$/i.test(l)).map(limparPrecoEmbutido).filter(Boolean);
       const designacao = cabecalho[0] || null;
       const linhaModelo = cabecalho[1] || null;
+      let corpoLinhasExp = [];
       let descricao = linhas.slice(idxPreco + 1).find((l) => /^(Condi[çc][ãa]o|Ano de fabrico|quilometragem|pot[êe]ncia):/i.test(l)) || "";
       // 13/11: card expandido ("Dados técnicos" / "Condição" / "usado" /
       // "Ano de fabrico" / "1996" / "Descrição" / texto em várias linhas).
@@ -5551,7 +5595,8 @@
         const anoExp = valorApos(/^Ano de fabrico$/i);
         const iDesc = resto.findIndex((l) => /^Descri[çc][ãa]o$/i.test(l));
         const iFim = resto.findIndex((l, i) => i > iDesc && /^(Fornecedor|O an[úu]ncio foi traduzido|Nota: Registe-se)/i.test(l));
-        const corpo = iDesc >= 0 ? resto.slice(iDesc + 1, iFim > iDesc ? iFim : void 0).join(" ") : "";
+        corpoLinhasExp = iDesc >= 0 ? resto.slice(iDesc + 1, iFim > iDesc ? iFim : void 0) : [];
+        const corpo = corpoLinhasExp.join(" ");
         descricao = [condExp && `Condi\xE7\xE3o: ${condExp}`, anoExp && /^\d{4}$/.test(anoExp) && `Ano de fabrico: ${anoExp}`, corpo].filter(Boolean).join(", ");
       }
       const { marca: marcaLinha, modelo: modeloLinha } = separarMarcaModeloMachineseeker(linhaModelo);
@@ -5568,16 +5613,21 @@
       const rotuloCapRel = descricao.match(/Capacidade(?: da (?:linha|m[áa]quina(?: de enchimento)?))?\s*:?\s*([^\n]{0,80})/i);
       const capHoraRel = extrairCapacidadePorHora([designacao, linhaModelo].filter(Boolean).join(" ")) || (rotuloCapRel ? extrairCapacidadePorHora(rotuloCapRel[1]) : null);
       const veiculoRel = dadosVeiculoMachineseeker(descricao);
+      const categoriaRel = classificarCategoriaGenerica(designacao || "") || classificarCategoriaGenerica(linhaModelo || "") || classificarCategoriaGenerica(textoCurto);
+      // Linha completa: composição máquina a máquina nos detalhes/atributos.
+      const linhaComp = componentesDaLinha(corpoLinhasExp);
+      const ehLinhaCompleta = /linha|f[áa]brica|planta/i.test(categoriaRel || "") || linhaComp.componentes.length >= 3;
+      const extrasLinha = ehLinhaCompleta && linhaComp.componentes.length ? { componentes: linhaComp.componentes, num_maquinas_linha: linhaComp.componentes.length } : {};
       itens.push({
-        categoria: classificarCategoriaGenerica(designacao || "") || classificarCategoriaGenerica(linhaModelo || "") || classificarCategoriaGenerica(textoCurto),
+        categoria: categoriaRel,
         marca: marcaLinha || (fabricanteRelMatch ? fabricanteRelMatch[1].trim() : null),
         modelo: modeloLinha || null,
         _tituloOriginal: [designacao, linhaModelo].filter(Boolean).join(" "),
-        ano: anoRelMatch ? anoRelMatch[1] : veiculoRel.anoMatricula,
+        ano: anoRelMatch ? anoRelMatch[1] : ehLinhaCompleta && linhaComp.anoPrincipal ? linhaComp.anoPrincipal : veiculoRel.anoMatricula,
         capacidade: capHoraRel ? formatarCapacidadeHora(capHoraRel.valor) : fatosRel.capacidade,
         potencia_kw: potenciaRelMatch ? parseNumeroBR(potenciaRelMatch[1]) : null,
-        atributos_normalizados: limparAtributosExtras({ quilometragem_km: veiculoRel.quilometragem_km, capacidade_carga_ton: veiculoRel.capacidade_carga_ton }),
-        detalhes: null,
+        atributos_normalizados: limparAtributosExtras({ quilometragem_km: veiculoRel.quilometragem_km, capacidade_carga_ton: veiculoRel.capacidade_carga_ton, ...extrasLinha }),
+        detalhes: ehLinhaCompleta ? linhaComp.detalhes : null,
         estado: estadoMachineseeker(condRelMatch ? condRelMatch[1] : ""),
         localizacao: localizacaoRel,
         preco: parsePrecoBR(linhas[idxPreco].replace(/^€\s*/, "")),
