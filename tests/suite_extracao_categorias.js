@@ -123,10 +123,10 @@ var SUITE_TESTES = [
   { categoria_esperada: "cromatografo_hplc", texto: "Bomba para HPLC Waters 510", campos_esperados: {} },
   { categoria_esperada: "equipamento_laboratorio", texto: "Lavadora Automatizada de Tiras Bio-Tek ELx405", campos_esperados: {} },
   { categoria_esperada: "forno_industrial", texto: "Estufa industrial a gás", campos_esperados: {} },
-  // 13/11: tanque rodoviário = Tanque + aplicação Rodoviário; produção sempre por hora (por minuto x60); "bph" não é ano
-  { categoria_esperada: "tanque", texto: "Tanque rodoviário inox 30.000 litros 3 compartimentos", campos_esperados: {"volume_l": 30000, "aplicacao": "Rodoviário"} },
-  { categoria_esperada: "tanque", texto: "Tanque de caminhão inox isotérmico 15.000 L", campos_esperados: {"volume_l": 15000, "aplicacao": "Rodoviário"} },
-  { categoria_esperada: "tanque", texto: "Semirreboque tanque inox 40.000 litros", campos_esperados: {"volume_l": 40000, "aplicacao": "Rodoviário"} },
+  // 13/11: tanque rodoviário = Tanque + tipo_tanque Rodoviário; produção sempre por hora (por minuto x60); "bph" não é ano
+  { categoria_esperada: "tanque", texto: "Tanque rodoviário inox 30.000 litros 3 compartimentos", campos_esperados: {"volume_l": 30000, "tipo_tanque": "Rodoviário"} },
+  { categoria_esperada: "tanque", texto: "Tanque de caminhão inox isotérmico 15.000 L", campos_esperados: {"volume_l": 15000, "tipo_tanque": "Rodoviário"} },
+  { categoria_esperada: "tanque", texto: "Semirreboque tanque inox 40.000 litros", campos_esperados: {"volume_l": 40000, "tipo_tanque": "Rodoviário"} },
   { categoria_esperada: "caminhao", texto: "Caminhão tanque Mercedes 1620 ano 2010", campos_esperados: {"ano": 2010} },
   { categoria_esperada: "envasadora", texto: "Envasadora 2000 bph", campos_esperados: {"capacidade_bph": 2000, "ano": undefined} },
   { categoria_esperada: "envasadora", texto: "Envasadora 30 bpm", campos_esperados: {"capacidade_bph": 1800} },
