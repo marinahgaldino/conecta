@@ -10382,7 +10382,13 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const modeloCurto = extrairModeloCurto(enr.modelo, enr.marca, enr.categoria);
         // Adjetivos e texto de anúncio não vão pra base (pedido dela, 02/10):
         // fica só o modelo curto; specs já foram extraídas em atributos.
-        const it = enr.modelo !== modeloCurto ? { ...enr, modelo: modeloCurto } : enr;
+        let it = enr.modelo !== modeloCurto ? { ...enr, modelo: modeloCurto } : enr;
+        // 14/11: modelo que era título ("Tanque Inox 2007 Liess") vira só o
+        // modelo (ou vazio) e o ano que estava nele vai para a coluna ano.
+        if (enr.modelo !== modeloCurto && (it.categoria_id || resolverCategoriaId(it.categoria)) && !String(it.ano || "").trim()) {
+          const anoTitulo = extrairAno(String(enr.modelo || "").replace(modeloCurto || "\0", " "));
+          if (anoTitulo) it = { ...it, ano: String(anoTitulo.valor) };
+        }
         const q = classificarQualidadeColeta(it, medianas, cotacoes);
         const dup = q.status !== "bloqueado" ? verificarDuplicadoNaBase(it, existentes, cotacoes) : null;
         if (dup && dup.tipo === "duplicado") {
