@@ -5443,7 +5443,7 @@
   // 13/11 (Marina): linha completa precisa de mais detalhe - formatos e a
   // composição (cada máquina com marca, modelo, ano e capacidade por hora).
   // Texto antirrobô do Machineseeker ("Gbjcewv Trlo E Nn Nfyjw") sai.
-  var RE_LIXO_ANTIROBO = /\bG[a-z]{1,9}(?:\s+[A-Za-z]{1,9}){1,6}?\s+Nf[a-z]{2,6}\b/g;
+  var RE_LIXO_ANTIROBO = /\bG[a-z]{1,10}(?:\s+[A-Za-z]{1,12}){1,7}?\s+[A-Za-z]*y[a-z]{0,3}d\b/g;
   function normalizarTaxasNoTexto(t) {
     return String(t || "").replace(new RegExp(RE_CAPACIDADE_HORA.source, "gi"), (trecho) => {
       const r = extrairCapacidadePorHora(trecho);
@@ -5491,7 +5491,7 @@
     const pares = [];
     // Formato em linha: "chave: valor, chave: valor, ..." até o texto livre.
     for (const seg of String(descricao || "").split(/,\s*(?!\d)/)) {
-      const m = seg.trim().match(/^([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s\/.-]{1,45}):\s*(.+)$/);
+      const m = seg.trim().match(/^([A-Za-zÀ-ÿ][a-zà-ÿ\s\/.-]{1,45}):\s*(.+)$/);
       if (!m) break;
       pares.push([m[1].trim(), m[2].trim()]);
     }
@@ -5658,7 +5658,11 @@
       const designacao = cabecalho[0] || null;
       const linhaModelo = cabecalho[1] || null;
       let corpoLinhasExp = [];
-      let descricao = linhas.slice(idxPreco + 1).find((l) => /^(Condi[çc][ãa]o|Ano de fabrico|quilometragem|pot[êe]ncia):/i.test(l)) || "";
+      const dadosTecLinhas = [];
+      // 14/11: com bloco "Dados técnicos" é sempre o card aberto (a descrição
+      // dele também pode ter "Condição: ..." numa linha).
+      const temDadosTecnicos = linhas.slice(idxPreco + 1).some((l) => /^Dados t[ée]cnicos$/i.test(l));
+      let descricao = temDadosTecnicos ? "" : linhas.slice(idxPreco + 1).find((l) => /^(Condi[çc][ãa]o|Ano de fabrico|quilometragem|pot[êe]ncia):/i.test(l)) || "";
       // 13/11: card expandido ("Dados técnicos" / "Condição" / "usado" /
       // "Ano de fabrico" / "1996" / "Descrição" / texto em várias linhas).
       if (!descricao) {
@@ -5667,6 +5671,17 @@
           const i = resto.findIndex((l) => re.test(l));
           return i >= 0 && resto[i + 1] ? resto[i + 1] : null;
         };
+        // 14/11: bloco "Dados técnicos" = pares rótulo/valor em linhas
+        // seguidas ("Horas de funcionamento" / "2.346 h") até "Descrição".
+        const iDados = resto.findIndex((l) => /^Dados t[ée]cnicos$/i.test(l));
+        const iDescDados = resto.findIndex((l, i) => i > iDados && /^Descri[çc][ãa]o$/i.test(l));
+        if (iDados >= 0) {
+          const bloco = resto.slice(iDados + 1, iDescDados > iDados ? iDescDados : void 0);
+          for (let k = 0; k + 1 < bloco.length; k += 2) {
+            if (/:/.test(bloco[k]) || bloco[k].length > 45) break;
+            dadosTecLinhas.push(`${bloco[k]}: ${bloco[k + 1]}`);
+          }
+        }
         const condExp = valorApos(/^Condi[çc][ãa]o$/i);
         const anoExp = valorApos(/^Ano de fabrico$/i);
         const iDesc = resto.findIndex((l) => /^Descri[çc][ãa]o$/i.test(l));
@@ -5694,7 +5709,7 @@
       const linhaComp = componentesDaLinha(corpoLinhasExp);
       const ehLinhaCompleta = /linha|f[áa]brica|planta/i.test(categoriaRel || "") || linhaComp.componentes.length >= 3;
       const extrasLinha = ehLinhaCompleta && linhaComp.componentes.length ? { componentes: linhaComp.componentes, num_maquinas_linha: linhaComp.componentes.length } : {};
-      const ficha = fichaTecnicaMachineseeker(descricao, corpoLinhasExp);
+      const ficha = fichaTecnicaMachineseeker(descricao, [...dadosTecLinhas, ...corpoLinhasExp]);
       // 14/11 (Marina): "Tipo: SBO 16/16 S1" na descrição é o modelo.
       const linhaTipo = corpoLinhasExp.map((l) => String(l).trim().match(/^(?:Tipo|Modelo)\s*:\s*(.{2,40})$/i)).find(Boolean);
       const modeloTipo = linhaTipo ? linhaTipo[1].replace(RE_LIXO_ANTIROBO, "").replace(/[.;]\s*$/, "").trim() : null;
