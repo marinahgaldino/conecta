@@ -5486,7 +5486,7 @@
   // 14/11: dados técnicos do anúncio (horas, capacidade de carga, elevação,
   // combustível, mastro, peso, estações de sopro...) vão para detalhes e
   // atributos - antes só marca/modelo/preço/ano entravam.
-  var MS_CHAVE_IGNORAR = /^(condi[çc][ãa]o(?: t[ée]cnica)?|funcionalidade|estado(?: t[ée]cnico| dos pneus.*)?|n[úu]mero (?:da m[áa]quina\/ve[íi]culo|do chassis?|de chassis)|descri[çc][ãa]o|fabricante|ano de fabrico|ano de fabrica[çc][ãa]o|tipo de transmiss[ãa]o|classe de velocidade|nota|ve[íi]culo|matr[íi]cula|primeira matr[íi]cula)$/i;
+  var MS_CHAVE_IGNORAR = /^(tipo|modelo|condi[çc][ãa]o(?: t[ée]cnica)?|funcionalidade|estado(?: t[ée]cnico| dos pneus.*)?|n[úu]mero (?:da m[áa]quina\/ve[íi]culo|do chassis?|de chassis)|descri[çc][ãa]o|fabricante|ano de fabrico|ano de fabrica[çc][ãa]o|tipo de transmiss[ãa]o|classe de velocidade|nota|ve[íi]culo|matr[íi]cula|primeira matr[íi]cula)$/i;
   function fichaTecnicaMachineseeker(descricao, linhasExp) {
     const pares = [];
     // Formato em linha: "chave: valor, chave: valor, ..." até o texto livre.
@@ -5695,13 +5695,16 @@
       const ehLinhaCompleta = /linha|f[áa]brica|planta/i.test(categoriaRel || "") || linhaComp.componentes.length >= 3;
       const extrasLinha = ehLinhaCompleta && linhaComp.componentes.length ? { componentes: linhaComp.componentes, num_maquinas_linha: linhaComp.componentes.length } : {};
       const ficha = fichaTecnicaMachineseeker(descricao, corpoLinhasExp);
+      // 14/11 (Marina): "Tipo: SBO 16/16 S1" na descrição é o modelo.
+      const linhaTipo = corpoLinhasExp.map((l) => String(l).trim().match(/^(?:Tipo|Modelo)\s*:\s*(.{2,40})$/i)).find(Boolean);
+      const modeloTipo = linhaTipo ? linhaTipo[1].replace(RE_LIXO_ANTIROBO, "").replace(/[.;]\s*$/, "").trim() : null;
       if (/empilhadeira/i.test(categoriaRel || "") && RE_EMPILHADEIRA_LATERAL.test(textoCurto + " " + descricao)) ficha.atributos.tipo_empilhadeira = "Lateral";
       const capProducaoDesc = extrairCapacidadePorHora(descricao);
       const capCarga = ficha.atributos.capacidade_carga_kg ? `${Number(ficha.atributos.capacidade_carga_kg).toLocaleString("pt-BR")} kg` : null;
       itens.push({
         categoria: categoriaRel,
         marca: marcaLinha || (fabricanteRelMatch ? fabricanteRelMatch[1].trim() : null),
-        modelo: modeloLinha || null,
+        modelo: modeloTipo || modeloLinha || null,
         _tituloOriginal: [designacao, linhaModelo].filter(Boolean).join(" "),
         ano: anoRelMatch ? anoRelMatch[1] : ehLinhaCompleta && linhaComp.anoPrincipal ? linhaComp.anoPrincipal : veiculoRel.anoMatricula,
         capacidade: capHoraRel ? formatarCapacidadeHora(capHoraRel.valor) : capProducaoDesc ? formatarCapacidadeHora(capProducaoDesc.valor) : capCarga || fatosRel.capacidade,
