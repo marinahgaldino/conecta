@@ -135,4 +135,9 @@ var SUITE_TESTES = [
   { categoria_esperada: "rotuladora", texto: "Rotuladora 50 un/min", campos_esperados: {"capacidade_bph": 3000} },
   { categoria_esperada: "rotuladora", texto: "Máquina de etiquetagem Krones", campos_esperados: {"fabricante": "Krones"} },
   { categoria_esperada: "linha_envase", texto: "Linha de produção de bebidas KHS 16000 bph", campos_esperados: {"capacidade_bph": 16000} },
+  // 14/11: empilhadeira lateral (sideloader) = Empilhadeira + tipo_empilhadeira Lateral
+  { categoria_esperada: "empilhadeira", texto: "Sideloader Baumann HX 40/14/60 ST capacidade de carga 4.000 kg", campos_esperados: {"tipo_empilhadeira": "Lateral"} },
+  { categoria_esperada: "empilhadeira", texto: "Carregador lateral elétrico Jumbo 5.000 kg", campos_esperados: {"tipo_empilhadeira": "Lateral"} },
+  { categoria_esperada: "empilhadeira", texto: "Empilhadeira Toyota 2.500 kg a gás", campos_esperados: {"tipo_empilhadeira": undefined} },
+  { categoria_esperada: "sopradora", texto: "Máquina de sopro para moldagem de garrafas PET 4.000 gph", campos_esperados: {"capacidade_bph": 4000} },
 ];
