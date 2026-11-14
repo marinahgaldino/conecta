@@ -140,4 +140,8 @@ var SUITE_TESTES = [
   { categoria_esperada: "empilhadeira", texto: "Carregador lateral elétrico Jumbo 5.000 kg", campos_esperados: {"tipo_empilhadeira": "Lateral"} },
   { categoria_esperada: "empilhadeira", texto: "Empilhadeira Toyota 2.500 kg a gás", campos_esperados: {"tipo_empilhadeira": undefined} },
   { categoria_esperada: "sopradora", texto: "Máquina de sopro para moldagem de garrafas PET 4.000 gph", campos_esperados: {"capacidade_bph": 4000} },
+  // 14/11: equipamento de queijaria (pré-prensa, tanque de coagulação) não é Prensa nem Tanque comum
+  { categoria_esperada: "equipamento_queijaria", texto: "Prepress vat and moulding station Tetra Pak Tebel 12000 l", campos_esperados: {"volume_l": 12000} },
+  { categoria_esperada: "equipamento_queijaria", texto: "Tanque de coagulação para queijo 5.000 litros inox", campos_esperados: {"volume_l": 5000} },
+  { categoria_esperada: "prensa", texto: "Prensa hidráulica 100 toneladas", campos_esperados: {} },
 ];

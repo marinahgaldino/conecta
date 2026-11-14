@@ -144,6 +144,7 @@
     { id: "resfriador_leite", nome: "Resfriador de Leite", grupo: "processo_alimenticio", synonyms: ["resfriador de leite a granel", "tanque resfriador de leite"], re: /resfriador(?:a)?\s*(?:de\s*)?leite|resfriador\s*industrial/i, comum: false, ativo: true },
     { id: "caldeira", nome: "Caldeira", grupo: "utilidades", synonyms: ["caldeira a vapor", "caldeira a lenha", "caldeira a cavaco", "gerador de vapor"], re: /caldeira/i, comum: true, ativo: true },
     { id: "centrifuga_desnatadeira", nome: "Centrífuga/Desnatadeira", grupo: "processo_alimenticio", synonyms: ["desnatadeira", "clarificadora de leite", "centrífuga de leite"], re: /centr[íi]fuga|desnatadeira|clarificadora/i, excludeRe: /bomba/i, comum: false, ativo: true },
+    { id: "equipamento_queijaria", nome: "Equipamento de Queijaria", grupo: "processo_alimenticio", synonyms: ["tanque de coagulação", "pré-prensa de queijo", "prensa de queijo", "queijomatic"], re: /queijo|queijaria|coalhada|pr[ée][\s-]?prensa(?:gem)?|prepress|tanque de coagula[çc][ãa]o|queijomatic|enformadeira/i, comum: false, ativo: true },
     { id: "homogeneizador", nome: "Homogeneizador", grupo: "processo_alimenticio", synonyms: ["homogeneizador de leite", "homogeneizador de alta pressão"], re: /homogeneizador|homogenizador/i, comum: false, ativo: true },
     { id: "trocador_calor", nome: "Trocador de Calor", grupo: "mecanica", synonyms: ["trocador de placas", "placas de troca térmica", "heat exchanger"], re: /trocador de (calor|placas)|placas? de troca t[ée]rmica/i, comum: false, ativo: true },
     { id: "torre_resfriamento", nome: "Torre de Resfriamento", grupo: "utilidades", synonyms: ["cooling tower", "torre de arrefecimento"], re: /torre de resfriamento/i, comum: false, ativo: true },
@@ -152,7 +153,7 @@
     { id: "fresadora", nome: "Fresadora", grupo: "maquinas_ferramenta", synonyms: ["fresadora universal", "fresadora ferramenteira"], re: /fresadora|fresa\b(?!dor)/i, comum: true, ativo: true },
     { id: "maquina_solda", nome: "Máquina de Solda", grupo: "maquinas_ferramenta", synonyms: ["máquina de solda MIG/MAG", "soldadora", "welding machine"], re: /m[áa]quina de solda(r)?\b|soldadora\b|welding machine/i, comum: false, ativo: true },
     { id: "peca_acessorio_maquina", nome: "Peça/Acessório para Máquina", grupo: "maquinas_ferramenta", synonyms: ["peça de reposição", "acessório de máquina"], excludeRe: /^\s*(torno|fresadora|fresa|centro de|prensa|ret[íi]fica|retificadora|dobradeira)\b/i, re: /\b(pe[çc]a|pe[çc]as|acess[óo]rio|kit de reposi[çc][ãa]o|placa para|placa de identifica[çc][ãa]o|suporte para|castanha|morsa|correia para|rolamento para|engrenagem para|v[íi]dea para)\b/i, requireRe: /torno|fresa|retificadora?/i, comum: false, ativo: true },
-    { id: "prensa", nome: "Prensa", grupo: "maquinas_ferramenta", synonyms: ["prensa hidráulica", "prensa excêntrica"], re: /prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i, excludeRe: /imprensa|filtro|dobradeira/i, comum: true, ativo: true },
+    { id: "prensa", nome: "Prensa", grupo: "maquinas_ferramenta", synonyms: ["prensa hidráulica", "prensa excêntrica"], re: /prensa\s*(hidr[áa]ulica|excêntrica|exc[êe]ntrica)?/i, excludeRe: /imprensa|filtro|dobradeira|queijo|coalhada|prepress|pr[ée][\s-]?prensa/i, comum: true, ativo: true },
     { id: "guilhotina", nome: "Guilhotina", grupo: "maquinas_ferramenta", synonyms: ["guilhotina hidráulica", "tesoura guilhotina"], re: /guilhotina/i, comum: true, ativo: true },
     { id: "paletizador", nome: "Paletizador", grupo: "envase_embalagem", synonyms: ["paletizadora automática", "palletizer"], re: /paletizador(a)?/i, comum: false, ativo: true },
     { id: "empilhadeira", nome: "Empilhadeira", grupo: "movimentacao", synonyms: ["empilhadeira a gás", "empilhadeira elétrica", "empilhador", "forklift"], re: /empilhadeira|\bempilhador\b|side[\s-]?loader|carregador lateral/i, comum: true, ativo: true },
@@ -1227,6 +1228,17 @@
         { campo: "num_placas_ou_area", tipo: "max", valor: 500, nivel: "suave", mensagem: "acima de 500 placas é incomum, confira" },
       ],
       valuation: { obrigatorios: ["num_placas_ou_area", "material", "fabricante", "estado"], complementares: ["pressao_projeto_bar", "temperatura_projeto_c", "ano"] }
+    },
+    "equipamento_queijaria": {
+      campos_obrigatorios: ["volume_l", "fabricante"],
+      campos_opcionais: ["modelo", "material", "ano", "peso_kg"],
+      campos_normalizados: {"volume_l": "L"},
+      campos_ocr_prioritarios: ["volume_l", "fabricante"],
+      faixas_esperadas: {"volume_l": [10, 100000]},
+      validacoes: [
+        { campo: "volume_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "volume precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["volume_l", "fabricante", "estado"], complementares: ["modelo", "material", "ano"] }
     },
     "tanque": {
       campos_obrigatorios: ["volume_l", "material"],
@@ -5486,7 +5498,7 @@
   // 14/11: dados técnicos do anúncio (horas, capacidade de carga, elevação,
   // combustível, mastro, peso, estações de sopro...) vão para detalhes e
   // atributos - antes só marca/modelo/preço/ano entravam.
-  var MS_CHAVE_IGNORAR = /^(tipo|modelo|condi[çc][ãa]o(?: t[ée]cnica)?|funcionalidade|estado(?: t[ée]cnico| dos pneus.*)?|n[úu]mero (?:da m[áa]quina\/ve[íi]culo|do chassis?|de chassis)|descri[çc][ãa]o|fabricante|ano de fabrico|ano de fabrica[çc][ãa]o|tipo de transmiss[ãa]o|classe de velocidade|nota|ve[íi]culo|matr[íi]cula|primeira matr[íi]cula)$/i;
+  var MS_CHAVE_IGNORAR = /^(tipo|modelo|condi[çc][ãa]o(?: t[ée]cnica)?|funcionalidade|estado(?: t[ée]cnico| dos pneus.*)?|n[úu]mero (?:da m[áa]quina\/ve[íi]culo|do chassis?|de chassis)|descri[çc][ãa]o|fabricante|ano de fabrico|ano de fabrica[çc][ãa]o|tipo de transmiss[ãa]o|tipo de corrente de entrada|classe de velocidade|nota|ve[íi]culo|matr[íi]cula|primeira matr[íi]cula)$/i;
   function fichaTecnicaMachineseeker(descricao, linhasExp) {
     const pares = [];
     // Formato em linha: "chave: valor, chave: valor, ..." até o texto livre.
@@ -5527,7 +5539,10 @@
     });
     return { atributos, detalhes: partes.length ? partes.join("; ") : null };
   }
-  function separarMarcaModeloMachineseeker(linha) {
+  function separarMarcaModeloMachineseeker(linhaOriginal) {
+    // 14/11: o site cola o tipo no modelo ("FIDAM HomogenizatorPOLOPAK 4",
+    // "Tetra PakTebelPrepress VAT") - separa minúscula seguida de maiúscula.
+    const linha = String(linhaOriginal || "").replace(/([a-zà-ÿ]{2})([A-ZÀ-Ÿ])/g, "$1 $2");
     // título cortado pelo site ("...EuromixMTP 3-Seiten-...") - a última
     // palavra incompleta sai
     const l = String(linha || "").trim().replace(/\s+\S*(?:\.\.\.|\u2026)$/, "").trim();
@@ -6466,7 +6481,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     // Número de 2 dígitos só vale logo depois de um nome ("GA 37", "Accord 40").
     // Número solto de 1 dígito nunca é modelo (costuma ser quantidade).
     const ehCod = (tk) => /\d/.test(tk) && (/[A-Za-zÀ-ÿ]/.test(tk) || /\d[\/-]\d/.test(tk) || /^\d{3,}$/.test(tk));
-    const ehNum2ComNome = (tk, i) => (/^\d{2}$/.test(tk) && i > 0 && /^[A-ZÀ-Ÿ]/.test(tokens[i - 1])) || (/^\d$/.test(tk) && i > 0 && /^[A-Z]{2,4}$/.test(tokens[i - 1]) && !/^(CV|HP|KW|KVA|PCS|UN|UND|KG|BAR|MM|CM|LT|NR|IP|AC|DC)$/.test(tokens[i - 1]));
+    const ehNum2ComNome = (tk, i) => (/^\d{2}$/.test(tk) && i > 0 && /^[A-ZÀ-Ÿ]/.test(tokens[i - 1])) || (/^\d$/.test(tk) && i > 0 && /^[A-Z]{2,10}$/.test(tokens[i - 1]) && !/^(CV|HP|KW|KVA|PCS|UN|UND|KG|BAR|MM|CM|LT|NR|IP|AC|DC)$/.test(tokens[i - 1]));
     const ehCodigo = (tk) => ehCod(tk) || /^[A-Z]{2,4}$/.test(tk);
     const iCod = tokens.findIndex((tk, i) => ehCod(tk) || ehNum2ComNome(tk, i));
     // Sem nenhum número não é modelo (mesma regra de limparModeloAposExtracao,
