@@ -190,6 +190,7 @@
     { id: "jateamento", nome: "Jateamento", grupo: "instrumentos_utilidades", synonyms: ["jato de granalha", "cabine de jateamento", "shot blasting"], re: /jato de areia|jato de granalha|granalha|jateamento/i, comum: true, ativo: true },
     { id: "torno", nome: "Torno", grupo: "maquinas_ferramenta", synonyms: ["torno mecânico", "torno CNC", "torno universal"], re: /torno\b/i, comum: true, ativo: true },
     { id: "dobradeira", nome: "Dobradeira", grupo: "maquinas_ferramenta", synonyms: ["dobradeira hidráulica", "dobradeira CNC"], re: /m[áa]quina de dobrar|dobradeira\b/i, comum: false, ativo: true },
+    { id: "linha_processamento", nome: "Linha de Processamento", grupo: "processo_alimenticio", synonyms: ["linha de pasteurização", "linha UHT", "linha de processo de leite"], re: /linha (?:completa )?(?:de|para) (?:pasteuriza[çc][ãa]o|processamento|processo|uht|esteriliza[çc][ãa]o|concentra[çc][ãa]o|evapora[çc][ãa]o)|instala[çc][ãa]o (?:de|para) (?:pasteuriza[çc][ãa]o|uht)|linha (?:completa )?uht|\buht line|pasteuri[sz]ation line/i, comum: false, ativo: true },
     { id: "pasteurizador", nome: "Pasteurizador", grupo: "processo_alimenticio", synonyms: ["pasteurizador HTST", "pasteurizador de placas", "pasteurizador tubular", "HTST"], re: /pasteurizador/i, comum: false, ativo: true },
     { id: "carbonatador", nome: "Carbonatador", grupo: "processo_alimenticio", synonyms: ["carbonatador de bebidas"], re: /carbonat/i, comum: false, ativo: true },
     { id: "envasadora_tribloco", nome: "Envasadora Tribloco", grupo: "envase_embalagem", synonyms: ["monobloco tribloco", "enchedora tribloco"], re: /\btriblo(co|ck)\b/i, comum: false, ativo: true },
@@ -370,6 +371,17 @@
       validacoes: [
       ],
       valuation: { obrigatorios: ["capacidade_l", "fabricante", "estado"], complementares: ["modelo", "ano", "horas_uso"] }
+    },
+    "linha_processamento": {
+      campos_obrigatorios: ["capacidade_lh", "processo"],
+      campos_opcionais: ["fabricante", "ano", "num_maquinas_linha", "material"],
+      campos_normalizados: {"capacidade_lh": "L/h"},
+      campos_ocr_prioritarios: ["capacidade_lh", "processo", "fabricante"],
+      faixas_esperadas: {"capacidade_lh": [100, 500000]},
+      validacoes: [
+        { campo: "capacidade_lh", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
+      ],
+      valuation: { obrigatorios: ["capacidade_lh", "processo", "estado"], complementares: ["fabricante", "ano", "num_maquinas_linha"] }
     },
     "pasteurizador": {
       campos_obrigatorios: ["capacidade_lh", "tipo", "fabricante"],
@@ -1711,11 +1723,52 @@
     return (it && it.atributos_normalizados && it.atributos_normalizados.tipo_empilhadeira) || (it && it.tipo_empilhadeira) || null;
   }
   function subtipoDe(it) {
-    return tipoTanqueDe(it) || tipoEmpilhadeiraDe(it);
+    return tipoTanqueDe(it) || tipoEmpilhadeiraDe(it) || (it && it.atributos_normalizados && it.atributos_normalizados.processo) || null;
+  }
+  // 15/11: linha de processamento (pasteurização, UHT...) é categoria própria,
+  // comparada pelo processo e pela capacidade em L/h.
+  var RE_LINHA_PROCESSO = /linha (?:completa )?(?:de|para) (?:pasteuriza[çc][ãa]o|processamento|processo|uht|esteriliza[çc][ãa]o|concentra[çc][ãa]o|evapora[çc][ãa]o)|instala[çc][ãa]o (?:de|para) (?:pasteuriza[çc][ãa]o|uht)|linha (?:completa )?uht|\buht line|pasteuri[sz]ation line/i;
+  function processoDaLinha(texto) {
+    const t = String(texto || "");
+    if (/\buht\b|ultra[\s-]?alta temperatura/i.test(t)) return "UHT";
+    if (/esteriliza/i.test(t)) return "Esteriliza\xE7\xE3o";
+    if (/pasteuriza/i.test(t)) return "Pasteuriza\xE7\xE3o";
+    if (/concentra|evapora/i.test(t)) return "Concentra\xE7\xE3o/Evapora\xE7\xE3o";
+    return null;
+  }
+  // Capacidade por hora com unidade: un/h (garrafas, peças), L/h ou kg/h.
+  // Por minuto x60; m³/h -> L/h x1000; t/h -> kg/h x1000.
+  function capacidadeTaxaDe(texto) {
+    const t = String(texto || "");
+    const un = extrairCapacidadePorHora(t);
+    if (un) return { valor: un.valor, unidade: "un/h" };
+    const num = "(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)";
+    const tempo = "\\s*(?:\\/|por|p\\/)\\s*(h|hr|horas?|min|minutos?)\\b";
+    let m = t.match(new RegExp(num + "\\s*(l|lt|litros?|m3|m\u00b3|metros c[\u00fau]bicos)" + tempo, "i"));
+    if (m) {
+      let v = parseNumeroBR(m[1]) * (/^m/i.test(m[2]) ? 1e3 : 1);
+      if (/^min/i.test(m[3])) v *= 60;
+      return isFinite(v) && v > 0 ? { valor: Math.round(v), unidade: "L/h" } : null;
+    }
+    m = t.match(new RegExp(num + "\\s*(kg|t|ton|toneladas?)" + tempo, "i"));
+    if (m) {
+      let v = parseNumeroBR(m[1]) * (/^t/i.test(m[2]) ? 1e3 : 1);
+      if (/^min/i.test(m[3])) v *= 60;
+      return isFinite(v) && v > 0 ? { valor: Math.round(v), unidade: "kg/h" } : null;
+    }
+    return null;
+  }
+  function capacidadeTaxaDosAtributos(attrs) {
+    if (!attrs) return null;
+    if (Number(attrs.capacidade_bph) > 0) return { valor: Number(attrs.capacidade_bph), unidade: "un/h" };
+    if (Number(attrs.capacidade_lh) > 0) return { valor: Number(attrs.capacidade_lh), unidade: "L/h" };
+    if (Number(attrs.capacidade_kgh) > 0) return { valor: Number(attrs.capacidade_kgh), unidade: "kg/h" };
+    return null;
   }
   function chaveCategoriaBase(catId, subtipo) {
     if (catId === "tanque" && /rodovi/i.test(subtipo || "")) return "tanque|rodoviario";
     if (catId === "empilhadeira" && /lateral/i.test(subtipo || "")) return "empilhadeira|lateral";
+    if (catId === "linha_processamento" && subtipo) return `linha_processamento|${subtipo}`;
     return catId;
   }
 
@@ -1839,6 +1892,7 @@
     var extracao = extrairAtributosPorSchema(texto, classe.category_id);
     if (classe.category_id === "tanque" && ehTanqueRodoviario(texto)) extracao.atributos.tipo_tanque = "Rodovi\u00e1rio";
     if (classe.category_id === "empilhadeira" && RE_EMPILHADEIRA_LATERAL.test(texto)) extracao.atributos.tipo_empilhadeira = "Lateral";
+    if (classe.category_id === "linha_processamento" && !extracao.atributos.processo && processoDaLinha(texto)) extracao.atributos.processo = processoDaLinha(texto);
     var validacao = validarAtributos(classe.category_id, extracao.atributos);
     var faltando = schemaCamposObrigatoriosFaltando(classe.category_id, extracao.atributos);
     var LIMIAR_CONFIANCA = 0.85;
@@ -1919,6 +1973,7 @@
     if (!t) return { category_id: null, category_name: null, confidence: 0 };
     if (/lote de m[\xE1a]quinas|lote de equipamentos/i.test(t)) return { category_id: null, category_name: null, confidence: 0 };
     if (ehTanqueRodoviario(t)) return { category_id: "tanque", category_name: "Tanque", confidence: 0.9 };
+    if (RE_LINHA_PROCESSO.test(t)) return { category_id: "linha_processamento", category_name: "Linha de Processamento", confidence: 0.9 };
     for (const c of CATEGORIA_CANONICA) {
       if (!c.ativo) continue;
       if (!c.re.test(t)) continue;
@@ -5464,21 +5519,60 @@
   }
   function componentesDaLinha(linhasDescricao) {
     const linhas = (linhasDescricao || []).map((l) => String(l).replace(RE_LIXO_ANTIROBO, "").replace(/\s+/g, " ").trim()).filter(Boolean);
-    const componentes = [];
+    // 15/11: cada máquina numerada leva junto as linhas curtas logo abaixo
+    // dela (Fabricante, Modelo/Tipo, Ano, Capacidade, Potência, pressão...).
+    const brutos = [];
+    let atual = null;
     linhas.forEach((l) => {
       const m = l.match(/^(?:(\d+(?:\s*[\u2013-]\s*\d+)?)\s*[.)]|[-\u2013\u2022*])\s+(.+)$/);
-      if (!m) return;
-      const desc = normalizarTaxasNoTexto(m[2]).replace(/\s*[,;.]\s*$/, "").slice(0, 180);
-      const marca = [...MARCAS_CONHECIDAS].sort((a, b) => b.length - a.length).find((mc) => new RegExp(`(^|[^\\w])${mc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\w]|$)`, "i").test(desc));
-      const anoM = desc.match(/\bano\s*:?\s*((?:19|20)\d{2})\b/i) || desc.match(/(?:^|[\s,(])((?:19[5-9]|20[0-4])\d)(?=\s*[,;)])/);
-      const cap = extrairCapacidadePorHora(desc);
-      componentes.push(limparAtributosExtras({
-        item: m[1] ? m[1].replace(/\s+/g, "") : "-",
-        descricao: desc,
-        marca: marca ? normalizarMarca(marca) : null,
+      if (m) {
+        atual = { item: m[1] ? m[1].replace(/\s+/g, "") : "-", nome: m[2], extras: [] };
+        brutos.push(atual);
+      } else if (atual && l.length <= 100 && /:/.test(l)) atual.extras.push(l);
+      else if (atual && l.length > 100) atual = null;
+    });
+    const valorDe = (extras, re) => {
+      for (const l of extras) {
+        const m = l.match(re);
+        if (m) return m[1].trim();
+      }
+      return null;
+    };
+    const componentes = brutos.map((c) => {
+      const nomeBase = normalizarTaxasNoTexto(c.nome).replace(/\s*[,;.]\s*$/, "");
+      const modeloInline = nomeBase.match(/,?\s*(?:tipo|modelo)\s*:\s*(.+)$/i);
+      const nome = modeloInline ? nomeBase.slice(0, modeloInline.index).trim() : nomeBase;
+      const fabricante = valorDe(c.extras, /^Fabricante\s*:\s*(.+)$/i);
+      const modelo = modeloInline ? modeloInline[1].trim() : valorDe(c.extras, /^(?:Modelo|Tipo)\s*:\s*(.+)$/i);
+      const anoTxt = valorDe(c.extras, /^Ano(?: de (?:fabrica[çc][ãa]o|produ[çc][ãa]o|fabrico))?\s*:\s*(?:\d{1,2}\/)?((?:19|20)\d{2})\b/i);
+      const capTxt = valorDe(c.extras, /^Capacidade\s*:\s*(.+)$/i);
+      const potTxt = valorDe(c.extras, /^Pot[êe]ncia\s*:\s*(.+)$/i);
+      const pressaoTxt = valorDe(c.extras, /^(?:PS|Press[ãa]o de opera[çc][ãa]o(?: \(PS\))?)\s*:\s*(.+)$/i);
+      const tempTxt = valorDe(c.extras, /^(?:TS|Faixa de temperatura(?: \(TS\))?)\s*:\s*(.+)$/i);
+      const textoMarca = [fabricante, nome].filter(Boolean).join(" ");
+      const marca = [...MARCAS_CONHECIDAS].sort((a, b) => b.length - a.length).find((mc) => new RegExp(`(^|[^\\w])${mc.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([^\\w]|$)`, "i").test(textoMarca));
+      const anoM = anoTxt ? [null, anoTxt] : nome.match(/\bano\s*:?\s*((?:19|20)\d{2})\b/i) || nome.match(/(?:^|[\s,(])((?:19[5-9]|20[0-4])\d)(?=\s*[,;)])/);
+      const cap = extrairCapacidadePorHora([nome, capTxt].filter(Boolean).join(" "));
+      const descricao = [
+        nome,
+        fabricante && !nome.toLowerCase().includes(fabricante.toLowerCase()) ? fabricante : null,
+        modelo,
+        anoTxt,
+        capTxt && normalizarTaxasNoTexto(capTxt),
+        potTxt,
+        pressaoTxt && `press\xE3o ${pressaoTxt}`,
+        tempTxt && `temp. ${tempTxt}`
+      ].filter(Boolean).join(" \xB7 ").slice(0, 220);
+      return limparAtributosExtras({
+        item: c.item,
+        descricao,
+        marca: marca ? normalizarMarca(marca) : fabricante || null,
+        modelo: modelo || null,
         ano: anoM ? Number(anoM[1]) : null,
-        capacidade_bph: cap ? cap.valor : null
-      }));
+        capacidade: capTxt ? normalizarTaxasNoTexto(capTxt) : null,
+        capacidade_bph: cap ? cap.valor : null,
+        potencia: potTxt || null
+      });
     });
     const textoTodo = linhas.join(" ");
     const formatosM = textoTodo.match(/(?:formatos?|recipientes?)[^:]{0,40}:\s*([^.]{3,80}?(?:\d+[.,]?\d*\s*(?:L|l|ml|mL)\b[^.]{0,40}))(?:\.|$)/i);
@@ -5493,7 +5587,10 @@
     if (porFormato.length) partes.push(`Produ\xE7\xE3o por formato: ${porFormato.join("; ")}`);
     if (anos.length > 1) partes.push(`Anos dos equipamentos: ${Math.min(...anos)}${Math.max(...anos) !== Math.min(...anos) ? `\u2013${Math.max(...anos)}` : ""}`);
     if (componentes.length) partes.push(`Composi\xE7\xE3o: ${componentes.map((c) => (c.item !== "-" ? `${c.item}) ` : "") + c.descricao).join("; ")}`);
-    return { componentes, detalhes: partes.join(" | ") || null, anoPrincipal: anos[0] || null };
+    // Ano da linha = máquina principal (pasteurizador, enchedora...), senão o 1º ano.
+    const principal = componentes.find((c) => c.ano && /pasteuriz|esteriliz|\buht\b|enchedora|envasadora|tribloc|monobloco|sopradora|evaporador|concentrador/i.test(c.descricao));
+    const inicioComponentes = linhas.findIndex((l) => /^(?:\d+(?:\s*[\u2013-]\s*\d+)?\s*[.)]|[-\u2013\u2022*])\s+/.test(l));
+    return { componentes, detalhes: partes.join(" | ") || null, anoPrincipal: (principal && principal.ano) || anos[0] || null, linhasAntesDosComponentes: inicioComponentes >= 0 ? linhas.slice(0, inicioComponentes) : linhas };
   }
   // 14/11: dados técnicos do anúncio (horas, capacidade de carga, elevação,
   // combustível, mastro, peso, estações de sopro...) vão para detalhes e
@@ -5724,9 +5821,17 @@
       const linhaComp = componentesDaLinha(corpoLinhasExp);
       const ehLinhaCompleta = /linha|f[áa]brica|planta/i.test(categoriaRel || "") || linhaComp.componentes.length >= 3;
       const extrasLinha = ehLinhaCompleta && linhaComp.componentes.length ? { componentes: linhaComp.componentes, num_maquinas_linha: linhaComp.componentes.length } : {};
-      const ficha = fichaTecnicaMachineseeker(descricao, [...dadosTecLinhas, ...corpoLinhasExp]);
+      const linhasFicha = ehLinhaCompleta && linhaComp.componentes.length ? linhaComp.linhasAntesDosComponentes : corpoLinhasExp;
+      const ficha = fichaTecnicaMachineseeker(descricao, [...dadosTecLinhas, ...linhasFicha]);
+      const ehLinhaProcesso = resolverCategoriaId(categoriaRel) === "linha_processamento";
+      if (ehLinhaProcesso) {
+        const proc = processoDaLinha([designacao, textoCurto].join(" "));
+        if (proc) ficha.atributos.processo = proc;
+        const capLinha = capacidadeTaxaDe([designacao, ...linhaComp.linhasAntesDosComponentes].join(" "));
+        if (capLinha && capLinha.unidade === "L/h") ficha.atributos.capacidade_lh = capLinha.valor;
+      }
       // 14/11 (Marina): "Tipo: SBO 16/16 S1" na descrição é o modelo.
-      const linhaTipo = corpoLinhasExp.map((l) => String(l).trim().match(/^(?:Tipo|Modelo)\s*:\s*(.{2,40})$/i)).find(Boolean);
+      const linhaTipo = linhasFicha.map((l) => String(l).trim().match(/^(?:Tipo|Modelo)\s*:\s*(.{2,40})$/i)).find(Boolean);
       const modeloTipo = linhaTipo ? linhaTipo[1].replace(RE_LIXO_ANTIROBO, "").replace(/[.;]\s*$/, "").trim() : null;
       if (/empilhadeira/i.test(categoriaRel || "") && RE_EMPILHADEIRA_LATERAL.test(textoCurto + " " + descricao)) ficha.atributos.tipo_empilhadeira = "Lateral";
       const capProducaoDesc = extrairCapacidadePorHora(descricao);
@@ -5734,9 +5839,11 @@
       itens.push({
         categoria: categoriaRel,
         marca: marcaLinha || (fabricanteRelMatch ? fabricanteRelMatch[1].trim() : null),
-        modelo: modeloTipo || modeloLinha || null,
+        modelo: ehLinhaProcesso ? null : modeloTipo || modeloLinha || null,
         _tituloOriginal: [designacao, linhaModelo].filter(Boolean).join(" "),
-        ano: anoRelMatch ? anoRelMatch[1] : ehLinhaCompleta && linhaComp.anoPrincipal ? linhaComp.anoPrincipal : veiculoRel.anoMatricula,
+        // Linha completa: ano do card ou da máquina principal - nunca o 1º
+        // "Ano de fabricação" que aparece na composição (15/11).
+        ano: ehLinhaCompleta && linhaComp.anoPrincipal ? (descricao.match(/Ano de fabrico:\s*(\d{4})/i) || [])[1] || String(linhaComp.anoPrincipal) : anoRelMatch ? anoRelMatch[1] : veiculoRel.anoMatricula,
         capacidade: capHoraRel ? formatarCapacidadeHora(capHoraRel.valor) : capProducaoDesc ? formatarCapacidadeHora(capProducaoDesc.valor) : capCarga || fatosRel.capacidade,
         potencia_kw: potenciaRelMatch ? parseNumeroBR(potenciaRelMatch[1]) : null,
         atributos_normalizados: limparAtributosExtras({ quilometragem_km: veiculoRel.quilometragem_km, capacidade_carga_ton: veiculoRel.capacidade_carga_ton, ...ficha.atributos, ...extrasLinha }),
@@ -6732,12 +6839,18 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       let rows = await res.json();
       // 13/11: capacidade por hora pesa direto no valor - com capacidade
       // informada, só entram itens de capacidade parecida (metade a dobro).
-      const capItem = (item.atributosExtras && Number(item.atributosExtras.capacidade_bph)) || (extrairCapacidadePorHora([item.capacidade, textoItemBase].filter(Boolean).join(" ")) || {}).valor || null;
+      // 15/11: vale também para L/h e kg/h (pasteurizador, linha de processo,
+      // bombas...), sempre na mesma unidade.
+      const capItem = capacidadeTaxaDosAtributos(item.atributosExtras) || capacidadeTaxaDe([item.capacidade, textoItemBase].filter(Boolean).join(" "));
       if (capItem) {
         rows = (rows || []).filter((r) => {
-          const capRow = (r.atributos_normalizados && Number(r.atributos_normalizados.capacidade_bph)) || (extrairCapacidadePorHora(r.capacidade || "") || {}).valor || null;
-          return capRow && capRow >= capItem * 0.5 && capRow <= capItem * 2;
+          const capRow = capacidadeTaxaDosAtributos(r.atributos_normalizados) || capacidadeTaxaDe(r.capacidade || "");
+          return capRow && capRow.unidade === capItem.unidade && capRow.valor >= capItem.valor * 0.5 && capRow.valor <= capItem.valor * 2;
         });
+      }
+      if (catId === "linha_processamento") {
+        const procItem = (item.atributosExtras && item.atributosExtras.processo) || processoDaLinha(textoItemBase);
+        if (procItem) rows = (rows || []).filter((r) => (r.atributos_normalizados && r.atributos_normalizados.processo) === procItem);
       }
       // Novo só compara com novo; usado (e seminovo, sucata...) com usado (02/10).
       const itemNovo = /^novo$/i.test(String(item.estado || "").trim());
@@ -10470,14 +10583,14 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         const client = getSupaClient();
         const ids = [...new Set(items.map((it) => it.categoria_id || resolverCategoriaId(it.categoria)).filter(Boolean))];
         if (client && ids.length > 0) {
-          const { data, error: errMed } = await client.from("observacoes_mercado").select("categoria_id, marca, modelo, potencia_cv, capacidade, preco, moeda, tipo_mercado, tipo_tanque:atributos_normalizados->>tipo_tanque, tipo_empilhadeira:atributos_normalizados->>tipo_empilhadeira").in("categoria_id", ids).not("preco", "is", null).limit(5e3);
+          const { data, error: errMed } = await client.from("observacoes_mercado").select("categoria_id, marca, modelo, potencia_cv, capacidade, preco, moeda, tipo_mercado, tipo_tanque:atributos_normalizados->>tipo_tanque, tipo_empilhadeira:atributos_normalizados->>tipo_empilhadeira, processo:atributos_normalizados->>processo").in("categoria_id", ids).not("preco", "is", null).limit(5e3);
           if (!errMed && data) {
             const porCat = {};
             data.forEach((r) => {
               if (/loca[çc]/i.test(r.tipo_mercado || "")) return;
               const v = converterParaBRL(Number(r.preco), r.moeda, cotacoes);
               if (v === null || isNaN(v) || v < COLETA_PRECO_MINIMO_BRL) return;
-              const chave = chaveCategoriaBase(r.categoria_id, r.tipo_tanque || r.tipo_empilhadeira);
+              const chave = chaveCategoriaBase(r.categoria_id, r.tipo_tanque || r.tipo_empilhadeira || r.processo);
               (porCat[chave] = porCat[chave] || []).push(v);
               (existentes[chave] = existentes[chave] || []).push({ marca: r.marca, modelo: r.modelo, potencia_cv: r.potencia_cv, capacidade: r.capacidade, precoBRL: v });
             });

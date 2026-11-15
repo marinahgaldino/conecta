@@ -144,4 +144,8 @@ var SUITE_TESTES = [
   { categoria_esperada: "equipamento_queijaria", texto: "Prepress vat and moulding station Tetra Pak Tebel 12000 l", campos_esperados: {"volume_l": 12000} },
   { categoria_esperada: "equipamento_queijaria", texto: "Tanque de coagulação para queijo 5.000 litros inox", campos_esperados: {"volume_l": 5000} },
   { categoria_esperada: "prensa", texto: "Prensa hidráulica 100 toneladas", campos_esperados: {} },
+  // 15/11: linha de processamento (pasteurização/UHT) é categoria própria, com processo e capacidade em L/h
+  { categoria_esperada: "linha_processamento", texto: "Linha de pasteurização para leitelho Alfa Laval Tetra Pak capacidade 25.000 litros/hora", campos_esperados: {"processo": "Pasteurização", "capacidade_lh": 25000} },
+  { categoria_esperada: "linha_processamento", texto: "Linha UHT completa 10.000 L/h", campos_esperados: {} },
+  { categoria_esperada: "pasteurizador", texto: "Pasteurizador de placas 5.000 L/h Alfa Laval", campos_esperados: {"capacidade_lh": 5000} },
 ];
