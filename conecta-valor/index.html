@@ -209,7 +209,9 @@
     { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
     { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing|encartuch|encartonador|flow\s?pack/i, comum: false, ativo: true },
     { id: "sucata", nome: "Sucata", grupo: "outros", synonyms: ["sucata metálica", "sucata industrial"], re: /sucata/i, comum: true, ativo: true },
-    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|etiquetag|etiquetadora|\blabell?er\b|etikettier|\bsleeve\b|t[úu]nel (de )?(vapor|encolhimento|termoencolh)/i, comum: true, ativo: true },
+    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|etiquetag|etiquetadora|\blabell?er\b|etikettier|\bsleeve\b|t[úu]nel (de )?vapor|encolhimento a vapor/i, comum: true, ativo: true },
+    // 16/11: túnel de encolhimento (filme shrink) tem categoria própria; túnel sleeve/vapor continua em Rotuladora.
+    { id: "tunel_encolhimento", nome: "Túnel de Encolhimento", grupo: "envase_embalagem", synonyms: ["túnel de encolhimento", "shrink tunnel", "túnel termoencolhível"], re: /t[úu]nel (de )?(encolhimento|termoencolh)|shrink tunnel|t[úu]nel shrink/i, comum: false, ativo: true },
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
     { id: "envasadora", nome: "Envasadora", grupo: "envase_embalagem", synonyms: ["envasadora automática"], re: /envasador(a)?\b|m[\u00E1a]quina\s+(?:autom[\u00E1a]tica\s+|semi-?autom[\u00E1a]tica\s+)?(?:de|para)\s+(?:envase|envasar|enchimento)\b|equipamento\s+(?:semi-?autom[\u00E1a]tico\s+)?de\s+enchimento/i, comum: false, ativo: true },
     { id: "transformador", nome: "Transformador", grupo: "eletrica_automacao", synonyms: ["trafo", "transformador de potência"], re: /transformador|\btrafo\b/i, comum: true, ativo: true },
@@ -437,6 +439,15 @@
         { campo: "capacidade_l", tipo: "min", valor: 0, nivel: "rigida", mensagem: "capacidade precisa ser maior que zero" },
       ],
       valuation: { obrigatorios: ["capacidade_l", "fabricante", "estado"], complementares: ["modelo", "ano", "tipo_resfriamento"] }
+    },
+    "tunel_encolhimento": {
+      campos_obrigatorios: ["fabricante"],
+      campos_opcionais: ["dimensoes", "potencia_kw", "modelo", "ano"],
+      campos_normalizados: {"potencia_kw": "kW"},
+      campos_ocr_prioritarios: ["fabricante", "modelo", "dimensoes"],
+      faixas_esperadas: {},
+      validacoes: [],
+      valuation: { obrigatorios: ["fabricante", "estado"], complementares: ["dimensoes", "potencia_kw", "modelo", "ano"] }
     },
     "drageadeira": {
       campos_obrigatorios: ["fabricante"],
