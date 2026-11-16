@@ -1751,6 +1751,10 @@
   // Por minuto x60; m³/h -> L/h x1000; t/h -> kg/h x1000.
   function capacidadeTaxaDe(texto) {
     const t = String(texto || "");
+    const kc = t.match(/(\d{1,3}(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*kcal/i);
+    if (kc) { const v = trDeValor(kc[1] + " kcal"); if (v) return { valor: v, unidade: "TR" }; }
+    const trm = t.match(/(?<![\/\d])(\d+(?:[.,]\d+)?)\s+TR\b/);
+    if (trm) { const v = parseNumeroBR(trm[1]); if (v > 0) return { valor: v, unidade: "TR" }; }
     const un = extrairCapacidadePorHora(t);
     if (un) return { valor: un.valor, unidade: "un/h" };
     const num = "(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)";
@@ -1769,13 +1773,89 @@
     }
     return null;
   }
+  function trDeValor(v) {
+    if (v === null || v === undefined || v === "") return null;
+    const s = String(v);
+    const m = s.match(/\d{1,3}(?:\.\d{3})+(?:,\d+)?|\d+(?:[.,]\d+)?/);
+    if (!m) return null;
+    let n = parseNumeroBR(m[0]);
+    if (!isFinite(n) || n <= 0) return null;
+    if (/kcal/i.test(s) || n > 2000) n = n / 3024; // kcal/h -> TR
+    return Math.round(n * 10) / 10;
+  }
   function capacidadeTaxaDosAtributos(attrs) {
     if (!attrs) return null;
+    const tr = trDeValor(attrs.capacidade_tr);
+    if (tr) return { valor: tr, unidade: "TR" };
     if (Number(attrs.capacidade_bph) > 0) return { valor: Number(attrs.capacidade_bph), unidade: "un/h" };
     if (Number(attrs.capacidade_lh) > 0) return { valor: Number(attrs.capacidade_lh), unidade: "L/h" };
     if (Number(attrs.capacidade_kgh) > 0) return { valor: Number(attrs.capacidade_kgh), unidade: "kg/h" };
     return null;
   }
+  // ===== Tamanho comparável por categoria (16/11) =====
+  // Com o tamanho do item informado, só entram comparáveis de tamanho
+  // parecido (metade a dobro), na mesma unidade. Registro sem tamanho
+  // legível fica de fora (mesma regra da capacidade por hora).
+  function numBR2(s) {
+    let t = String(s);
+    if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, "").replace(",", ".");
+    else t = t.replace(",", ".");
+    return Number(t);
+  }
+  const NUM_RE = "(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)";
+  function achar(texto, sufixo) {
+    const m = String(texto || "").match(new RegExp(NUM_RE + "\\s*" + sufixo, "i"));
+    if (!m) return null;
+    const v = numBR2(m[1]);
+    return isFinite(v) && v > 0 ? v : null;
+  }
+  function potenciaCvDe(cv, kw, texto) {
+    if (Number(cv) > 0) return Number(cv);
+    if (Number(kw) > 0) return Math.round(Number(kw) * 1.36 * 100) / 100;
+    const c = achar(texto, "(?:cv|hp)\\b");
+    if (c) return c;
+    const k = achar(texto, "kw\\b");
+    return k ? Math.round(k * 1.36 * 100) / 100 : null;
+  }
+  const CATS_POTENCIA = /^(motor_eletrico|motorredutor|redutor|motovibrador|compressor)$/;
+  function tamanhoDe(catId, o) {
+    // o: { cv, kw, capacidade, texto, attrs }
+    const attrs = o.attrs || {};
+    const textoCap = String(o.capacidade || "");
+    const textoTudo = [o.capacidade, o.texto].filter(Boolean).join(" ");
+    if (CATS_POTENCIA.test(catId || "")) {
+      const v = potenciaCvDe(o.cv || numBR2(attrs.potencia_cv || ""), o.kw || numBR2(attrs.potencia_kw || ""), textoTudo);
+      return v ? { valor: v, unidade: "CV" } : null;
+    }
+    if (catId === "caldeira") {
+      let v = Number(attrs.capacidade_producao_vapor_kgh) > 0 ? Number(attrs.capacidade_producao_vapor_kgh) : achar(textoTudo, "kg\\s*(?:v|vapor)?\\s*\\/\\s*h");
+      if (!v) { const t = achar(textoTudo, "(?:t|ton|tons|toneladas?)\\s*(?:v|vapor)?\\s*\\/\\s*h"); if (t) v = t * 1000; }
+      return v ? { valor: v, unidade: "kg/h" } : null;
+    }
+    if (catId === "empilhadeira") {
+      if (Number(attrs.capacidade_carga_kg) > 0) return { valor: Number(attrs.capacidade_carga_kg), unidade: "kg" };
+      let v = achar(textoTudo, "kg\\b(?!\\s*\\/)");
+      if (!v) { const t = achar(textoTudo, "(?:t|ton|tons|toneladas?)\\b(?!\\s*\\/)"); if (t && t <= 60) v = t * 1000; }
+      return v ? { valor: v, unidade: "kg" } : null;
+    }
+    if (catId === "prensa") {
+      const v = Number(attrs.capacidade_toneladas) > 0 ? Number(attrs.capacidade_toneladas) : achar(textoTudo, "(?:t|ton|tons|toneladas?)\\b(?!\\s*\\/)");
+      return v ? { valor: v, unidade: "ton" } : null;
+    }
+    if (catId === "transformador" || catId === "gerador") {
+      let v = Number(attrs.potencia_kva) > 0 ? Number(attrs.potencia_kva) : achar(textoTudo, "kva\\b");
+      if (!v && catId === "gerador") { const k = achar(textoTudo, "kw\\b"); if (k) v = Math.round(k / 0.8); }
+      return v ? { valor: v, unidade: "kVA" } : null;
+    }
+    if (catId === "bomba") {
+      let v = Number(attrs.vazao_m3h) > 0 ? Number(attrs.vazao_m3h) : achar(textoTudo, "m[³3]\\s*(?:\\/\\s*h)?");
+      if (v) return { valor: v, unidade: "m³/h" };
+      const cv = potenciaCvDe(o.cv || numBR2(attrs.potencia_motor_cv || ""), o.kw, textoTudo);
+      return cv ? { valor: cv, unidade: "CV" } : null;
+    }
+    return undefined; // categoria sem regra de tamanho aqui
+  }
+
   function chaveCategoriaBase(catId, subtipo) {
     if (catId === "tanque" && /rodovi/i.test(subtipo || "")) return "tanque|rodoviario";
     if (catId === "empilhadeira" && /lateral/i.test(subtipo || "")) return "empilhadeira|lateral";
@@ -6802,7 +6882,7 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
     try {
       const catId = item.categoria_id || resolverCategoriaId(item.categoria);
       const params = new URLSearchParams();
-      params.set("select", "preco,moeda,data_observacao,tipo_mercado,estado,capacidade,atributos_normalizados");
+      params.set("select", "preco,moeda,data_observacao,tipo_mercado,estado,capacidade,potencia_cv,potencia_kw,modelo,atributos_normalizados");
       if (catId) {
         params.set("categoria_id", `eq.${catId}`);
       } else {
@@ -6852,10 +6932,15 @@ Mantenha a ordem dos itens igual \xE0 ordem dos blocos de colunas no texto origi
       // informada, só entram itens de capacidade parecida (metade a dobro).
       // 15/11: vale também para L/h e kg/h (pasteurizador, linha de processo,
       // bombas...), sempre na mesma unidade.
-      const capItem = capacidadeTaxaDosAtributos(item.atributosExtras) || capacidadeTaxaDe([item.capacidade, textoItemBase].filter(Boolean).join(" "));
+      // 16/11: tamanho por categoria (CV, kVA, ton, carga, vapor, vazão); nas demais, capacidade por hora/TR.
+      const tamItem = tamanhoDe(catId, { cv: item.potenciaCv, kw: item.potenciaKw, capacidade: item.capacidade, texto: [item.modelo, item.obs].filter(Boolean).join(" "), attrs: item.atributosExtras });
+      const usaTamanho = tamItem !== undefined;
+      const capItem = usaTamanho ? tamItem : capacidadeTaxaDosAtributos(item.atributosExtras) || capacidadeTaxaDe([item.capacidade, textoItemBase].filter(Boolean).join(" "));
       if (capItem) {
         rows = (rows || []).filter((r) => {
-          const capRow = capacidadeTaxaDosAtributos(r.atributos_normalizados) || capacidadeTaxaDe(r.capacidade || "");
+          const capRow = usaTamanho
+            ? tamanhoDe(catId, { cv: r.potencia_cv, kw: r.potencia_kw, capacidade: r.capacidade, texto: r.modelo, attrs: r.atributos_normalizados })
+            : capacidadeTaxaDosAtributos(r.atributos_normalizados) || capacidadeTaxaDe(r.capacidade || "");
           return capRow && capRow.unidade === capItem.unidade && capRow.valor >= capItem.valor * 0.5 && capRow.valor <= capItem.valor * 2;
         });
       }

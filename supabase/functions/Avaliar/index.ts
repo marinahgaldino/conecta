@@ -643,11 +643,75 @@ Deno.serve(async (req) => {
       const t = String(texto || "");
       let m = t.match(/(\d{1,3}(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*kcal/i);
       if (m) { const v = trDe(m[1] + " kcal"); if (v) return { valor: v, unidade: "TR" }; }
-      m = t.match(/(\d+(?:[.,]\d+)?)\s*TR\b/);
+      m = t.match(/(?<![\/\d])(\d+(?:[.,]\d+)?)\s+TR\b/);
       if (m) { const v = numBR(m[1]); if (v > 0) return { valor: v, unidade: "TR" }; }
       m = aceitaVolume ? t.match(/(\d{1,3}(?:\.\d{3})+|\d+(?:[.,]\d+)?)\s*(?:l|lt|litros?)\b(?!\s*(?:\/|por\b|p\/))/i) : null;
       if (m) { const v = numBR(m[1]); if (v > 0) return { valor: v, unidade: "L" }; }
       return null;
+    }
+
+    // ===== Tamanho comparável por categoria (16/11) =====
+    // Com o tamanho do item informado, só entram comparáveis de tamanho
+    // parecido (metade a dobro), na mesma unidade. Registro sem tamanho
+    // legível fica de fora (mesma regra da capacidade por hora).
+    function numBR2(s) {
+      let t = String(s);
+      if (/^\d{1,3}(\.\d{3})+(,\d+)?$/.test(t)) t = t.replace(/\./g, "").replace(",", ".");
+      else t = t.replace(",", ".");
+      return Number(t);
+    }
+    const NUM_RE = "(\\d{1,3}(?:\\.\\d{3})+(?:,\\d+)?|\\d+(?:[.,]\\d+)?)";
+    function achar(texto, sufixo) {
+      const m = String(texto || "").match(new RegExp(NUM_RE + "\\s*" + sufixo, "i"));
+      if (!m) return null;
+      const v = numBR2(m[1]);
+      return isFinite(v) && v > 0 ? v : null;
+    }
+    function potenciaCvDe(cv, kw, texto) {
+      if (Number(cv) > 0) return Number(cv);
+      if (Number(kw) > 0) return Math.round(Number(kw) * 1.36 * 100) / 100;
+      const c = achar(texto, "(?:cv|hp)\\b");
+      if (c) return c;
+      const k = achar(texto, "kw\\b");
+      return k ? Math.round(k * 1.36 * 100) / 100 : null;
+    }
+    const CATS_POTENCIA = /^(motor_eletrico|motorredutor|redutor|motovibrador|compressor)$/;
+    function tamanhoDe(catId, o) {
+      // o: { cv, kw, capacidade, texto, attrs }
+      const attrs = o.attrs || {};
+      const textoCap = String(o.capacidade || "");
+      const textoTudo = [o.capacidade, o.texto].filter(Boolean).join(" ");
+      if (CATS_POTENCIA.test(catId || "")) {
+        const v = potenciaCvDe(o.cv || numBR2(attrs.potencia_cv || ""), o.kw || numBR2(attrs.potencia_kw || ""), textoTudo);
+        return v ? { valor: v, unidade: "CV" } : null;
+      }
+      if (catId === "caldeira") {
+        let v = Number(attrs.capacidade_producao_vapor_kgh) > 0 ? Number(attrs.capacidade_producao_vapor_kgh) : achar(textoTudo, "kg\\s*(?:v|vapor)?\\s*\\/\\s*h");
+        if (!v) { const t = achar(textoTudo, "(?:t|ton|tons|toneladas?)\\s*(?:v|vapor)?\\s*\\/\\s*h"); if (t) v = t * 1000; }
+        return v ? { valor: v, unidade: "kg/h" } : null;
+      }
+      if (catId === "empilhadeira") {
+        if (Number(attrs.capacidade_carga_kg) > 0) return { valor: Number(attrs.capacidade_carga_kg), unidade: "kg" };
+        let v = achar(textoTudo, "kg\\b(?!\\s*\\/)");
+        if (!v) { const t = achar(textoTudo, "(?:t|ton|tons|toneladas?)\\b(?!\\s*\\/)"); if (t && t <= 60) v = t * 1000; }
+        return v ? { valor: v, unidade: "kg" } : null;
+      }
+      if (catId === "prensa") {
+        const v = Number(attrs.capacidade_toneladas) > 0 ? Number(attrs.capacidade_toneladas) : achar(textoTudo, "(?:t|ton|tons|toneladas?)\\b(?!\\s*\\/)");
+        return v ? { valor: v, unidade: "ton" } : null;
+      }
+      if (catId === "transformador" || catId === "gerador") {
+        let v = Number(attrs.potencia_kva) > 0 ? Number(attrs.potencia_kva) : achar(textoTudo, "kva\\b");
+        if (!v && catId === "gerador") { const k = achar(textoTudo, "kw\\b"); if (k) v = Math.round(k / 0.8); }
+        return v ? { valor: v, unidade: "kVA" } : null;
+      }
+      if (catId === "bomba") {
+        let v = Number(attrs.vazao_m3h) > 0 ? Number(attrs.vazao_m3h) : achar(textoTudo, "m[³3]\\s*(?:\\/\\s*h)?");
+        if (v) return { valor: v, unidade: "m³/h" };
+        const cv = potenciaCvDe(o.cv || numBR2(attrs.potencia_motor_cv || ""), o.kw, textoTudo);
+        return cv ? { valor: cv, unidade: "CV" } : null;
+      }
+      return undefined; // categoria sem regra de tamanho aqui
     }
 
     // ===== Base própria (v15) =====
@@ -660,7 +724,7 @@ Deno.serve(async (req) => {
       const dataLimite = new Date(Date.now() - BASE_PROPRIA_VALIDADE_DIAS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       let query = supabase
         .from("observacoes_mercado")
-        .select("preco, moeda, estado, marca, modelo, ano, capacidade, localizacao, tipo_mercado, atributos_normalizados, data_observacao")
+        .select("preco, moeda, estado, marca, modelo, ano, capacidade, potencia_cv, potencia_kw, localizacao, tipo_mercado, atributos_normalizados, data_observacao")
         .not("preco", "is", null)
         .gte("data_observacao", dataLimite);
       if (item.categoria_id) {
@@ -676,7 +740,10 @@ Deno.serve(async (req) => {
       const combItem = item.categoria_id === "motor_eletrico" ? combustivelDoItem(item) : null;
       const descartes = { locacao: 0, preco_baixo: 0, sem_cotacao: 0, estado: 0, combustivel: 0, score: 0, capacidade: 0 };
       const aceitaVolume = /^(tanque|tanque_misturador|resfriador_leite)$/.test(item.categoria_id || "");
-      const capItem = capacidadeComparavel(item.atributosExtras, [item.capacidade, item.modelo, item.obs].filter(Boolean).join(" "), aceitaVolume);
+      // Tamanho por categoria (potência, kVA, toneladas, carga, vapor, vazão); nas demais, capacidade.
+      const tamItem = tamanhoDe(item.categoria_id, { cv: item.potenciaCv, kw: item.potenciaKw, capacidade: item.capacidade, texto: [item.modelo, item.obs].filter(Boolean).join(" "), attrs: item.atributosExtras });
+      const usaTamanho = tamItem !== undefined;
+      const capItem = usaTamanho ? tamItem : capacidadeComparavel(item.atributosExtras, [item.capacidade, item.modelo, item.obs].filter(Boolean).join(" "), aceitaVolume);
       // capacidade em TR vira número para o score (o campo pode vir "22.000 kcal/h")
       if (capItem && capItem.unidade === "TR" && item.atributosExtras) item.atributosExtras = { ...item.atributosExtras, capacidade_tr: capItem.valor };
 
@@ -692,7 +759,9 @@ Deno.serve(async (req) => {
           if (combObs !== combItem) { descartes.combustivel++; continue; }
         }
         if (capItem) {
-          const capRow = capacidadeComparavel(r.atributos_normalizados, r.capacidade, aceitaVolume);
+          const capRow = usaTamanho
+            ? tamanhoDe(item.categoria_id, { cv: r.potencia_cv, kw: r.potencia_kw, capacidade: r.capacidade, texto: r.modelo, attrs: r.atributos_normalizados })
+            : capacidadeComparavel(r.atributos_normalizados, r.capacidade, aceitaVolume);
           if (!capRow || capRow.unidade !== capItem.unidade || capRow.valor < capItem.valor * 0.5 || capRow.valor > capItem.valor * 2) { descartes.capacidade++; continue; }
         }
         const score = calcularScoreCompatibilidade(item, r, item.ranking_importancia);
