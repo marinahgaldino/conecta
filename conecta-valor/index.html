@@ -12186,9 +12186,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .tag-card .rivet { top: 1rem; left: 1rem; }
         .tag-card-head { margin-left: 1.5rem; margin-bottom: 1rem; }
         .tag-card-columns { display: flex; flex-direction: column; gap: 1.5rem; }
-        @media (min-width: 900px) {
-          .tag-card-columns { display: grid; grid-template-columns: 1fr 320px; align-items: start; gap: 2.25rem; }
-        }
         .batch-row-detail .tag-card-columns { display: flex; flex-direction: column; }
         .tag-card-sidebar {
           background: #F7F6F2;
@@ -13313,7 +13310,8 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .tag-sub { display: block; font-size: 0.78rem; color: #6B6E73; margin-top: 0.15rem; }
         .tag-resumo { font-size: 0.92rem; line-height: 1.5; margin-bottom: 1rem; }
         /* ===== v19.1: Comparáveis Premium ===== */
-        .comp-header { margin-bottom: 0.9rem; }
+        .comp-header { margin-bottom: 0.9rem; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; }
+        .comp-header .comp-header-stats { margin-top: 0; }
         .comp-header-stats { display: flex; flex-wrap: wrap; align-items: center; gap: 0.7rem; margin-top: 0.5rem; }
         .comp-header-stat { font-size: 0.8rem; color: #4A5568; background: #F4F3EF; border-radius: 999px; padding: 0.2rem 0.7rem; }
         .comp-base-badge { font-size: 0.78rem; color: #96650B; background: #FBF0DC; border: 1px solid #E8DCC0; border-radius: 999px; padding: 0.2rem 0.7rem; }
@@ -13324,7 +13322,12 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .comp-amostra-num.verde { color: #1F5C3F; }
         .comp-amostra-label { font-size: 0.68rem; color: #6B7280; margin-top: 0.1rem; }
         .comp-amostra-motivos { display: flex; flex-wrap: wrap; gap: 0.8rem; margin-top: 0.6rem; font-size: 0.76rem; color: #6B7280; }
-        .comp-card-list { display: flex; flex-direction: column; gap: 0.7rem; }
+        .comp-card-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.8rem; }
+        .comp-card { display: flex; flex-direction: column; min-width: 0; }
+        .comp-card > .comp-card-rodape { margin-top: auto; }
+        .comp-card > :nth-last-child(2) { margin-bottom: 0.7rem; }
+        .comp-card-head > div { min-width: 0; }
+        .comp-card-modelo { overflow-wrap: anywhere; }
         .comp-card {
           position: relative;
           background: #FFFFFF;
@@ -13390,9 +13393,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .modal-comparaveis-tabela th { text-align: left; font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.04em; color: #8A8D91; padding: 0.7rem 0.6rem; border-bottom: 2px solid #E4E2DC; position: sticky; top: 0; background: #FFFFFF; }
         .modal-comparaveis-tabela td { padding: 0.65rem 0.6rem; border-bottom: 1px solid #F0EEE7; color: #1B1D1F; }
 
-        @media (min-width: 900px) {
-          .comp-card-list { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; }
-        }
         @media (max-width: 620px) {
           .comp-header-stats { gap: 0.5rem; }
           .comp-amostra-indicadores { gap: 0.9rem; }
@@ -14530,7 +14530,6 @@ const LOGO_FULL_B64 = "/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAMCAgICAgMCAgIDAwMDBAYEB
         .coleta-qualidade-leilao { background: #EAF0F7; color: #2C4A6E; border-radius: 4px; padding: 0.1rem 0.5rem; font-weight: 600; }
         .coleta-qualidade-incluir { white-space: nowrap; display: inline-flex; align-items: center; gap: 0.3rem; color: #4B5058; cursor: pointer; text-transform: none; letter-spacing: 0; font-weight: 400; }
         .tag-card-sidebar:empty { display: none; }
-        .tag-card-columns:has(> .tag-card-sidebar:empty) { grid-template-columns: 1fr; }
         @media (min-width: 1280px) {
           .panel, .tag-card, .review-panel { padding: 1.5rem; }
           .panel, .tag-card { margin-top: 1rem; margin-bottom: 1rem; }
