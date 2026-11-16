@@ -175,7 +175,7 @@
     { id: "retifica", nome: "Retífica", grupo: "maquinas_ferramenta", synonyms: ["retificadora cilíndrica", "retificadora plana"], re: /ret[íi]fic(adora|a)\b|barramento/i, comum: true, ativo: true },
     { id: "elevador_graos", nome: "Elevador de Grãos", grupo: "movimentacao", synonyms: ["elevador de canecas", "elevador de grãos"], re: /elevador de (gr[ãa]os|canecas)/i, comum: false, ativo: true },
     { id: "religadora", nome: "Religadora", grupo: "eletrica_automacao", synonyms: ["religador automático"], re: /religadora/i, comum: false, ativo: true },
-    { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /(?<!refri)gerador|eletrog[êe]neo/i, excludeRe: /gerador(es)? de (nitrog|oxig|oz[oô]n|di[oó]xido|cloro|hidrog|espuma|v[aá]cuo)/i, comum: true, ativo: true },
+    { id: "gerador", nome: "Gerador", grupo: "eletrica_automacao", synonyms: ["gerador a diesel", "grupo gerador", "eletrogeno"], re: /(?<!refri)gerador|eletrog[êe]neo/i, excludeRe: /gerador(es)? de (nitrog|oxig|oz[oô]n|di[oó]xido|cloro|hidrog|espuma|v[aá]cuo)|t[úu]nel de encolhimento/i, comum: true, ativo: true },
     { id: "luminaria_industrial", nome: "Luminária Industrial", grupo: "instrumentos_utilidades", synonyms: ["luminária LED industrial", "refletor industrial"], re: /lumin[áa]ria|refletor|plafon(ier)?/i, comum: false, ativo: true },
     { id: "seladora", nome: "Seladora", grupo: "envase_embalagem", synonyms: ["seladora de embalagens", "heat sealer"], re: /selador/i, comum: false, ativo: true },
     // 04/10: grupo Laboratório - cada tipo na sua categoria (banho-maria de
@@ -209,7 +209,7 @@
     { id: "resfriador_garrafas", nome: "Resfriador de Garrafas", grupo: "processo_alimenticio", synonyms: ["resfriador de garrafas", "cooling tunnel"], re: /resfriador de garrafas|cooling machine|spray.*cool/i, comum: false, ativo: true },
     { id: "empacotadora", nome: "Empacotadora", grupo: "envase_embalagem", synonyms: ["empacotadora automática", "packing machine"], re: /empacotador|packing machine|pouch.*packing|encartuch|encartonador|flow\s?pack/i, comum: false, ativo: true },
     { id: "sucata", nome: "Sucata", grupo: "outros", synonyms: ["sucata metálica", "sucata industrial"], re: /sucata/i, comum: true, ativo: true },
-    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|etiquetag|etiquetadora|\blabell?er\b|etikettier|\bsleeve\b|t[úu]nel (de )?vapor|encolhimento a vapor/i, comum: true, ativo: true },
+    { id: "rotuladora", nome: "Rotuladora", grupo: "envase_embalagem", synonyms: ["rotuladora automática", "labeler"], re: /rotulad|etiquetag|etiquetadora|\blabell?er\b|etikettier|\bsleeve\b|t[úu]nel (de )?vapor|encolhimento.{0,25}\bvapor\b/i, comum: true, ativo: true },
     // 16/11: túnel de encolhimento (filme shrink) tem categoria própria; túnel sleeve/vapor continua em Rotuladora.
     { id: "tunel_encolhimento", nome: "Túnel de Encolhimento", grupo: "envase_embalagem", synonyms: ["túnel de encolhimento", "shrink tunnel", "túnel termoencolhível"], re: /t[úu]nel (de )?(encolhimento|termoencolh)|shrink tunnel|t[úu]nel shrink/i, comum: false, ativo: true },
     { id: "sopradora", nome: "Sopradora", grupo: "envase_embalagem", synonyms: ["sopradora PET", "blow molding"], re: /soprador|m[áa]quina de sopro|blow.*mold/i, comum: true, ativo: true },
